@@ -4,6 +4,30 @@ src/antlr
 
 #ignore Java class files
 *.class
+*.log
 
 #ignore other junk files
 *~
+
+# IntelliJ & VSCode files
+.idea/
+.vscode/
+
+# MacOS Desktop Services Store
+.DS_Store
+
+# sbt specific
+.cache/
+.history/
+.lib/
+dist/*
+target/
+lib_managed/
+src_managed/
+project/boot/
+project/plugins/project/
+
+# Scala-IDE specific
+.scala_dependencies
+.worksheet
+.idea
