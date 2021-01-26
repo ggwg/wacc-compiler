@@ -1,4 +1,4 @@
-name := "random-scala-project"
+name := "wacc_41"
 
 version := "0.1"
 
