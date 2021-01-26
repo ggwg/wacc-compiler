@@ -17,6 +17,7 @@ src/antlr
 .DS_Store
 
 # sbt specific
+.bsp/
 .cache/
 .history/
 .lib/
