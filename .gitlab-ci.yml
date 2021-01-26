@@ -1,0 +1,15 @@
+image: hseeberger/scala-sbt
+
+stages:
+	- build
+	- test
+
+build:
+	stage: build
+	script:
+		- sbt compile
+
+test:
+	stage: test
+	script:
+		- sbt test
