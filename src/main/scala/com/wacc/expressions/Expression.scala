@@ -1,3 +1,5 @@
 package com.wacc.expressions
 
-trait Expression {}
+import com.wacc.assignment.AssignmentRight
+
+trait Expression extends AssignmentRight {}

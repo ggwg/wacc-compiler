@@ -1,3 +1,3 @@
-package com.wacc.binaryOperators
+package com.wacc.binaryoperators
 
 class And extends BinaryOperator {}

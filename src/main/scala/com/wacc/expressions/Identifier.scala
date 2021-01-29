@@ -1,3 +1,5 @@
 package com.wacc.expressions
 
-class Identifier(val identifier: String) {}
+import com.wacc.assignment.AssignmentLeft
+
+class Identifier(val identifier: String) extends AssignmentLeft {}
