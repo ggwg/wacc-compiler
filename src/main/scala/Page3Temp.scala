@@ -1,17 +1,19 @@
-import com.wacc.assignment.ArrayLiter
-import com.wacc.expressions.{Expression, StringLiter}
-import com.wacc.functions.Program
-import com.wacc.miscellaneous.Comment
-import com.wacc.primitives.{DefaultCharacter, EscapedCharacter}
+import com.wacc.assignment._
+import com.wacc.binaryoperators._
+import com.wacc.expressions._
+import com.wacc.functions._
+import com.wacc.miscellaneous._
+import com.wacc.primitives._
+import com.wacc.statements._
+import com.wacc.types._
+import com.wacc.unaryoperators._
 import parsley.Parsley
-import parsley.expr.precedence
+import parsley.character.{alphaNum, letter, noneOf}
+import parsley.combinator.{many, manyN, option}
+import parsley.expr.{InfixL, Ops, precedence}
 import parsley.implicits._
 
 import scala.io.Source
-import javax.swing.text.html.HTMLEditorKit.Parser
-import java.beans.Expression
-import java.util.function.UnaryOperator
-import scala.runtime.Tuple2Zipped.Ops
 
 object Main2 {
   def main(args: Array[String]): Unit = {
@@ -32,7 +34,7 @@ object Main2 {
       => new Program(functions, body)
     val toFunctionCall = (functionType: Type, functionName: Identifier, parameters: Option[ParameterList], body: Statement) 
       => new FunctionCall(functionType, functionName, parameters, body)
-    val toParameterList = (param: Parameter, params: List[Prameter])
+    val toParameterList = (param: Parameter, params: List[Parameter])
       => new ParameterList(param :: params)
     val toParameter = (parameterType: Type, parameterName: Identifier) 
       => new Parameter(parameterType, parameterName)
@@ -68,7 +70,7 @@ object Main2 {
       <\> (("while" *> expressionParser) <~> ("do" *> statementParser <* "done")).map(
         (condition, statement) => new While(condition, statement)
       )
-      <\> ("begin" *> expressionParser <* "end").map(expression => new BeginEnd(expression))
+      <\> ("begin" *> expressionParser <* "end").map(expression => new BeginEnd(expression)),
       Ops(InfixL)(";" #> ((_, _) => new StatementSequence(_, _)))
       ) 
     lazy val assignmentLeftParser: Parsley[AssignmentLeft] 
@@ -89,7 +91,7 @@ object Main2 {
     // <\> *> 
     /* Things that don't have precedence */
     lazy val argumentListParser: Parsley[ArgumentList] 
-      = toArgumentList.lift(expression, manyOf(',' *> expressions))
+      = toArgumentList.lift(expressionParser, many(',' *> expressionParser))
     
 
     // Functions
@@ -126,47 +128,47 @@ object Main2 {
       }
 
     val toPair = (pair: String) 
-      => new Pair()
+      => new PairDefault()
     val toPairType = (type1: PairElementType, type2: PairElementType) 
       => new PairType(type1, type2) 
     val toBaseType = (baseType: String)
       => baseType match {
         case "int"    => new IntType() 
-        case "bool"   => new BoolType()
-        case "char"   => new CharType()
+        case "bool"   => new BooleanType()
+        case "char"   => new CharacterType()
         case "string" => new StringType()
       }
     val toUnaryOperatorApplication = (opType: UnaryOperator, expression: Expression) 
       => new UnaryOperatorApplication(opType, expression)
     
-    val binaryFunctionGenerator = (operator: Stream) 
+    val binaryFunctionGenerator = (operator: String)
       => operator match {
         case "*" => ((expr1: Expression, expr2: Expression) 
-                      => new BinaryOperatorApplication(expr1, "*", expr2))
+                      => new BinaryOperatorApplication(expr1, new Multiply(), expr2))
         case "/" => ((expr1: Expression, expr2: Expression) 
-                      => new BinaryOperatorApplication(expr1, "/", expr2))
+                      => new BinaryOperatorApplication(expr1, new Divide(), expr2))
         case "%" => ((expr1: Expression, expr2: Expression) 
-                      => new BinaryOperatorApplication(expr1, "%", expr2))
+                      => new BinaryOperatorApplication(expr1, new Modulo(), expr2))
         case "+" => ((expr1: Expression, expr2: Expression) 
-                      => new BinaryOperatorApplication(expr1, "+", expr2))
+                      => new BinaryOperatorApplication(expr1, new Add(), expr2))
         case "-" => ((expr1: Expression, expr2: Expression) 
-                      => new BinaryOperatorApplication(expr1, "-", expr2))
+                      => new BinaryOperatorApplication(expr1, new Subtract(), expr2))
         case ">" => ((expr1: Expression, expr2: Expression) 
-                      => new BinaryOperatorApplication(expr1, ">", expr2))
+                      => new BinaryOperatorApplication(expr1, new GreaterThan(), expr2))
         case ">=" => ((expr1: Expression, expr2: Expression) 
-                      => new BinaryOperatorApplication(expr1, ">=", expr2))
+                      => new BinaryOperatorApplication(expr1, new GreaterEqualThan(), expr2))
         case "<" => ((expr1: Expression, expr2: Expression) 
-                      => new BinaryOperatorApplication(expr1, "<", expr2))
+                      => new BinaryOperatorApplication(expr1, new SmallerThan(), expr2))
         case "<=" => ((expr1: Expression, expr2: Expression) 
-                      => new BinaryOperatorApplication(expr1, "<=", expr2))
+                      => new BinaryOperatorApplication(expr1, new SmallerEqualThan(), expr2))
         case "==" => ((expr1: Expression, expr2: Expression) 
-                      => new BinaryOperatorApplication(expr1, "==", expr2))
+                      => new BinaryOperatorApplication(expr1, new Equals(), expr2))
         case "!=" => ((expr1: Expression, expr2: Expression) 
-                      => new BinaryOperatorApplication(expr1, "!=", expr2))
+                      => new BinaryOperatorApplication(expr1, new NotEquals(), expr2))
         case "&&" => ((expr1: Expression, expr2: Expression) 
-                      => new BinaryOperatorApplication(expr1, "&&", expr2))
+                      => new BinaryOperatorApplication(expr1, new And(), expr2))
         case "||" => ((expr1: Expression, expr2: Expression) 
-                      => new BinaryOperatorApplication(expr1, "||", expr2))
+                      => new BinaryOperatorApplication(expr1, new Or(), expr2))
       }
 
     //
@@ -222,7 +224,7 @@ object Main2 {
     lazy val arrayTypeParser: Parsley[ArrayType]
       = toArrayType.lift(typeParser <* '[' <* ']')
     lazy val identifierParser: Parsley[Identifier]
-      = toIdentifier.lift('_' <\> letter(), many('_' <\> alphaNum()))
+      = toIdentifier.lift('_' <\> letter, many('_' <\> alphaNum)
     lazy val arrayElementParser: Parsley[ArrayElement]
       = toArrayElement.lift(identifierParser, manyN(1, "[" *> expressionParser <* "]"))
     
@@ -230,7 +232,7 @@ object Main2 {
     val toComment = (chars: List[Char]) 
       => new Comment(chars.mkString)
     val toStringLiter = (chars: List[DefaultCharacter]) 
-      => new StringLiter(chars.map(chr -> chr.char).mkString(""))
+      => new StringLiter(chars.map(chr => chr.char).mkString(""))
     val toPairLiter = (nullstr: String) 
       => new PairLiter()
     val toArrayLiter = (opt: Option[(Expression, List[Expression])]) 
@@ -243,7 +245,7 @@ object Main2 {
     val toCharacterLiter = (char: DefaultCharacter) 
       => new CharacterLiter(char.char)
     val toBooleanLiter = (boolean: String) 
-      => new BooleanLiter(Boolean.parseBoolean(boolean))
+      => new BooleanLiter(boolean.equals("true"))
     val integerSignParser = (sign: Char) 
       => new IntegerSign(sign)
     val toDigit = (digit: Char) 
@@ -260,11 +262,11 @@ object Main2 {
     lazy val integerSignParser: Parsley[IntegerSign]
       = toIntegerSign.lift('+' <\> '-')
     lazy val booleanLiterParser: Parsley[BooleanLiter]
-      = oBooleanLiter.lift("true" <\> "false") 
+      = toBooleanLiter.lift("true" <\> "false")
     lazy val characterLiterParser: Parsley[CharacterLiter]
       = toCharacterLiter.lift("\'" *> defaultCharacterParser <* "\'")
-    lazy val defaultCharacterParser: Parsley[DefaultCharacter]  // TODO
-      = noneOf('\\', '\'', '\"').map(chr => new DefaultCharacter(chr, false)) 
+    lazy val defaultCharacterParser: Parsley[DefaultCharacter]
+      = noneOf('\\', '\'', '\"').map(chr => new DefaultCharacter(chr, false))
         <\> ('\\' *> escapedCharParser).map(chr => new DefaultCharacter(chr, true))
     lazy val escapedCharParser: Parsley[EscapedCharacter]
       = toEscapedCharacter.lift('0' <\> 'b' <\> 't' <\> 'n' <\> 'f' <\> 'r' 
