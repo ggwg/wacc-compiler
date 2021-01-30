@@ -7,3 +7,4 @@ class MainSpec extends AnyFlatSpec {
     assert(Main.square(8) === 64)
   }
 }
+
