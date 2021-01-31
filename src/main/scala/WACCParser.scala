@@ -8,7 +8,7 @@ import com.wacc.statements._
 import com.wacc.types._
 import com.wacc.unaryoperators._
 import parsley.Parsley._
-import parsley.character.{alphaNum, letter, noneOf}
+import parsley.character.{alphaNum, letter, noneOf, satisfy}
 import parsley.combinator.{manyN, option}
 import parsley.expr.{InfixL, Ops, precedence}
 import parsley.implicits._
@@ -317,7 +317,7 @@ object WACCParser {
                      | ‘'’
                      | ‘\’ */
   lazy val escapedCharParser: Parsley[EscapedCharacter] =
-    ('0' <\> 'b' <\> 't' <\> 'n' <\> 'f' <\> 'r' <\> '\"' <\> '\'' <\> '\\')
+    satisfy(EscapedCharacter.escapableCharacters.contains(_))
       .map(new EscapedCharacter(_))
 
   /*〈array-liter〉::= ‘[’ (〈expr〉(‘,’〈expr〉)* )?  ‘]’ */

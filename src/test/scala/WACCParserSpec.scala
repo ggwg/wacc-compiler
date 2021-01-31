@@ -1,7 +1,15 @@
 import org.scalatest.flatspec.AnyFlatSpec
 import WACCParser._
-import com.wacc.miscellaneous.Comment
-import parsley.{Success, Failure}
+import com.wacc.assignment._
+import com.wacc.binaryoperators._
+import com.wacc.expressions._
+import com.wacc.functions._
+import com.wacc.miscellaneous._
+import com.wacc.primitives._
+import com.wacc.statements._
+import com.wacc.types._
+import com.wacc.unaryoperators._
+import parsley.{Failure, Success}
 
 class WACCParserSpec extends AnyFlatSpec {
   val commentInput = "# This is a comment \n"
@@ -55,10 +63,27 @@ class WACCParserSpec extends AnyFlatSpec {
 
   "A string literal parser" should "" in {}
 
-  "A default character parser" should "" in {}
+  "A default character parser" should "parse any character except '\\', '\'' and '\"'" in {
+    assert(defaultCharacterParser.runParser("a").isSuccess)
+    assert(defaultCharacterParser.runParser("Z").isSuccess)
+    assert(defaultCharacterParser.runParser("9").isSuccess)
+    assert(defaultCharacterParser.runParser("@").isSuccess)
+    assert(defaultCharacterParser.runParser("[").isSuccess)
+  }
+  it should "fail to parse '\\', '\'' and '\"'" in {
+    assert(defaultCharacterParser.runParser("\\").isFailure)
+    assert(defaultCharacterParser.runParser("\'").isFailure)
+    assert(defaultCharacterParser.runParser("\"").isFailure)
+  }
+  it should "only parse escapable characters after '\\'" in {
+    for (chr <- EscapedCharacter.escapableCharacters) {
+      assert(defaultCharacterParser.runParser("\\" + chr).isSuccess)
+    }
+    assert(defaultCharacterParser.runParser("\\a").isFailure)
+  }
 
   "An escaped character parser" should "only parse escapable characters" in {
-    for (chr <- "0btnfr\"\'\\") {
+    for (chr <- EscapedCharacter.escapableCharacters) {
       val parsed = escapedCharParser.runParser(chr.toString)
       assert(parsed.isSuccess)
     }
