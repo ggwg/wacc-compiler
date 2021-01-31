@@ -53,7 +53,12 @@ class WACCParserSpec extends AnyFlatSpec {
 
   "An integer literal parser" should "" in {}
 
-  "A digit parser" should "" in {}
+  "A digit parser" should "only parse digits" in {
+    for (digit <- "0123456789") {
+      assert(digitParser.runParser(digit + "").isSuccess)
+    }
+    assert(digitParser.runParser("x").isFailure)
+  }
 
   "An integer sign parser" should "only parse a '+' or '-'" in {
     assert(integerSignParser.runParser("+").isSuccess)
