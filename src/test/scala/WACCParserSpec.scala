@@ -51,7 +51,19 @@ class WACCParserSpec extends AnyFlatSpec {
 
   "An array element parser" should "" in {}
 
-  "An integer literal parser" should "" in {}
+  "An integer literal parser" should "parse any number (sequence of digits)" in {
+    assert(integerLiterParser.runParser("0").isSuccess)
+    assert(integerLiterParser.runParser("100").isSuccess)
+    assert(integerLiterParser.runParser("123456789").isSuccess)
+  }
+  it should "parse any number preceded by a '+' or '-'" in {
+    assert(integerLiterParser.runParser("+100").isSuccess)
+    assert(integerLiterParser.runParser("-100").isSuccess)
+  }
+  it should "fail to parse multiple signs" in {
+    assert(integerLiterParser.runParser("++100").isFailure)
+    assert(integerLiterParser.runParser("--100").isFailure)
+  }
 
   "A digit parser" should "only parse digits" in {
     for (digit <- "0123456789") {
