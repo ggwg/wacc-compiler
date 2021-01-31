@@ -18,13 +18,8 @@ import scala.io.Source
 
 object Main2 {
   def main(args: Array[String]): Unit = {
-    val filename = "/home/codrin/wacc_examples/valid/basic/skip/comment.wacc"
-    for (line <- Source.fromFile(filename).getLines()) {
-      println(line)
-    }
 
     //functions
-
     lazy val toArgumentList =
       (expression: Expression, expressions: List[Expression]) =>
         new ArgumentList(expression :: expressions)
@@ -164,8 +159,6 @@ object Main2 {
             new BinaryOperatorApplication(expr1, new Or(), expr2)
         )
       }
-
-    ///////
 
     lazy val integerLiterParser: Parsley[IntegerLiter] =
       toIntegerLiter.lift(option(integerSignParser), manyN(1, digitParser))
@@ -351,6 +344,13 @@ object Main2 {
     /* Parsers */
 
     commentParser.runParser("")
+
+    // Testing the parser on some example inputs
+    println("Hello World!")
+    println(expressionParser.runParser("5+5"))             // Should succeed
+    println(expressionParser.runParser("152*55/22!=0"))    // Should succeed
+    println(integerLiterParser.runParser("5"))             // Should succeed
+    println(integerLiterParser.runParser("a"))             // Should fail
   }
 
   def square(x: Int): Int = x * x

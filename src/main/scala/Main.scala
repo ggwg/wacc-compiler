@@ -19,8 +19,18 @@ import scala.io.Source
 object Main {
 
   def main(args: Array[String]): Unit = {
-    val filename = "/home/codrin/wacc_examples/valid/basic/skip/comment.wacc"
-    for (line <- Source.fromFile(filename).getLines()) {
+    val file1 = "src/main/resources/valid_examples/basic/skip/skip.wacc"
+    for (line <- Source.fromFile(file1).getLines()) {
+      println(line)
+    }
+
+    val file2 = "src/main/resources/valid_examples/function/simple_functions/functionSimple.wacc"
+    for (line <- Source.fromFile(file2).getLines()) {
+      println(line)
+    }
+
+    val file3 = "src/main/resources/invalid_examples/syntaxErr/basic/badComment.wacc"
+    for (line <- Source.fromFile(file3).getLines()) {
       println(line)
     }
 
