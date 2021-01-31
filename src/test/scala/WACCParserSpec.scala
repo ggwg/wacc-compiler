@@ -57,7 +57,12 @@ class WACCParserSpec extends AnyFlatSpec {
 
   "An integer sign parser" should "" in {}
 
-  "A boolean literal parser" should "" in {}
+  "A boolean literal parser" should "only parse a 'true' or 'false' string" in {
+    assert(booleanLiterParser.runParser("true").isSuccess)
+    assert(booleanLiterParser.runParser("false").isSuccess)
+    assert(booleanLiterParser.runParser("xyz").isFailure)
+    assert(booleanLiterParser.runParser("tru").isFailure)
+  }
 
   "A character literal parser" should "read a single default character surrounded in '\''" in {
     val parsed = characterLiterParser.runParser("\'x\'")
