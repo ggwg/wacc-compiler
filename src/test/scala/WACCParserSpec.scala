@@ -57,11 +57,31 @@ class WACCParserSpec extends AnyFlatSpec {
 
   "A default character parser" should "" in {}
 
-  "An escaped character parser" should "" in {}
+  "An escaped character parser" should "only parse escapable characters" in {
+    for (chr <- "0btnfr\"\'\\") {
+      val parsed = escapedCharParser.runParser(chr.toString)
+      assert(parsed.isSuccess)
+    }
+
+    assert(escapedCharParser.runParser("5").isFailure)
+    assert(escapedCharParser.runParser("a").isFailure)
+    assert(escapedCharParser.runParser("X").isFailure)
+  }
 
   "An array literal parser" should "" in {}
 
-  "A pair literal parser" should "" in {}
+  "A pair literal parser" should "only parse a 'null' string" in {
+    val parsed1 = pairLiterParser.runParser("null")
+    parsed1 match {
+      case Success(_)   =>
+      case Failure(msg) => fail(msg)
+    }
+
+    val parsed2 = pairLiterParser.runParser("not a pair liter")
+    val parsed3 = pairLiterParser.runParser("nul")
+
+    assert(parsed2.isFailure && parsed3.isFailure)
+  }
 
   "A comment parser" should "parse a '#'" in {
     val parsed = commentParser.runParser("#")
