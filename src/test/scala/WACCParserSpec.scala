@@ -49,7 +49,20 @@ class WACCParserSpec extends AnyFlatSpec {
 
   "An identifier parser" should "" in {}
 
-  "An array element parser" should "" in {}
+  "An array element parser" should "allow any array access of the form arrayName[expr1][expr2]...[exprN]" in {
+    assert(arrayElementParser.runParser("a[0]").isSuccess)
+    assert(arrayElementParser.runParser("aName[100]").isSuccess)
+    assert(arrayElementParser.runParser("arrayName[10+10]").isSuccess)
+    assert(arrayElementParser.runParser("a[100][100][100][100]").isSuccess)
+    assert(arrayElementParser.runParser("a[1+2+3][5-2][a]").isSuccess)
+  }
+  it should "fail to parse any badly constructed array access" in {
+    assert(arrayElementParser.runParser("a[]").isFailure)
+    assert(arrayElementParser.runParser("[]").isFailure)
+    assert(arrayElementParser.runParser("a[").isFailure)
+    assert(arrayElementParser.runParser("a[]]").isFailure)
+    assert(arrayElementParser.runParser("a[\n]").isFailure)
+  }
 
   "An integer literal parser" should "parse any number (sequence of digits)" in {
     assert(integerLiterParser.runParser("0").isSuccess)
