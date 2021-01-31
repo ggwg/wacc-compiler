@@ -59,7 +59,20 @@ class WACCParserSpec extends AnyFlatSpec {
 
   "A boolean literal parser" should "" in {}
 
-  "A character literal parser" should "" in {}
+  "A character literal parser" should "read a single default character surrounded in '\''" in {
+    val parsed = characterLiterParser.runParser("\'x\'")
+    parsed match {
+      case Success(character) =>
+        assert(character.char == 'x')
+      case Failure(msg) => fail(msg)
+    }
+  }
+  it should "fail to parse anything missing the simple quotes" in {
+    assert(characterLiterParser.runParser("\'x").isFailure)
+    assert(characterLiterParser.runParser("x\'").isFailure)
+    assert(characterLiterParser.runParser("x").isFailure)
+    assert(characterLiterParser.runParser("xyz").isFailure)
+  }
 
   "A string literal parser" should "parse any string enclosed in '\"'" in {
     val parsed = stringLiterParser.runParser("\"This is a valid string\"")
