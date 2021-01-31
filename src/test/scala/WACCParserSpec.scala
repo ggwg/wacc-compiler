@@ -1,7 +1,10 @@
 import org.scalatest.flatspec.AnyFlatSpec
 import WACCParser._
+import com.wacc.miscellaneous.Comment
+import parsley.{Success, Failure}
 
 class WACCParserSpec extends AnyFlatSpec {
+  val commentInput = "# This is a comment \n"
   "A program parser" should "" in {}
 
   "A function parser" should "" in {}
@@ -60,6 +63,33 @@ class WACCParserSpec extends AnyFlatSpec {
 
   "A pair literal parser" should "" in {}
 
-  "A comment parser" should "" in {}
-
+  "A comment parser" should "parse a '#'" in {
+    val parsed = commentParser.runParser("#")
+    parsed match {
+      case Success(comment) => assert(comment.comment.isEmpty)
+      case Failure(msg)     => fail(msg)
+    }
+  }
+  it should "parse any number of characters after a '#'" in {
+    val parsed = commentParser.runParser("#comment!")
+    parsed match {
+      case Success(comment) => assert(comment.comment.equals("comment!"))
+      case Failure(msg)     => fail(msg)
+    }
+  }
+  it should "stop after reaching an EOL character" in {
+    val parsed = commentParser.runParser(commentInput)
+    parsed match {
+      case Success(comment) =>
+        assert(comment.comment.equals(" This is a comment "))
+      case Failure(msg) => fail(msg)
+    }
+  }
+  it should "fail to parse a string not starting with '#'" in {
+    val parsed = commentParser.runParser("bad comment")
+    parsed match {
+      case Success(_) => fail("Parsed a non-comment")
+      case Failure(_) =>
+    }
+  }
 }
