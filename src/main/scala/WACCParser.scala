@@ -11,7 +11,7 @@ import parsley.character.{
   whitespace
 }
 import parsley.combinator.{attemptChoice, manyN, option}
-import parsley.expr.{InfixL, Ops, Prefix, precedence}
+import parsley.expr.{InfixL, Ops, Postfix, Prefix, precedence}
 import parsley.implicits.{voidImplicitly => _, _}
 import parsley.{Parsley, combinator}
 
@@ -180,9 +180,12 @@ object WACCParser {
   /* 〈type〉::=〈base-type〉
              | 〈array-type〉
              | 〈pair-type〉 */
-  lazy val typeParser: Parsley[Type] =
-    (pairTypeParser <\> arrayTypeParser <\> baseTypeParser) <* skipWhitespace
+  lazy val typeParser: Parsley[Type] = precedence[Type](
+    pairTypeParser <\> baseTypeParser,
+    Ops(Postfix)("[]" #> toArrayType)
+  ) <* skipWhitespace
 
+  lazy val toArrayType: Type => ArrayType = ArrayType(_)
   /* 〈base-type〉::= ‘int’
                    | ‘bool’
                    | ‘char’
@@ -194,7 +197,11 @@ object WACCParser {
 
   /*〈array-type〉::=〈type〉‘[’ ‘]’ */
   lazy val arrayTypeParser: Parsley[ArrayType] =
-    ArrayType.build.lift(typeParser <* '[' <* ']') <* skipWhitespace
+    ArrayType.build.lift(
+      lookAhead(
+        attemptChoice(baseTypeParser, pairTypeParser) *> "["
+      ) *> typeParser
+    ) <* skipWhitespace
 
   /*〈pair-type〉::=  ‘pair’ ‘(’〈pair-elem-type〉‘,’〈pair-elem-type〉‘)’ */
   lazy val pairTypeParser: Parsley[PairType] =
