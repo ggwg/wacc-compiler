@@ -181,7 +181,7 @@ object WACCParser {
              | 〈array-type〉
              | 〈pair-type〉 */
   lazy val typeParser: Parsley[Type] =
-    (baseTypeParser <\> arrayTypeParser <\> pairTypeParser) <* skipWhitespace
+    (pairTypeParser <\> arrayTypeParser <\> baseTypeParser) <* skipWhitespace
 
   /* 〈base-type〉::= ‘int’
                    | ‘bool’
@@ -199,17 +199,17 @@ object WACCParser {
   /*〈pair-type〉::=  ‘pair’ ‘(’〈pair-elem-type〉‘,’〈pair-elem-type〉‘)’ */
   lazy val pairTypeParser: Parsley[PairType] =
     PairType.build.lift(
-      "pair" *> skipWhitespace *> "(" *> pairElementTypeParser,
+      "pair" *> skipWhitespace *> "(" *> skipWhitespace *> pairElementTypeParser,
       "," *> skipWhitespace *> pairElementTypeParser <* ")"
     ) <* skipWhitespace
 
   /* 〈pair-elem-type〉::=〈base-type〉
-                       | 〈array-type〉
-                       | ‘pair’ */
+                       | ‘pair’
+                       | 〈array-type〉 */
   lazy val pairElementTypeParser: Parsley[PairElementType] =
-    (baseTypeParser <\> arrayTypeParser <\> PairDefault.build.lift(
+    (PairDefault.build.lift(
       "pair"
-    )) <* skipWhitespace
+    ) <\> (arrayTypeParser) <\> baseTypeParser) <* skipWhitespace
 
   /*〈expr〉::=〈int-liter〉
             | 〈bool-liter〉

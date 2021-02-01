@@ -24,15 +24,39 @@ class WACCParserSpec extends AnyFlatSpec {
 
   "A pair element parser" should "" in {}
 
-  "A type parser" should "" in {}
+  "A type parser" should "parse all valid types" in {
+    assert(typeParser.runParser("int").isSuccess)
+    assert(typeParser.runParser("bool[][]").isSuccess)
+    assert(typeParser.runParser("pair(int, char)").isSuccess)
+    assert(typeParser.runParser("pair(pair, string[][])[]").isSuccess)
+  }
 
-  "A base type parser" should "" in {}
+  "A base type parser" should "parse all base types" in {
+    assert(baseTypeParser.runParser("int").isSuccess)
+    assert(baseTypeParser.runParser("bool").isSuccess)
+    assert(baseTypeParser.runParser("char").isSuccess)
+    assert(baseTypeParser.runParser("string").isSuccess)
+  }
 
-  "An array type parser" should "" in {}
+  "An array type parser" should "parse any array type" in {
+    assert(arrayTypeParser.runParser("int[]").isSuccess)
+    assert(arrayTypeParser.runParser("string[][]").isSuccess)
+    assert(arrayTypeParser.runParser("pair(int, int)[]").isSuccess)
+    assert(arrayTypeParser.runParser("pair(pair, int[])[]").isSuccess)
+  }
 
-  "A pair type parser" should "" in {}
+  "A pair type parser" should "parse any valid pair type" in {
+    assert(pairTypeParser.runParser("pair(int, char)").isSuccess)
+    assert(pairTypeParser.runParser("pair(string, string)").isSuccess)
+    assert(pairTypeParser.runParser("pair(pair, pair)").isSuccess)
+    assert(pairTypeParser.runParser("pair(int[], string[][])").isSuccess)
+  }
 
-  "A pair element type parser" should "" in {}
+  "A pair element type parser" should "parse any valid pair element type" in {
+    assert(pairElementTypeParser.runParser("int").isSuccess)
+    assert(pairElementTypeParser.runParser("int[]").isSuccess)
+    assert(pairElementTypeParser.runParser("pair").isSuccess)
+  }
 
   "An expression parser" should "parse any literal" in {
     assert(expressionParser.runParser("-100").isSuccess)
