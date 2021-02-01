@@ -1,12 +1,6 @@
-import com.wacc.assignment._
-import com.wacc.binaryoperators._
-import com.wacc.expressions._
-import com.wacc.functions._
-import com.wacc.miscellaneous._
-import com.wacc.primitives._
-import com.wacc.statements._
-import com.wacc.types._
-import com.wacc.unaryoperators._
+import com.wacc
+import com.wacc._
+import com.wacc.operator.{BinaryOperator, UnaryOperator}
 import parsley.Parsley._
 import parsley.character.{alphaNum, letter, noneOf, satisfy}
 import parsley.combinator.{manyN, option}
@@ -21,18 +15,18 @@ object WACCParser {
     (("begin" *> combinator.many(
       functionParser
     )) <~> (statementParser <* "end")).map {
-      case (functions: List[Function], body: Statement) =>
+      case (functions: List[wacc.Function], body: Statement) =>
         new Program(functions, body)
     }
 
   /* 〈func〉::=〈type〉 〈ident〉‘(’〈param-list〉?  ‘)’ ‘is’〈stat〉‘end’ */
-  lazy val functionParser: Parsley[Function] = (
+  lazy val functionParser: Parsley[wacc.Function] = (
     typeParser <~>
       identifierParser <~>
       ('(' *> option(parameterListParser) <* ')') <~>
       ("is" *> statementParser <* "end")
   ).map { case (((functionType, functionName), optionParameters), body) =>
-    new Function(functionType, functionName, optionParameters, body)
+    new wacc.Function(functionType, functionName, optionParameters, body)
   }
 
   /* 〈param-list〉::=〈param〉( ‘,’〈param〉)* */
@@ -166,7 +160,7 @@ object WACCParser {
   lazy val pairElementTypeParser: Parsley[PairElementType] =
     baseTypeParser <\> arrayTypeParser <\> precedence
       .apply("pair")
-      .map(_ => new Pair())
+      .map(_ => new PairDefault())
 
   /*〈expr〉::=〈int-liter〉
             | 〈bool-liter〉

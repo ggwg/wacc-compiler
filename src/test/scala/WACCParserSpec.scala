@@ -1,14 +1,6 @@
 import org.scalatest.flatspec.AnyFlatSpec
 import WACCParser._
-import com.wacc.assignment._
-import com.wacc.binaryoperators._
-import com.wacc.expressions._
-import com.wacc.functions._
-import com.wacc.miscellaneous._
-import com.wacc.primitives._
-import com.wacc.statements._
-import com.wacc.types._
-import com.wacc.unaryoperators._
+import com.wacc.EscapedCharacter
 import parsley.{Failure, Success}
 
 class WACCParserSpec extends AnyFlatSpec {
