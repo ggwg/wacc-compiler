@@ -1,6 +1,14 @@
 package com.wacc
 
-import com.wacc.operator.{BinaryOperator, UnaryOperator}
+import com.wacc.operator.{
+  BinaryOperator,
+  Chr,
+  Length,
+  Negate,
+  Not,
+  Ord,
+  UnaryOperator
+}
 
 sealed trait Expression extends AssignmentRight {}
 sealed trait AssignmentRight {}
@@ -58,7 +66,10 @@ case class UnaryOperatorApplication(
     unaryOperator: UnaryOperator,
     expression: Expression
 ) extends Expression {
-  override def toString: String = unaryOperator.toString + expression.toString
+  override def toString: String = unaryOperator match {
+    case Chr() | Length() | Negate() => "(" + expression.toString + ")"
+    case Not() | Ord()               => expression.toString
+  }
 }
 
 case class ArrayLiter(expressions: List[Expression]) extends AssignmentRight {

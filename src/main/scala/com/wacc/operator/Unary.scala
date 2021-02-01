@@ -2,11 +2,21 @@ package com.wacc.operator
 
 sealed trait UnaryOperator
 
-case class Chr() extends UnaryOperator
-case class Length() extends UnaryOperator
-case class Negate() extends UnaryOperator
-case class Not() extends UnaryOperator
-case class Ord() extends UnaryOperator
+case class Chr() extends UnaryOperator {
+  override def toString: String = "chr"
+}
+case class Length() extends UnaryOperator {
+  override def toString: String = "len"
+}
+case class Negate() extends UnaryOperator {
+  override def toString: String = "-"
+}
+case class Not() extends UnaryOperator {
+  override def toString: String = "!"
+}
+case class Ord() extends UnaryOperator {
+  override def toString: String = "ord"
+}
 
 object UnaryOperator {
   val build: String => UnaryOperator = UnaryOperator(_)

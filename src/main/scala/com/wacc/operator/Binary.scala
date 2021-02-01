@@ -2,19 +2,45 @@ package com.wacc.operator
 
 trait BinaryOperator {}
 
-case class Add() extends BinaryOperator
-case class And() extends BinaryOperator
-case class Divide() extends BinaryOperator
-case class Equals() extends BinaryOperator
-case class GreaterEqualThan() extends BinaryOperator
-case class GreaterThan() extends BinaryOperator
-case class Modulo() extends BinaryOperator
-case class Multiply() extends BinaryOperator
-case class NotEquals() extends BinaryOperator
-case class Or() extends BinaryOperator
-case class SmallerEqualThan() extends BinaryOperator
-case class SmallerThan() extends BinaryOperator
-case class Subtract() extends BinaryOperator
+case class Add() extends BinaryOperator {
+  override def toString: String = "+"
+}
+case class And() extends BinaryOperator {
+  override def toString: String = "&&"
+}
+case class Divide() extends BinaryOperator {
+  override def toString: String = "/"
+}
+case class Equals() extends BinaryOperator {
+  override def toString: String = "=="
+}
+case class GreaterEqualThan() extends BinaryOperator {
+  override def toString: String = ">="
+}
+case class GreaterThan() extends BinaryOperator {
+  override def toString: String = ">"
+}
+case class Modulo() extends BinaryOperator {
+  override def toString: String = "%"
+}
+case class Multiply() extends BinaryOperator {
+  override def toString: String = "*"
+}
+case class NotEquals() extends BinaryOperator {
+  override def toString: String = "!="
+}
+case class Or() extends BinaryOperator {
+  override def toString: String = "||"
+}
+case class SmallerEqualThan() extends BinaryOperator {
+  override def toString: String = "<="
+}
+case class SmallerThan() extends BinaryOperator {
+  override def toString: String = "<"
+}
+case class Subtract() extends BinaryOperator {
+  override def toString: String = "-"
+}
 
 object BinaryOperator {
   val build: String => BinaryOperator = BinaryOperator(_)
