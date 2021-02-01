@@ -1,12 +1,5 @@
 import parsley.Parsley
 import Parsley._
-import com.wacc.assignment._
-import com.wacc.binaryoperators._
-import com.wacc.expressions._
-import com.wacc.miscellaneous._
-import com.wacc.primitives._
-import com.wacc.types._
-import com.wacc.unaryoperators._
 import parsley.character.{alphaNum, letter, noneOf}
 import parsley.combinator
 import parsley.combinator.{manyN, option}
@@ -24,12 +17,14 @@ object Main {
       println(line)
     }
 
-    val file2 = "src/main/resources/valid_examples/function/simple_functions/functionSimple.wacc"
+    val file2 =
+      "src/main/resources/valid_examples/function/simple_functions/functionSimple.wacc"
     for (line <- Source.fromFile(file2).getLines()) {
       println(line)
     }
 
-    val file3 = "src/main/resources/invalid_examples/syntaxErr/basic/badComment.wacc"
+    val file3 =
+      "src/main/resources/invalid_examples/syntaxErr/basic/badComment.wacc"
     for (line <- Source.fromFile(file3).getLines()) {
       println(line)
     }

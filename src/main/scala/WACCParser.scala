@@ -242,16 +242,16 @@ object WACCParser {
       ("-" <* skipWhitespace) #> binaryFunctionGenerator("-")
     ),
     Ops(InfixL)(
-      (">" <* skipWhitespace) #> binaryFunctionGenerator(">"),
-      (">=" <* skipWhitespace) #> binaryFunctionGenerator(">="),
-      ("<" <* skipWhitespace) #> binaryFunctionGenerator("<"),
-      ("<=" <* skipWhitespace) #> binaryFunctionGenerator("<="),
+      (attempt(">=") <* skipWhitespace) #> binaryFunctionGenerator(">="),
+      (attempt("<=") <* skipWhitespace) #> binaryFunctionGenerator("<="),
       ("==" <* skipWhitespace) #> binaryFunctionGenerator("=="),
-      ("!=" <* skipWhitespace) #> binaryFunctionGenerator("!=")
+      ("!=" <* skipWhitespace) #> binaryFunctionGenerator("!="),
+      (">" <* skipWhitespace) #> binaryFunctionGenerator(">"),
+      ("<" <* skipWhitespace) #> binaryFunctionGenerator("<")
     ),
     Ops(InfixL)(
-      ("&" <* skipWhitespace) #> binaryFunctionGenerator("+"),
-      ("-" <* skipWhitespace) #> binaryFunctionGenerator("-")
+      ("&&" <* skipWhitespace) #> binaryFunctionGenerator("&&"),
+      ("||" <* skipWhitespace) #> binaryFunctionGenerator("||")
     )
   ) <* skipWhitespace
 

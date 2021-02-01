@@ -34,7 +34,37 @@ class WACCParserSpec extends AnyFlatSpec {
 
   "A pair element type parser" should "" in {}
 
-  "An expression parser" should "" in {}
+  "An expression parser" should "parse any literal" in {
+    assert(expressionParser.runParser("-100").isSuccess)
+    assert(expressionParser.runParser("true").isSuccess)
+    assert(expressionParser.runParser("'x'").isSuccess)
+    assert(expressionParser.runParser("\"string\"").isSuccess)
+    assert(expressionParser.runParser("null").isSuccess)
+    assert(expressionParser.runParser("identifier").isSuccess)
+    assert(expressionParser.runParser("array[10][10]").isSuccess)
+  }
+  it should "parse any unary operator application" in {
+    assert(expressionParser.runParser("!true").isSuccess)
+    assert(expressionParser.runParser("--100").isSuccess)
+    assert(expressionParser.runParser("len(\"thisstring\")").isSuccess)
+    assert(expressionParser.runParser("ord('x')").isSuccess)
+    assert(expressionParser.runParser("chr(100)").isSuccess)
+  }
+  it should "parse any binary operator application" in {
+    for (op <- BinaryOperator.operators) {
+      assert(expressionParser.runParser("5 " + op + " 5").isSuccess)
+    }
+  }
+  it should "parse any complex expression" in {
+    assert(expressionParser.runParser("(1 + 2) * (3 + 4)").isSuccess)
+    assert(expressionParser.runParser("len(\"this\") + chr(111)").isSuccess)
+    assert(
+      expressionParser
+        .runParser("true && (false || (false && (ident)))")
+        .isSuccess
+    )
+    assert(expressionParser.runParser("(((((100)))))").isSuccess)
+  }
 
   "An unary operator parser" should "parse all unary operators" in {
     for (op <- UnaryOperator.operators) {
