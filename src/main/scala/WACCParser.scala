@@ -53,23 +53,25 @@ object WACCParser {
   /* 〈program〉::=  ‘begin’〈func〉*〈stat〉‘end’ */
   lazy val programParser: Parsley[Program] =
     Program.build.lift(
-      "begin" *> combinator.many(functionParser),
-      statementParser <* "end"
+      "begin" *> skipWhitespace *> combinator.many(functionParser),
+      statementParser <* "end" <* skipWhitespace
     )
 
   /* 〈func〉::=〈type〉 〈ident〉‘(’〈param-list〉?  ‘)’ ‘is’〈stat〉‘end’ */
   lazy val functionParser: Parsley[wacc.Function] = Function.build.lift(
     typeParser,
     identifierParser,
-    '(' *> option(parameterListParser) <* ')',
-    "is" *> statementParser <* "end"
+    '(' *> skipWhitespace *> option(
+      parameterListParser
+    ) <* ')' <* skipWhitespace,
+    "is" *> skipWhitespace *> statementParser <* "end" <* skipWhitespace
   )
 
   /* 〈param-list〉::=〈param〉( ‘,’〈param〉)* */
   lazy val parameterListParser: Parsley[ParameterList] =
     ParameterList.build.lift(
       parameterParser,
-      combinator.many(',' *> parameterParser)
+      combinator.many(',' *> skipWhitespace *> parameterParser)
     )
 
   /* 〈param〉::=〈type〉 〈ident〉 */
@@ -90,32 +92,50 @@ object WACCParser {
                | ‘begin’〈stat〉‘end’
                | 〈stat〉‘;’〈stat〉*/
   lazy val statementParser: Parsley[Statement] = precedence[Statement](
-    SkipStatement.build.lift("skip")
+    (SkipStatement.build.lift("skip") <* skipWhitespace)
       <\> IdentifierDeclaration.build
-        .lift(typeParser, identifierParser, "=" *> assignmentRightParser)
+        .lift(
+          typeParser,
+          identifierParser,
+          "=" *> skipWhitespace *> assignmentRightParser
+        )
       <\> Assignment.build
-        .lift(assignmentLeftParser, '=' *> assignmentRightParser)
-      <\> ("read" *> assignmentLeftParser).map(Read(_))
+        .lift(
+          assignmentLeftParser,
+          '=' *> skipWhitespace *> assignmentRightParser
+        )
+      <\> Read.build.lift("read" *> skipWhitespace *> assignmentLeftParser)
       <\> Statement.buildActionExpression.lift(
-        attemptChoice("free", "return", "exit", "print", "println"),
+        attemptChoice(
+          "free",
+          "return",
+          "exit",
+          "print",
+          "println"
+        ) <* skipWhitespace,
         expressionParser
       )
       <\> If.build.lift(
-        "if" *> expressionParser,
-        "then" *> statementParser,
-        "else" *> statementParser <* "fi"
+        "if" *> skipWhitespace *> expressionParser,
+        "then" *> skipWhitespace *> statementParser,
+        "else" *> skipWhitespace *> statementParser <* "fi" <* skipWhitespace
       )
       <\> While.build
-        .lift("while" *> expressionParser, "do" *> statementParser <* "done")
-      <\> BeginEnd.build.lift("begin" *> statementParser <* "end"),
-    Ops(InfixL)(";" #> StatementSequence.build)
-  )
+        .lift(
+          "while" *> skipWhitespace *> expressionParser,
+          "do" *> skipWhitespace *> statementParser <* "done" <* skipWhitespace
+        )
+      <\> BeginEnd.build.lift(
+        "begin" *> skipWhitespace *> statementParser <* "end" <* skipWhitespace
+      ),
+    Ops(InfixL)((";" <* skipWhitespace) #> StatementSequence.build)
+  ) <* skipWhitespace
 
   /* 〈assign-lhs〉::=〈ident〉
                    | 〈array-elem〉
                    | 〈pair-elem〉*/
   lazy val assignmentLeftParser: Parsley[AssignmentLeft] =
-    identifierParser <\> arrayElementParser <\> pairElementParser
+    (identifierParser <\> arrayElementParser <\> pairElementParser) <* skipWhitespace
 
   /* 〈assign-rhs〉::=〈expr〉
                    | 〈array-liter〉
@@ -123,63 +143,73 @@ object WACCParser {
                    | 〈pair-elem〉
                    | ‘call’〈ident〉‘(’〈arg-list〉?  ‘)’ */
   lazy val assignmentRightParser: Parsley[AssignmentRight] =
-    expressionParser <\> arrayLiterParser <\> newpairParser <\> pairElementParser <\> functionCallParser
+    (expressionParser <\> arrayLiterParser <\> newpairParser <\> pairElementParser <\> functionCallParser) <* skipWhitespace
 
   lazy val newpairParser: Parsley[NewPair] =
     NewPair.build.lift(
-      "newpair(" *> expressionParser,
-      ',' *> expressionParser <* ')'
+      "newpair" *> skipWhitespace *> "(" *> skipWhitespace *> expressionParser,
+      ',' *> skipWhitespace *> expressionParser <* ')' <* skipWhitespace
     )
 
   lazy val functionCallParser: Parsley[FunctionCall] =
     FunctionCall.build.lift(
-      "call" *> identifierParser,
-      '(' *> option(argumentListParser) <* ')'
+      "call" *> skipWhitespace *> identifierParser,
+      '(' *> skipWhitespace *> option(argumentListParser) <* ')'
     )
 
   /*〈arg-list〉::=〈expr〉(‘,’〈expr〉)* */
   lazy val argumentListParser: Parsley[ArgumentList] =
     ArgumentList.build.lift(
       expressionParser,
-      combinator.many(',' *> expressionParser)
+      combinator.many(',' *> skipWhitespace *> expressionParser)
     )
 
   /* 〈pair-elem〉::= ‘fst’〈expr〉
                     |‘snd’〈expr〉 */
   lazy val pairElementParser: Parsley[PairElement] = {
-    PairElement.build.lift("fst" *> expressionParser, "" #> true) <\>
-      PairElement.build.lift("snd" *> expressionParser, "" #> false)
+    PairElement.build.lift(
+      "fst" *> skipWhitespace *> expressionParser,
+      "" #> true
+    ) <\>
+      PairElement.build.lift(
+        "snd" *> skipWhitespace *> expressionParser,
+        "" #> false
+      )
   }
 
   /* 〈type〉::=〈base-type〉
              | 〈array-type〉
              | 〈pair-type〉 */
   lazy val typeParser: Parsley[Type] =
-    baseTypeParser <\> arrayTypeParser <\> pairTypeParser
+    (baseTypeParser <\> arrayTypeParser <\> pairTypeParser) <* skipWhitespace
 
   /* 〈base-type〉::= ‘int’
                    | ‘bool’
                    | ‘char’
                    | ‘string’ */
   lazy val baseTypeParser: Parsley[BaseType] =
-    BaseType.build.lift(attemptChoice(BaseType.types.map(attempt(_)): _*))
+    BaseType.build.lift(
+      attemptChoice(BaseType.types.map(attempt(_)): _*)
+    ) <* skipWhitespace
 
   /*〈array-type〉::=〈type〉‘[’ ‘]’ */
   lazy val arrayTypeParser: Parsley[ArrayType] =
-    ArrayType.build.lift(typeParser <* '[' <* ']')
+    ArrayType.build.lift(typeParser <* '[' <* ']') <* skipWhitespace
 
   /*〈pair-type〉::=  ‘pair’ ‘(’〈pair-elem-type〉‘,’〈pair-elem-type〉‘)’ */
   lazy val pairTypeParser: Parsley[PairType] =
     PairType.build.lift(
-      "pair(" *> pairElementTypeParser,
-      "," *> pairElementTypeParser <* ")"
-    )
+      "pair" *> skipWhitespace *> "(" *> pairElementTypeParser,
+      "," *> skipWhitespace *> pairElementTypeParser <* ")"
+    ) <* skipWhitespace
 
   /* 〈pair-elem-type〉::=〈base-type〉
                        | 〈array-type〉
                        | ‘pair’ */
   lazy val pairElementTypeParser: Parsley[PairElementType] =
-    baseTypeParser <\> arrayTypeParser <\> PairDefault.build.lift("pair")
+    (baseTypeParser <\> arrayTypeParser <\> PairDefault.build.lift(
+      "pair"
+    )) <* skipWhitespace
 
   /*〈expr〉::=〈int-liter〉
             | 〈bool-liter〉
@@ -201,32 +231,35 @@ object WACCParser {
       <\> identifierParser
       <\> arrayElementParser
       <\> unaryOperatorApplicationParser
-      <\> ("(" *> expressionParser <* ")"),
+      <\> ("(" *> skipWhitespace *> expressionParser <* ")"),
     Ops(InfixL)(
-      "*" #> binaryFunctionGenerator("*"),
-      "/" #> binaryFunctionGenerator("/"),
-      "%" #> binaryFunctionGenerator("%")
+      ("*" <* skipWhitespace) #> binaryFunctionGenerator("*"),
+      ("/" <* skipWhitespace) #> binaryFunctionGenerator("/"),
+      ("%" <* skipWhitespace) #> binaryFunctionGenerator("%")
     ),
     Ops(InfixL)(
-      "+" #> binaryFunctionGenerator("+"),
-      "-" #> binaryFunctionGenerator("-")
+      ("+" <* skipWhitespace) #> binaryFunctionGenerator("+"),
+      ("-" <* skipWhitespace) #> binaryFunctionGenerator("-")
     ),
     Ops(InfixL)(
-      ">" #> binaryFunctionGenerator(">"),
-      ">=" #> binaryFunctionGenerator(">="),
-      "<" #> binaryFunctionGenerator("<"),
-      "<=" #> binaryFunctionGenerator("<="),
-      "==" #> binaryFunctionGenerator("=="),
-      "!=" #> binaryFunctionGenerator("!=")
+      (">" <* skipWhitespace) #> binaryFunctionGenerator(">"),
+      (">=" <* skipWhitespace) #> binaryFunctionGenerator(">="),
+      ("<" <* skipWhitespace) #> binaryFunctionGenerator("<"),
+      ("<=" <* skipWhitespace) #> binaryFunctionGenerator("<="),
+      ("==" <* skipWhitespace) #> binaryFunctionGenerator("=="),
+      ("!=" <* skipWhitespace) #> binaryFunctionGenerator("!=")
     ),
     Ops(InfixL)(
-      "&" #> binaryFunctionGenerator("+"),
-      "-" #> binaryFunctionGenerator("-")
+      ("&" <* skipWhitespace) #> binaryFunctionGenerator("+"),
+      ("-" <* skipWhitespace) #> binaryFunctionGenerator("-")
     )
-  )
+  ) <* skipWhitespace
 
   lazy val unaryOperatorApplicationParser: Parsley[UnaryOperatorApplication] =
-    UnaryOperatorApplication.build.lift(unaryOperatorParser, expressionParser)
+    UnaryOperatorApplication.build.lift(
+      unaryOperatorParser,
+      expressionParser <* skipWhitespace
+    )
 
   lazy val binaryFunctionGenerator
       : String => (Expression, Expression) => BinaryOperatorApplication =
@@ -259,23 +292,34 @@ object WACCParser {
                     | ‘||’ */
   lazy val binaryOperatorParser: Parsley[BinaryOperator] =
     BinaryOperator.build.lift(
-      attemptChoice(BinaryOperator.operators.map(attempt(_)): _*)
+      attemptChoice(
+        BinaryOperator.operators.map(attempt(_)): _*
+      ) <* skipWhitespace
     )
 
   /*〈ident〉::=  ( ‘’|‘a’-‘z’|‘A’-‘Z’ ) ( ‘’|‘a’-‘z’|‘A’-‘Z’|‘0’-‘9’ )* */
   lazy val identifierParser: Parsley[Identifier] =
-    Identifier.build.lift('_' <\> letter, combinator.many('_' <\> alphaNum))
+    Identifier.build.lift(
+      '_' <\> letter,
+      combinator.many('_' <\> alphaNum) <* skipWhitespace
+    )
 
   /*〈array-elem〉::=〈ident〉(‘[’〈expr〉‘]’)+ */
   lazy val arrayElementParser: Parsley[ArrayElement] =
     ArrayElement.build.lift(
       identifierParser,
-      manyN(1, "[" *> expressionParser <* "]")
+      manyN(
+        1,
+        "[" *> skipWhitespace *> expressionParser <* "]"
+      ) <* skipWhitespace
     )
 
   /* 〈int-liter〉::=〈int-sign〉?〈digit〉+ */
   lazy val integerLiterParser: Parsley[IntegerLiter] =
-    IntegerLiter.build.lift(option(integerSignParser), manyN(1, digitParser))
+    IntegerLiter.build.lift(
+      option(integerSignParser),
+      manyN(1, digitParser) <* skipWhitespace
+    )
 
   /*〈digit〉::=  (‘0’-‘9’) */
   lazy val digitParser: Parsley[Digit] =
@@ -287,15 +331,17 @@ object WACCParser {
 
   /*〈bool-liter〉::=  ‘true’|‘false’ */
   lazy val booleanLiterParser: Parsley[BooleanLiter] =
-    BooleanLiter.build.lift("true" <\> "false")
+    BooleanLiter.build.lift(("true" <\> "false") <* skipWhitespace)
 
   /*〈char-liter〉::=  ‘'’〈character〉‘'’ */
   lazy val characterLiterParser: Parsley[CharacterLiter] =
-    CharacterLiter.build.lift("\'" *> defaultCharacterParser <* "\'")
+    CharacterLiter.build.lift(
+      "\'" *> defaultCharacterParser <* "\'" <* skipWhitespace
+    )
 
   /*〈str-liter〉::=  ‘"’〈character〉* ‘"’ */
   lazy val stringLiterParser: Parsley[StringLiter] = StringLiter.build.lift(
-    "\"" *> combinator.many(defaultCharacterParser) <* "\""
+    "\"" *> combinator.many(defaultCharacterParser) <* "\"" <* skipWhitespace
   )
 
   /*〈character〉::= any-ASCII-character-except-‘\’-‘'’-‘"’
@@ -323,14 +369,16 @@ object WACCParser {
 
   /*〈array-liter〉::= ‘[’ (〈expr〉(‘,’〈expr〉)* )?  ‘]’ */
   lazy val arrayLiterParser: Parsley[ArrayLiter] = ArrayLiter.build.lift(
-    "[" *> option(
-      expressionParser <~> combinator.many("," *> expressionParser)
-    ) <* "]"
+    "[" *> skipWhitespace *> option(
+      expressionParser <~> combinator.many(
+        "," *> skipWhitespace *> expressionParser
+      )
+    ) <* "]" <* skipWhitespace
   )
 
   /*〈pair-liter〉::=  ‘null’ */
   lazy val pairLiterParser: Parsley[PairLiter] =
-    PairLiter.build.lift("null")
+    PairLiter.build.lift("null" <* skipWhitespace)
 
   /* 〈comment〉::=  ‘#’ (any-character-except-EOL)*〈EOL〉 */
   lazy val commentParser: Parsley[Comment] =
