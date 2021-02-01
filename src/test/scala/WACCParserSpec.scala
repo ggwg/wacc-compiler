@@ -36,7 +36,17 @@ class WACCParserSpec extends AnyFlatSpec {
 
   "An expression parser" should "" in {}
 
-  "An unary operator parser" should "" in {}
+  "An unary operator parser" should "parse all unary operators" in {
+    for (op <- UnaryOperator.operators) {
+      println(op)
+      assert(unaryOperatorParser.runParser(op).get.equals(UnaryOperator(op)))
+    }
+  }
+  it should "not parse anything else" in {
+    assert(unaryOperatorParser.runParser("xyz").isFailure)
+    assert(unaryOperatorParser.runParser("123").isFailure)
+    assert(unaryOperatorParser.runParser("\n ==").isFailure)
+  }
 
   "A binary operator parser" should "parse all binary operators" in {
     for (op <- BinaryOperator.operators) {

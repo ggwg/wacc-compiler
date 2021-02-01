@@ -45,7 +45,7 @@ case class Subtract() extends BinaryOperator {
 object BinaryOperator {
   val build: String => BinaryOperator = BinaryOperator(_)
   val operators =
-    List("*", "/", "%", "+", "-", ">", ">+", "<", "<=", "==", "!=", "&&", "||")
+    List(">=", "<=", "==", "!=", "&&", "||", "*", "/", "%", "+", "-", ">", "<")
   def apply(operator: String): BinaryOperator = operator match {
     case "*"  => Multiply()
     case "/"  => Divide()
