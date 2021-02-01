@@ -112,11 +112,13 @@ object BinaryOperatorApplication {
 }
 
 object BooleanLiter {
-  val build: (Boolean => BooleanLiter) = BooleanLiter(_)
+  val build: (String => BooleanLiter) = bool =>
+    BooleanLiter(bool.equals("true"))
 }
 
 object CharacterLiter {
-  val build: (Char => CharacterLiter) = CharacterLiter(_)
+  val build: (DefaultCharacter => CharacterLiter) = chr =>
+    CharacterLiter(chr.char)
 }
 
 object Identifier {

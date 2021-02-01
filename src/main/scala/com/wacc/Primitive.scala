@@ -24,6 +24,7 @@ object DefaultCharacter {
 }
 
 object Digit {
+  val digits = "0123456789"
   val build: (Char) => Digit = Digit(_)
 }
 

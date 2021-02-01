@@ -38,7 +38,8 @@ object Function {
 }
 
 object ParameterList {
-  val build: List[Parameter] => ParameterList = ParameterList(_)
+  val build: (Parameter, List[Parameter]) => ParameterList = (p, ps) =>
+    ParameterList(p :: ps)
 }
 
 object Parameter {

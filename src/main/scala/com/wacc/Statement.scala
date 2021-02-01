@@ -74,6 +74,16 @@ case class While(condition: Expression, statement: Statement)
     "while " + condition.toString + " do\n" + statement.toString + "done\n"
 }
 
+object Statement {
+  val buildActionExpression: (String, Expression) => Statement = {
+    case ("free", e)    => Free(e)
+    case ("return", e)  => Return(e)
+    case ("exit", e)    => Exit(e)
+    case ("print", e)   => Print(e)
+    case ("println", e) => Println(e)
+  }
+}
+
 object Assignment {
   val build: (AssignmentLeft, AssignmentRight) => Assignment = Assignment(_, _)
 }
