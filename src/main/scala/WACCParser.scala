@@ -2,7 +2,14 @@ import com.wacc
 import com.wacc._
 import com.wacc.operator.{BinaryOperator, UnaryOperator}
 import parsley.Parsley._
-import parsley.character.{alphaNum, anyChar, letter, noneOf, satisfy}
+import parsley.character.{
+  alphaNum,
+  anyChar,
+  letter,
+  noneOf,
+  satisfy,
+  whitespace
+}
 import parsley.combinator.{attemptChoice, manyN, option}
 import parsley.expr.{InfixL, Ops, precedence}
 import parsley.implicits.{voidImplicitly => _, _}
@@ -328,6 +335,9 @@ object WACCParser {
   /* 〈comment〉::=  ‘#’ (any-character-except-EOL)*〈EOL〉 */
   lazy val commentParser: Parsley[Comment] =
     Comment.build.lift('#' *> combinator.manyUntil(anyChar, "\n"))
+
+  lazy val skipWhitespace: Parsley[Unit] =
+    combinator.skipMany(whitespace <\> commentParser).hide
 
   def main(args: Array[String]): Unit = {
     // Testing the parser on some example inputs
