@@ -39,7 +39,29 @@ class WACCParserSpec extends AnyFlatSpec {
 
   "A binary operator parser" should "" in {}
 
-  "An identifier parser" should "" in {}
+  "An identifier parser" should "parse valid one character strings" in {
+    assert(identifierParser.runParser("_").isSuccess)
+    assert(identifierParser.runParser("x").isSuccess)
+    assert(identifierParser.runParser("X").isSuccess)
+  }
+  it should "parse any alphanumeric valid identifier string" in {
+    assert(identifierParser.runParser("aVariableName").isSuccess)
+    assert(
+      identifierParser.runParser("aNameContainingNumbers0123456789").isSuccess
+    )
+    assert(identifierParser.runParser("_NameContainingUnderscore_").isSuccess)
+    assert(identifierParser.runParser("RandomLetters_34fsdf5JF9e7").isSuccess)
+  }
+  it should "fail to parse strings starting with digits" in {
+    assert(identifierParser.runParser("0name").isFailure)
+    assert(identifierParser.runParser("4name").isFailure)
+    assert(identifierParser.runParser("9name").isFailure)
+  }
+  it should "fail to parse any keyword" in {
+    for (keyword <- keywords) {
+      assert(identifierParser.runParser(keyword).isFailure)
+    }
+  }
 
   "An array element parser" should "allow any array access of the form arrayName[expr1][expr2]...[exprN]" in {
     assert(arrayElementParser.runParser("a[0]").isSuccess)
