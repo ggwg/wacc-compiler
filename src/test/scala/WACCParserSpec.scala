@@ -1,5 +1,6 @@
 import org.scalatest.flatspec.AnyFlatSpec
 import WACCParser._
+import com.wacc.operator._
 import com.wacc.EscapedCharacter
 import parsley.{Failure, Success}
 
@@ -37,7 +38,17 @@ class WACCParserSpec extends AnyFlatSpec {
 
   "An unary operator parser" should "" in {}
 
-  "A binary operator parser" should "" in {}
+  "A binary operator parser" should "parse all binary operators" in {
+    for (op <- BinaryOperator.operators) {
+      println(op)
+      assert(binaryOperatorParser.runParser(op).get.equals(BinaryOperator(op)))
+    }
+  }
+  it should "not parse anything else" in {
+    assert(binaryOperatorParser.runParser("xyz").isFailure)
+    assert(binaryOperatorParser.runParser("123").isFailure)
+    assert(binaryOperatorParser.runParser("\n ==").isFailure)
+  }
 
   "An identifier parser" should "parse valid one character strings" in {
     assert(identifierParser.runParser("_").isSuccess)
@@ -61,6 +72,11 @@ class WACCParserSpec extends AnyFlatSpec {
     for (keyword <- keywords) {
       assert(identifierParser.runParser(keyword).isFailure)
     }
+  }
+  it should "parse identifiers with keywords as substrings" in {
+    assert(identifierParser.runParser("truetrue").isSuccess)
+    assert(identifierParser.runParser("while0").isSuccess)
+    assert(identifierParser.runParser("xlen").isSuccess)
   }
 
   "An array element parser" should "allow any array access of the form arrayName[expr1][expr2]...[exprN]" in {
