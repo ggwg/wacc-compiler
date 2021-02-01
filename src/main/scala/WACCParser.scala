@@ -2,8 +2,8 @@ import com.wacc
 import com.wacc._
 import com.wacc.operator.{BinaryOperator, UnaryOperator}
 import parsley.Parsley._
-import parsley.character.{alphaNum, letter, noneOf, satisfy}
-import parsley.combinator.{manyN, option}
+import parsley.character.{alphaNum, anyChar, letter, noneOf, satisfy}
+import parsley.combinator.{attemptChoice, manyN, option}
 import parsley.expr.{InfixL, Ops, precedence}
 import parsley.implicits.{voidImplicitly => _, _}
 import parsley.{Parsley, combinator}
@@ -70,12 +70,12 @@ object WACCParser {
         case (assignmentLeft, assignmentRight) =>
           Assignment(assignmentLeft, assignmentRight)
       }
-      <\> ("read" *> assignmentLeftParser).map(Read)
-      <\> ("free" *> expressionParser).map(Free)
-      <\> ("return" *> expressionParser).map(Return)
-      <\> ("exit" *> expressionParser).map(Exit)
-      <\> ("print" *> expressionParser).map(Print)
-      <\> ("println" *> expressionParser).map(Println)
+      <\> ("read" *> assignmentLeftParser).map(Read(_))
+      <\> ("free" *> expressionParser).map(Free(_))
+      <\> ("return" *> expressionParser).map(Return(_))
+      <\> ("exit" *> expressionParser).map(Exit(_))
+      <\> ("print" *> expressionParser).map(Print(_))
+      <\> ("println" *> expressionParser).map(Println(_))
       <\> (("if" *> expressionParser) <~> ("then" *> statementParser) <~> ("else" *> statementParser <* "fi"))
         .map { case ((condition, statement1), statement2) =>
           If(condition, statement1, statement2)
@@ -84,8 +84,8 @@ object WACCParser {
         .map { case (condition, statement) =>
           While(condition, statement)
         }
-      <\> ("begin" *> statementParser <* "end").map(BeginEnd),
-    Ops(InfixL)(";" #> StatementSequence)
+      <\> ("begin" *> statementParser <* "end").map(BeginEnd(_)),
+    Ops(InfixL)(";" #> StatementSequence.build)
   )
 
   /* 〈assign-lhs〉::=〈ident〉
@@ -125,10 +125,10 @@ object WACCParser {
 
   /* 〈pair-elem〉::= ‘fst’〈expr〉
                     |‘snd’〈expr〉 */
-  lazy val pairElementParser: Parsley[PairElement] =
-    (("fst" *> expressionParser) <~> ("snd" *> expressionParser)).map {
-      case (expr1, expr2) => PairElement(expr1, expr2)
-    }
+  lazy val pairElementParser: Parsley[PairElement] = {
+    PairElement.build.lift("fst" *> expressionParser, "" #> true) <\>
+      PairElement.build.lift("snd" *> expressionParser, "" #> false)
+  }
 
   /* 〈type〉::=〈base-type〉
              | 〈array-type〉
@@ -141,11 +141,11 @@ object WACCParser {
                    | ‘char’
                    | ‘string’ */
   lazy val baseTypeParser: Parsley[BaseType] =
-    ("int" <\> "bool" <\> "char" <\> "string").map(BaseType(_))
+    BaseType.build.lift(attemptChoice(BaseType.types.map(attempt(_)): _*))
 
   /*〈array-type〉::=〈type〉‘[’ ‘]’ */
   lazy val arrayTypeParser: Parsley[ArrayType] =
-    (typeParser <* '[' <* ']').map(ArrayType)
+    (typeParser <* '[' <* ']').map(ArrayType(_))
 
   /*〈pair-type〉::=  ‘pair’ ‘(’〈pair-elem-type〉‘,’〈pair-elem-type〉‘)’ */
   lazy val pairTypeParser: Parsley[PairType] =
@@ -267,7 +267,7 @@ object WACCParser {
   /*〈digit〉::=  (‘0’-‘9’) */
   lazy val digitParser: Parsley[Digit] =
     ('0' <\> '1' <\> '2' <\> '3' <\> '4' <\> '5' <\> '6' <\> '7' <\> '8' <\> '9')
-      .map(Digit)
+      .map(Digit(_))
 
   /*〈int-sign〉::=  ‘+’|‘-’ */
   lazy val integerSignParser: Parsley[IntegerSign] =
@@ -295,11 +295,11 @@ object WACCParser {
   /*〈character〉::= any-ASCII-character-except-‘\’-‘'’-‘"’
                   | ‘\’〈escaped-char〉*/
   lazy val defaultCharacterParser: Parsley[DefaultCharacter] =
-    noneOf('\\', '\'', '\"').map(
-      DefaultCharacter(_, isEscaped = false)
-    ) <\> ('\\' *> escapedCharParser).map(escapedCharacter =>
-      DefaultCharacter(escapedCharacter.char, isEscaped = true)
-    )
+    DefaultCharacter.build.lift(noneOf('\\', '\'', '\"'), "" #> false) <\>
+      DefaultCharacter.build.lift(
+        ('\\' *> escapedCharParser).map(esc => esc.char),
+        "" #> true
+      )
 
   /*〈escaped-char〉::= ‘0’
                      | ‘b’
@@ -311,26 +311,24 @@ object WACCParser {
                      | ‘'’
                      | ‘\’ */
   lazy val escapedCharParser: Parsley[EscapedCharacter] =
-    satisfy(EscapedCharacter.escapableCharacters.contains(_))
-      .map(EscapedCharacter(_))
+    EscapedCharacter.build.lift(
+      satisfy(EscapedCharacter.escapableCharacters.contains(_))
+    )
 
   /*〈array-liter〉::= ‘[’ (〈expr〉(‘,’〈expr〉)* )?  ‘]’ */
-  lazy val arrayLiterParser: Parsley[ArrayLiter] = ("[" *> option(
-    expressionParser <~> combinator.many("," *> expressionParser)
-  ) <* "]").map {
-    case None => ArrayLiter(List())
-    case Some((expression: Expression, expressions: List[Expression])) =>
-      ArrayLiter(expression :: expressions)
-  }
+  lazy val arrayLiterParser: Parsley[ArrayLiter] = ArrayLiter.build.lift(
+    "[" *> option(
+      expressionParser <~> combinator.many("," *> expressionParser)
+    ) <* "]"
+  )
 
   /*〈pair-liter〉::=  ‘null’ */
   lazy val pairLiterParser: Parsley[PairLiter] =
-    precedence.apply("null").map(_ => PairLiter())
+    PairLiter.build.lift("null")
 
   /* 〈comment〉::=  ‘#’ (any-character-except-EOL)*〈EOL〉 */
   lazy val commentParser: Parsley[Comment] =
-    ('#' *> combinator.many(noneOf('\n')))
-      .map(comment => Comment(comment.mkString("")))
+    Comment.build.lift('#' *> combinator.manyUntil(anyChar, "\n"))
 
   def main(args: Array[String]): Unit = {
     // Testing the parser on some example inputs

@@ -165,14 +165,14 @@ class WACCParserSpec extends AnyFlatSpec {
   }
 
   "A comment parser" should "parse a '#'" in {
-    val parsed = commentParser.runParser("#")
+    val parsed = commentParser.runParser("#\n")
     parsed match {
       case Success(comment) => assert(comment.comment.isEmpty)
       case Failure(msg)     => fail(msg)
     }
   }
   it should "parse any number of characters after a '#'" in {
-    val parsed = commentParser.runParser("#comment!")
+    val parsed = commentParser.runParser("#comment!\n")
     parsed match {
       case Success(comment) => assert(comment.comment.equals("comment!"))
       case Failure(msg)     => fail(msg)
