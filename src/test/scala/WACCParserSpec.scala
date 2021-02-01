@@ -22,7 +22,10 @@ class WACCParserSpec extends AnyFlatSpec {
 
   "An argument list parser" should "" in {}
 
-  "A pair element parser" should "" in {}
+  "A pair element parser" should "parse strings of the form ('fst' | 'snd') expression" in {
+    assert(pairElementParser.runParser("fst 1").isSuccess)
+    assert(pairElementParser.runParser("snd (len(chr(ord(xyz))))").isSuccess)
+  }
 
   "A type parser" should "parse all valid types" in {
     assert(typeParser.runParser("int").isSuccess)
@@ -88,6 +91,7 @@ class WACCParserSpec extends AnyFlatSpec {
         .isSuccess
     )
     assert(expressionParser.runParser("(((((100)))))").isSuccess)
+    assert(expressionParser.runParser("((1 + 2)+len(3))").isSuccess)
   }
 
   "An unary operator parser" should "parse all unary operators" in {

@@ -11,7 +11,7 @@ import parsley.character.{
   whitespace
 }
 import parsley.combinator.{attemptChoice, manyN, option}
-import parsley.expr.{InfixL, Ops, precedence}
+import parsley.expr.{InfixL, Ops, Prefix, precedence}
 import parsley.implicits.{voidImplicitly => _, _}
 import parsley.{Parsley, combinator}
 
@@ -169,11 +169,11 @@ object WACCParser {
   lazy val pairElementParser: Parsley[PairElement] = {
     PairElement.build.lift(
       "fst" *> skipWhitespace *> expressionParser,
-      "" #> true
+      unit.map(_ => true)
     ) <\>
       PairElement.build.lift(
         "snd" *> skipWhitespace *> expressionParser,
-        "" #> false
+        unit.map(_ => false)
       )
   }
 
@@ -223,15 +223,21 @@ object WACCParser {
             | ‘(’〈expr〉‘)’ */
 
   lazy val expressionParser: Parsley[Expression] = precedence[Expression](
-    integerLiterParser
-      <\> booleanLiterParser
-      <\> characterLiterParser
-      <\> stringLiterParser
-      <\> pairLiterParser
-      <\> identifierParser
-      <\> arrayElementParser
-      <\> unaryOperatorApplicationParser
-      <\> ("(" *> skipWhitespace *> expressionParser <* ")"),
+    attempt("(" *> skipWhitespace *> expressionParser <* ")")
+      <\> attempt(integerLiterParser)
+      <\> attempt(booleanLiterParser)
+      <\> attempt(characterLiterParser)
+      <\> attempt(stringLiterParser)
+      <\> attempt(pairLiterParser)
+      <\> attempt(arrayElementParser)
+      <\> attempt(identifierParser),
+    Ops(Prefix)(
+      ("!" <* skipWhitespace) #> unaryFunctionGenerator("!"),
+      ("-" <* skipWhitespace) #> unaryFunctionGenerator("-"),
+      ("len" <* skipWhitespace) #> unaryFunctionGenerator("len"),
+      ("ord" <* skipWhitespace) #> unaryFunctionGenerator("ord"),
+      ("chr" <* skipWhitespace) #> unaryFunctionGenerator("chr")
+    ),
     Ops(InfixL)(
       ("*" <* skipWhitespace) #> binaryFunctionGenerator("*"),
       ("/" <* skipWhitespace) #> binaryFunctionGenerator("/"),
@@ -255,11 +261,11 @@ object WACCParser {
     )
   ) <* skipWhitespace
 
-  lazy val unaryOperatorApplicationParser: Parsley[UnaryOperatorApplication] =
-    UnaryOperatorApplication.build.lift(
-      unaryOperatorParser,
-      expressionParser <* skipWhitespace
-    )
+  lazy val unaryFunctionGenerator
+      : String => Expression => UnaryOperatorApplication =
+    (operator: String) =>
+      (expr: Expression) =>
+        UnaryOperatorApplication(UnaryOperator(operator), expr)
 
   lazy val binaryFunctionGenerator
       : String => (Expression, Expression) => BinaryOperatorApplication =
