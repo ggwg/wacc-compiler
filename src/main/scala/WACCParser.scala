@@ -9,6 +9,39 @@ import parsley.implicits.{voidImplicitly => _, _}
 import parsley.{Parsley, combinator}
 
 object WACCParser {
+  val keywords = List(
+    "begin",
+    "end",
+    "is",
+    "skip",
+    "read",
+    "free",
+    "return",
+    "exit",
+    "print",
+    "println",
+    "if",
+    "then",
+    "else",
+    "fi",
+    "while",
+    "do",
+    "done",
+    "newpair",
+    "call",
+    "fst",
+    "snd",
+    "int",
+    "bool",
+    "char",
+    "string",
+    "pair",
+    "len",
+    "ord",
+    "chr",
+    "true",
+    "false"
+  )
 
   /* 〈program〉::=  ‘begin’〈func〉*〈stat〉‘end’ */
   lazy val programParser: Parsley[Program] =
