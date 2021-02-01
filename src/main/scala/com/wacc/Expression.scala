@@ -7,38 +7,36 @@ sealed trait AssignmentRight {}
 sealed trait AssignmentLeft {}
 
 case class ArrayElement(
-    val identifier: Identifier,
-    val expressions: List[Expression]
+    identifier: Identifier,
+    expressions: List[Expression]
 ) extends Expression
     with AssignmentLeft
 
 case class BinaryOperatorApplication(
-    val expression1: Expression,
-    val binaryOperator: BinaryOperator,
-    val expression2: Expression
+    expression1: Expression,
+    binaryOperator: BinaryOperator,
+    expression2: Expression
 ) extends Expression
 
-case class BooleanLiter(val boolean: Boolean) extends Expression
+case class BooleanLiter(boolean: Boolean) extends Expression
 
-case class CharacterLiter(val char: Char) extends Expression
+case class CharacterLiter(char: Char) extends Expression
 
-case class Identifier(val identifier: String)
-    extends Expression
-    with AssignmentLeft
+case class Identifier(identifier: String) extends Expression with AssignmentLeft
 
-case class IntegerLiter(sign: Option[IntegerSign], val digits: List[Digit])
+case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit])
     extends Expression
 
 case class PairLiter() extends Expression
 
-case class StringLiter(val string: String) extends Expression
+case class StringLiter(string: String) extends Expression
 
 case class UnaryOperatorApplication(
-    val unaryOperator: UnaryOperator,
-    val expression: Expression
+    unaryOperator: UnaryOperator,
+    expression: Expression
 ) extends Expression
 
-case class ArrayLiter(val expressions: List[Expression]) extends AssignmentRight
+case class ArrayLiter(expressions: List[Expression]) extends AssignmentRight
 
 case class FunctionCall(identifier: Identifier, arguments: Option[ArgumentList])
     extends AssignmentRight
@@ -46,8 +44,8 @@ case class FunctionCall(identifier: Identifier, arguments: Option[ArgumentList])
 case class NewPair(expression1: Expression, expression2: Expression)
     extends AssignmentRight
 
-case class PairElement(val firstField: Expression, val secondField: Expression)
+case class PairElement(firstField: Expression, secondField: Expression)
     extends AssignmentRight
     with AssignmentLeft
 
-case class ArgumentList(val expressions: List[Expression])
+case class ArgumentList(expressions: List[Expression])

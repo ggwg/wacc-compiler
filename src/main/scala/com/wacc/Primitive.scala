@@ -1,12 +1,12 @@
 package com.wacc
 
-case class DefaultCharacter(val char: Char, val isEscaped: Boolean)
+case class DefaultCharacter(char: Char, isEscaped: Boolean)
 
-case class Digit(val digit: Char)
+case class Digit(digit: Char)
 
-case class EscapedCharacter(val char: Char)
+case class EscapedCharacter(char: Char)
 
-case class IntegerSign(val sign: Char)
+case class IntegerSign(sign: Char)
 
 object EscapedCharacter {
   val escapableCharacters = "0btnfr\"\'\\"

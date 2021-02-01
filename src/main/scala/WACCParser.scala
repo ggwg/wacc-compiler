@@ -5,7 +5,7 @@ import parsley.Parsley._
 import parsley.character.{alphaNum, letter, noneOf, satisfy}
 import parsley.combinator.{manyN, option}
 import parsley.expr.{InfixL, Ops, precedence}
-import parsley.implicits._
+import parsley.implicits.{voidImplicitly => _, _}
 import parsley.{Parsley, combinator}
 
 object WACCParser {
@@ -16,7 +16,7 @@ object WACCParser {
       functionParser
     )) <~> (statementParser <* "end")).map {
       case (functions: List[wacc.Function], body: Statement) =>
-        new Program(functions, body)
+        Program(functions, body)
     }
 
   /* 〈func〉::=〈type〉 〈ident〉‘(’〈param-list〉?  ‘)’ ‘is’〈stat〉‘end’ */
@@ -26,21 +26,21 @@ object WACCParser {
       ('(' *> option(parameterListParser) <* ')') <~>
       ("is" *> statementParser <* "end")
   ).map { case (((functionType, functionName), optionParameters), body) =>
-    new wacc.Function(functionType, functionName, optionParameters, body)
+    wacc.Function(functionType, functionName, optionParameters, body)
   }
 
   /* 〈param-list〉::=〈param〉( ‘,’〈param〉)* */
   lazy val parameterListParser: Parsley[ParameterList] =
     (parameterParser <~> combinator.many(',' *> parameterParser)).map {
       case (parameter: Parameter, parameters: List[Parameter]) =>
-        new ParameterList(parameter :: parameters)
+        ParameterList(parameter :: parameters)
     }
 
   /* 〈param〉::=〈type〉 〈ident〉 */
   lazy val parameterParser: Parsley[Parameter] =
     (typeParser <~> identifierParser).map {
       case (parameterType, parameterName) =>
-        new Parameter(parameterType, parameterName)
+        Parameter(parameterType, parameterName)
     }
 
   /* 〈stat〉::=  ‘skip’
@@ -57,10 +57,10 @@ object WACCParser {
                | ‘begin’〈stat〉‘end’
                | 〈stat〉‘;’〈stat〉*/
   lazy val statementParser: Parsley[Statement] = precedence[Statement](
-    precedence.apply("skip").map(_ => new SkipStatement())
+    precedence.apply("skip").map(_ => SkipStatement())
       <\> (typeParser <~> identifierParser <~> ("=" *> assignmentRightParser))
         .map { case ((identifierType, identifierName), assignmentRight) =>
-          new IdentifierDeclaration(
+          IdentifierDeclaration(
             identifierType,
             identifierName,
             assignmentRight
@@ -68,24 +68,24 @@ object WACCParser {
         }
       <\> (assignmentLeftParser <~> ('=' *> assignmentRightParser)).map {
         case (assignmentLeft, assignmentRight) =>
-          new Assignment(assignmentLeft, assignmentRight)
+          Assignment(assignmentLeft, assignmentRight)
       }
-      <\> ("read" *> assignmentLeftParser).map(new Read(_))
-      <\> ("free" *> expressionParser).map(new Free(_))
-      <\> ("return" *> expressionParser).map(new Return(_))
-      <\> ("exit" *> expressionParser).map(new Exit(_))
-      <\> ("print" *> expressionParser).map(new Print(_))
-      <\> ("println" *> expressionParser).map(new Println(_))
+      <\> ("read" *> assignmentLeftParser).map(Read)
+      <\> ("free" *> expressionParser).map(Free)
+      <\> ("return" *> expressionParser).map(Return)
+      <\> ("exit" *> expressionParser).map(Exit)
+      <\> ("print" *> expressionParser).map(Print)
+      <\> ("println" *> expressionParser).map(Println)
       <\> (("if" *> expressionParser) <~> ("then" *> statementParser) <~> ("else" *> statementParser <* "fi"))
         .map { case ((condition, statement1), statement2) =>
-          new If(condition, statement1, statement2)
+          If(condition, statement1, statement2)
         }
       <\> (("while" *> expressionParser) <~> ("do" *> statementParser <* "done"))
         .map { case (condition, statement) =>
-          new While(condition, statement)
+          While(condition, statement)
         }
-      <\> ("begin" *> statementParser <* "end").map(new BeginEnd(_)),
-    Ops(InfixL)(";" #> (new StatementSequence(_, _)))
+      <\> ("begin" *> statementParser <* "end").map(BeginEnd),
+    Ops(InfixL)(";" #> StatementSequence)
   )
 
   /* 〈assign-lhs〉::=〈ident〉
@@ -105,7 +105,7 @@ object WACCParser {
   lazy val newpairParser: Parsley[NewPair] =
     (("newpair(" *> expressionParser) <~> (',' *> expressionParser <* ')'))
       .map { case (expr1: Expression, expr2: Expression) =>
-        new NewPair(expr1, expr2)
+        NewPair(expr1, expr2)
       }
 
   lazy val functionCallParser: Parsley[FunctionCall] =
@@ -113,21 +113,21 @@ object WACCParser {
       argumentListParser
     ) <* ')')).map {
       case (identifier: Identifier, optionArguments: Option[ArgumentList]) =>
-        new FunctionCall(identifier, optionArguments)
+        FunctionCall(identifier, optionArguments)
     }
 
   /*〈arg-list〉::=〈expr〉(‘,’〈expr〉)* */
   lazy val argumentListParser: Parsley[ArgumentList] =
     (expressionParser <~> combinator.many(',' *> expressionParser)).map {
       case (expression: Expression, expressions: List[Expression]) =>
-        new ArgumentList(expression :: expressions)
+        ArgumentList(expression :: expressions)
     }
 
   /* 〈pair-elem〉::= ‘fst’〈expr〉
                     |‘snd’〈expr〉 */
   lazy val pairElementParser: Parsley[PairElement] =
     (("fst" *> expressionParser) <~> ("snd" *> expressionParser)).map {
-      case (expr1, expr2) => new PairElement(expr1, expr2)
+      case (expr1, expr2) => PairElement(expr1, expr2)
     }
 
   /* 〈type〉::=〈base-type〉
@@ -145,13 +145,13 @@ object WACCParser {
 
   /*〈array-type〉::=〈type〉‘[’ ‘]’ */
   lazy val arrayTypeParser: Parsley[ArrayType] =
-    (typeParser <* '[' <* ']').map(new ArrayType(_))
+    (typeParser <* '[' <* ']').map(ArrayType)
 
   /*〈pair-type〉::=  ‘pair’ ‘(’〈pair-elem-type〉‘,’〈pair-elem-type〉‘)’ */
   lazy val pairTypeParser: Parsley[PairType] =
     (("pair(" *> pairElementTypeParser) <~> ("," *> pairElementTypeParser <* ")"))
       .map { case (type1, type2) =>
-        new PairType(type1, type2)
+        PairType(type1, type2)
       }
 
   /* 〈pair-elem-type〉::=〈base-type〉
@@ -160,7 +160,7 @@ object WACCParser {
   lazy val pairElementTypeParser: Parsley[PairElementType] =
     baseTypeParser <\> arrayTypeParser <\> precedence
       .apply("pair")
-      .map(_ => new PairDefault())
+      .map(_ => PairDefault())
 
   /*〈expr〉::=〈int-liter〉
             | 〈bool-liter〉
@@ -209,14 +209,14 @@ object WACCParser {
   lazy val unaryOperatorApplicationParser: Parsley[UnaryOperatorApplication] =
     (unaryOperatorParser <~> expressionParser).map {
       case (operator, expression) =>
-        new UnaryOperatorApplication(operator, expression)
+        UnaryOperatorApplication(operator, expression)
     }
 
   lazy val binaryFunctionGenerator
       : String => (Expression, Expression) => BinaryOperatorApplication =
     (operator: String) =>
       (expr1: Expression, expr2: Expression) =>
-        new BinaryOperatorApplication(expr1, BinaryOperator(operator), expr2)
+        BinaryOperatorApplication(expr1, BinaryOperator(operator), expr2)
 
   /* 〈unary-oper〉::= ‘!’
                     | ‘-’
@@ -248,57 +248,57 @@ object WACCParser {
   lazy val identifierParser: Parsley[Identifier] =
     (('_' <\> letter) <~> combinator.many('_' <\> alphaNum)).map {
       case (letter, letters) =>
-        new Identifier((letter :: letters).mkString(""))
+        Identifier((letter :: letters).mkString(""))
     }
 
   /*〈array-elem〉::=〈ident〉(‘[’〈expr〉‘]’)+ */
   lazy val arrayElementParser: Parsley[ArrayElement] =
     (identifierParser <~> manyN(1, "[" *> expressionParser <* "]")).map {
       case (identifier, expressions) =>
-        new ArrayElement(identifier, expressions)
+        ArrayElement(identifier, expressions)
     }
 
   /* 〈int-liter〉::=〈int-sign〉?〈digit〉+ */
   lazy val integerLiterParser: Parsley[IntegerLiter] =
     (option(integerSignParser) <~> manyN(1, digitParser)).map {
-      case (sign, digits) => new IntegerLiter(sign, digits)
+      case (sign, digits) => IntegerLiter(sign, digits)
     }
 
   /*〈digit〉::=  (‘0’-‘9’) */
   lazy val digitParser: Parsley[Digit] =
     ('0' <\> '1' <\> '2' <\> '3' <\> '4' <\> '5' <\> '6' <\> '7' <\> '8' <\> '9')
-      .map(new Digit(_))
+      .map(Digit)
 
   /*〈int-sign〉::=  ‘+’|‘-’ */
   lazy val integerSignParser: Parsley[IntegerSign] =
-    ('+' <\> '-').map(sign => new IntegerSign(sign))
+    ('+' <\> '-').map(sign => IntegerSign(sign))
 
   /*〈bool-liter〉::=  ‘true’|‘false’ */
   lazy val booleanLiterParser: Parsley[BooleanLiter] =
     ("true" <\> "false").map {
-      case "true"  => new BooleanLiter(true)
-      case "false" => new BooleanLiter(false)
+      case "true"  => BooleanLiter(true)
+      case "false" => BooleanLiter(false)
     }
 
   /*〈char-liter〉::=  ‘'’〈character〉‘'’ */
   lazy val characterLiterParser: Parsley[CharacterLiter] =
     ("\'" *> defaultCharacterParser <* "\'").map(character =>
-      new CharacterLiter(character.char)
+      CharacterLiter(character.char)
     )
 
   /*〈str-liter〉::=  ‘"’〈character〉* ‘"’ */
   lazy val stringLiterParser: Parsley[StringLiter] =
     ("\"" *> combinator.many(defaultCharacterParser) <* "\"").map(characters =>
-      new StringLiter(characters.mkString(""))
+      StringLiter(characters.mkString(""))
     )
 
   /*〈character〉::= any-ASCII-character-except-‘\’-‘'’-‘"’
                   | ‘\’〈escaped-char〉*/
   lazy val defaultCharacterParser: Parsley[DefaultCharacter] =
-    (noneOf('\\', '\'', '\"')).map(
-      new DefaultCharacter(_, false)
+    noneOf('\\', '\'', '\"').map(
+      DefaultCharacter(_, isEscaped = false)
     ) <\> ('\\' *> escapedCharParser).map(escapedCharacter =>
-      new DefaultCharacter(escapedCharacter.char, true)
+      DefaultCharacter(escapedCharacter.char, isEscaped = true)
     )
 
   /*〈escaped-char〉::= ‘0’
@@ -312,25 +312,25 @@ object WACCParser {
                      | ‘\’ */
   lazy val escapedCharParser: Parsley[EscapedCharacter] =
     satisfy(EscapedCharacter.escapableCharacters.contains(_))
-      .map(new EscapedCharacter(_))
+      .map(EscapedCharacter(_))
 
   /*〈array-liter〉::= ‘[’ (〈expr〉(‘,’〈expr〉)* )?  ‘]’ */
   lazy val arrayLiterParser: Parsley[ArrayLiter] = ("[" *> option(
     expressionParser <~> combinator.many("," *> expressionParser)
   ) <* "]").map {
-    case None => new ArrayLiter(List())
+    case None => ArrayLiter(List())
     case Some((expression: Expression, expressions: List[Expression])) =>
-      new ArrayLiter(expression :: expressions)
+      ArrayLiter(expression :: expressions)
   }
 
   /*〈pair-liter〉::=  ‘null’ */
   lazy val pairLiterParser: Parsley[PairLiter] =
-    precedence.apply("null").map(_ => new PairLiter())
+    precedence.apply("null").map(_ => PairLiter())
 
   /* 〈comment〉::=  ‘#’ (any-character-except-EOL)*〈EOL〉 */
   lazy val commentParser: Parsley[Comment] =
     ('#' *> combinator.many(noneOf('\n')))
-      .map(comment => new Comment(comment.mkString("")))
+      .map(comment => Comment(comment.mkString("")))
 
   def main(args: Array[String]): Unit = {
     // Testing the parser on some example inputs

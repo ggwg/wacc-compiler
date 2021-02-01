@@ -4,19 +4,19 @@ trait BinaryOperator {}
 
 object BinaryOperator {
   def apply(operator: String): BinaryOperator = operator match {
-    case "*"  => new Multiply()
-    case "/"  => new Divide()
-    case "%"  => new Modulo()
-    case "+"  => new Add()
-    case "-"  => new Subtract()
-    case ">"  => new GreaterThan()
-    case ">=" => new GreaterEqualThan()
-    case "<"  => new SmallerThan()
-    case "<=" => new SmallerEqualThan()
-    case "==" => new Equals()
-    case "!=" => new NotEquals()
-    case "&&" => new And()
-    case "||" => new Or()
+    case "*"  => Multiply()
+    case "/"  => Divide()
+    case "%"  => Modulo()
+    case "+"  => Add()
+    case "-"  => Subtract()
+    case ">"  => GreaterThan()
+    case ">=" => GreaterEqualThan()
+    case "<"  => SmallerThan()
+    case "<=" => SmallerEqualThan()
+    case "==" => Equals()
+    case "!=" => NotEquals()
+    case "&&" => And()
+    case "||" => Or()
   }
 }
 

@@ -4,11 +4,11 @@ sealed trait UnaryOperator {}
 
 object UnaryOperator {
   def apply(operator: String): UnaryOperator = operator match {
-    case "!"   => new Not()
-    case "-"   => new Negate()
-    case "len" => new Length()
-    case "ord" => new Ord()
-    case "chr" => new Chr()
+    case "!"   => Not()
+    case "-"   => Negate()
+    case "len" => Length()
+    case "ord" => Ord()
+    case "chr" => Chr()
   }
 }
 
