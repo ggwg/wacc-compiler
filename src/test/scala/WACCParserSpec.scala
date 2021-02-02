@@ -9,6 +9,7 @@ import com.wacc.{
   Free,
   IdentifierDeclaration,
   If,
+  Parameter,
   Print,
   Println,
   Read,
@@ -27,7 +28,13 @@ class WACCParserSpec extends AnyFlatSpec {
 
   "A parameter list parser" should "" in {}
 
-  "A parameter parser" should "" in {}
+  "A parameter parser" should "parse any parameter declaration" in {
+    parameterParser.runParser("int x").get shouldBe a[Parameter]
+    parameterParser.runParser("char[] array").get shouldBe a[Parameter]
+    parameterParser
+      .runParser("pair(bool[], pair) myPair")
+      .get shouldBe a[Parameter]
+  }
 
   "A statement parser" should "parse the skip statement" in {
     statementParser.runParser("skip").get shouldBe a[SkipStatement]
