@@ -6,7 +6,24 @@ import org.scalatest.matchers.should.Matchers.{a, an, convertToAnyShouldWrapper}
 import parsley.{Failure, Success}
 
 class WACCParserSpec extends AnyFlatSpec {
-  "A program parser" should "" in {}
+  "A program parser" should "parse any program" in {
+    programParser
+      .runParser(
+        "begin" +
+          "     int pred(int x) is return (x-1) end" +
+          "     int succ(int x) is return (x+1) end" +
+          "     int a = 0;" +
+          "     a = call succ(a);" +
+          "     a = call pred(a);" +
+          "     if (a == 0) then" +
+          "       return 0" +
+          "     else" +
+          "       return -1" +
+          "     fi" +
+          "     end"
+      )
+      .get shouldBe a[Program]
+  }
 
   "A function parser" should "parse any valid function declaration" in {
     functionParser

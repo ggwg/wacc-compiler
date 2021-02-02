@@ -53,7 +53,7 @@ object WACCParser {
   /* 〈program〉::=  ‘begin’〈func〉*〈stat〉‘end’ */
   lazy val programParser: Parsley[Program] =
     Program.build.lift(
-      "begin" *> skipWhitespace *> combinator.many(functionParser),
+      "begin" *> skipWhitespace *> combinator.many(attempt(functionParser)),
       statementParser <* "end" <* skipWhitespace
     )
 
