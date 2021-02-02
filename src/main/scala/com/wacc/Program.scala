@@ -4,6 +4,18 @@ case class Program(functions: List[Function], body: Statement) extends ASTNode {
   override def toString: String = "begin\n" + functions
     .map(_.toString)
     .reduce((left, right) => left + right) + body.toString + "end"
+
+  def check(symbolTable: SymbolTable): Unit = {
+    // TODO: check function name and return type, slide 31
+
+    println("CHECKED INSIDE PROGRAM")
+
+    val newSymbolTable = new SymbolTable(Option(symbolTable))
+
+    functions.foreach {
+      func => func.check(newSymbolTable)
+    }
+  }
 }
 
 case class Function (
@@ -16,6 +28,11 @@ case class Function (
     functionType.toString + " " + functionName + "(" + parameters
       .getOrElse("")
       .toString + ")" + "is\n" + body.toString + "end\n"
+
+  def check(symbolTable: SymbolTable): Unit = {
+    // check function name and return type, slide 31
+    println("CHECKED INSIDE FUNCTION")
+  }
 }
 
 case class ParameterList(parameters: List[Parameter]) extends ASTNode {
