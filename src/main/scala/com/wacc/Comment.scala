@@ -1,6 +1,6 @@
 package com.wacc
 
-case class Comment(comment: String) {
+case class Comment(comment: String) extends ASTNode {
   override def toString: String = comment
 }
 

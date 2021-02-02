@@ -1,6 +1,8 @@
 package com.wacc.operator
 
-trait BinaryOperator {}
+import com.wacc.ASTNode
+
+trait BinaryOperator extends ASTNode {}
 
 case class Add() extends BinaryOperator {
   override def toString: String = "+"

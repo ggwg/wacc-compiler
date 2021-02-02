@@ -1,6 +1,6 @@
 package com.wacc
 
-sealed trait Type
+sealed trait Type extends ASTNode
 sealed trait PairElementType extends Type
 sealed trait BaseType extends Type with PairElementType
 

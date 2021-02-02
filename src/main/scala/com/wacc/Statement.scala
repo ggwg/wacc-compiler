@@ -1,6 +1,6 @@
 package com.wacc
 
-sealed trait Statement
+sealed trait Statement extends ASTNode
 
 case class Assignment(
     assignmentLeft: AssignmentLeft,

@@ -11,8 +11,8 @@ import com.wacc.operator.{
 }
 
 sealed trait Expression extends AssignmentRight {}
-sealed trait AssignmentRight {}
-sealed trait AssignmentLeft {}
+sealed trait AssignmentRight extends ASTNode {}
+sealed trait AssignmentLeft extends ASTNode {}
 
 case class ArrayElement(
     identifier: Identifier,

@@ -1,6 +1,8 @@
 package com.wacc.operator
 
-sealed trait UnaryOperator
+import com.wacc.ASTNode
+
+sealed trait UnaryOperator extends ASTNode
 
 case class Chr() extends UnaryOperator {
   override def toString: String = "chr"
