@@ -5,7 +5,6 @@ import com.wacc.EscapedCharacter
 import parsley.{Failure, Success}
 
 class WACCParserSpec extends AnyFlatSpec {
-  val commentInput = "# This is a comment \n"
   "A program parser" should "" in {}
 
   "A function parser" should "" in {}
@@ -20,7 +19,14 @@ class WACCParserSpec extends AnyFlatSpec {
 
   "An assign right parser" should "" in {}
 
-  "An argument list parser" should "" in {}
+  "An argument list parser" should "parse any non-empty list of expressions" in {
+    assert(argumentListParser.runParser("100").isSuccess)
+    assert(argumentListParser.runParser("100, 200").isSuccess)
+    assert(argumentListParser.runParser("5+5, 7*3-(4+9)").isSuccess)
+    assert(
+      argumentListParser.runParser("chr(96), ord('x'), (len(ident))").isSuccess
+    )
+  }
 
   "A pair element parser" should "parse strings of the form ('fst' | 'snd') expression" in {
     assert(pairElementParser.runParser("fst 1").isSuccess)
@@ -285,7 +291,7 @@ class WACCParserSpec extends AnyFlatSpec {
     }
   }
   it should "stop after reaching an EOL character" in {
-    val parsed = commentParser.runParser(commentInput)
+    val parsed = commentParser.runParser("# This is a comment \n")
     parsed match {
       case Success(comment) =>
         assert(comment.comment.equals(" This is a comment "))
