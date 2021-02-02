@@ -98,7 +98,7 @@ class WACCParserSpec extends AnyFlatSpec {
   }
   it should "parse an if statement" in {
     statementParser
-      .runParser("if (a > b) then println a else println b")
+      .runParser("if (a > b) then println a else println b fi")
       .get shouldBe an[If]
   }
   it should "parse a while statement" in {
@@ -116,223 +116,265 @@ class WACCParserSpec extends AnyFlatSpec {
   }
 
   "An assign left parser" should "parse any identifier" in {
-    assert(assignmentLeftParser.runParser("ident").isSuccess)
-    assert(assignmentLeftParser.runParser("_IdenT1").isSuccess)
+    assignmentLeftParser.runParser("ident").get shouldBe an[AssignmentLeft]
+    assignmentLeftParser.runParser("_IdenT1").get shouldBe an[AssignmentLeft]
   }
   it should "parse any array element" in {
-    assert(assignmentLeftParser.runParser("array[10]").isSuccess)
-    assert(assignmentLeftParser.runParser("array['a'][10]").isSuccess)
+    assignmentLeftParser.runParser("array[10]").get shouldBe an[AssignmentLeft]
+    assignmentLeftParser
+      .runParser("array['a'][10]")
+      .get shouldBe an[AssignmentLeft]
   }
   it should "parse any pair element" in {
-    assert(assignmentLeftParser.runParser("fst ident").isSuccess)
-    assert(assignmentLeftParser.runParser("snd array[10][200]").isSuccess)
+    assignmentLeftParser.runParser("fst ident").get shouldBe an[AssignmentLeft]
+    assignmentLeftParser
+      .runParser("snd array[10][200]")
+      .get shouldBe an[AssignmentLeft]
   }
 
   "An assign right parser" should "parse any expression" in {
-    assert(assignmentRightParser.runParser("1+2+(3*4)").isSuccess)
-    assert(assignmentRightParser.runParser("len(4%4)").isSuccess)
+    assignmentRightParser.runParser("1+2+(3*4)").get shouldBe a[AssignmentRight]
+    assignmentRightParser.runParser("len(4%4)").get shouldBe a[AssignmentRight]
   }
   it should "parse any array literal" in {
-    assert(assignmentRightParser.runParser("[1]").isSuccess)
-    assert(assignmentRightParser.runParser("['a', \"aString\"]").isSuccess)
+    assignmentRightParser.runParser("[1]").get shouldBe a[AssignmentRight]
+    assignmentRightParser
+      .runParser("['a', \"aString\"]")
+      .get shouldBe a[AssignmentRight]
   }
   it should "parse any newpair creation" in {
-    assert(
-      assignmentRightParser.runParser("newpair(\"this\", \"that\")").isSuccess
-    )
-    assert(assignmentRightParser.runParser("newpair(1+1, ord('a')").isSuccess)
+    assignmentRightParser
+      .runParser("newpair(\"this\", \"that\")")
+      .get shouldBe a[AssignmentRight]
+    assignmentRightParser
+      .runParser("newpair(1+1, ord('a')")
+      .get shouldBe a[AssignmentRight]
   }
   it should "parse any pair element" in {
-    assert(assignmentRightParser.runParser("fst ident").isSuccess)
-    assert(assignmentRightParser.runParser("snd (a[100][20])").isSuccess)
+    assignmentRightParser.runParser("fst ident").get shouldBe a[AssignmentRight]
+    assignmentRightParser
+      .runParser("snd (a[100][20])")
+      .get shouldBe a[AssignmentRight]
   }
   it should "parse any function call" in {
-    assert(assignmentRightParser.runParser("call fun()").isSuccess)
-    assert(assignmentRightParser.runParser("call fun2(100, 1000)").isSuccess)
+    assignmentRightParser
+      .runParser("call fun()")
+      .get shouldBe a[AssignmentRight]
+    assignmentRightParser
+      .runParser("call fun2(100, 1000)")
+      .get shouldBe a[AssignmentRight]
   }
 
   "An argument list parser" should "parse any non-empty list of expressions" in {
-    assert(argumentListParser.runParser("100").isSuccess)
-    assert(argumentListParser.runParser("100, 200").isSuccess)
-    assert(argumentListParser.runParser("5+5, 7*3-(4+9)").isSuccess)
-    assert(
-      argumentListParser.runParser("chr(96), ord('x'), (len(ident))").isSuccess
-    )
+    argumentListParser.runParser("100").get shouldBe an[ArgumentList]
+    argumentListParser.runParser("100, 200").get shouldBe an[ArgumentList]
+    argumentListParser.runParser("5+5, 7*3-(4+9)").get shouldBe an[ArgumentList]
+    argumentListParser
+      .runParser("chr(96), ord('x'), (len(ident))")
+      .get shouldBe an[ArgumentList]
   }
 
   "A pair element parser" should "parse strings of the form ('fst' | 'snd') expression" in {
-    assert(pairElementParser.runParser("fst 1").isSuccess)
-    assert(pairElementParser.runParser("snd (len(chr(ord(xyz))))").isSuccess)
+    pairElementParser.runParser("fst 1").get shouldBe an[PairElement]
+    pairElementParser
+      .runParser("snd (len(chr(ord(xyz))))")
+      .get shouldBe an[PairElement]
   }
 
   "A type parser" should "parse all valid types" in {
-    assert(typeParser.runParser("int").isSuccess)
-    assert(typeParser.runParser("bool[][]").isSuccess)
-    assert(typeParser.runParser("pair(int, char)").isSuccess)
-    assert(typeParser.runParser("pair(pair, string[][])[]").isSuccess)
+    typeParser.runParser("int").get shouldBe an[Type]
+    typeParser.runParser("bool[][]").get shouldBe an[Type]
+    typeParser.runParser("pair(int, char)").get shouldBe an[Type]
+    typeParser.runParser("pair(pair, string[][])[]").get shouldBe an[Type]
   }
 
   "A base type parser" should "parse all base types" in {
-    assert(baseTypeParser.runParser("int").isSuccess)
-    assert(baseTypeParser.runParser("bool").isSuccess)
-    assert(baseTypeParser.runParser("char").isSuccess)
-    assert(baseTypeParser.runParser("string").isSuccess)
+    baseTypeParser.runParser("int").get shouldBe an[BaseType]
+    baseTypeParser.runParser("bool").get shouldBe an[BaseType]
+    baseTypeParser.runParser("char").get shouldBe an[BaseType]
+    baseTypeParser.runParser("string").get shouldBe an[BaseType]
   }
 
   "An array type parser" should "parse any array type" in {
-    assert(arrayTypeParser.runParser("int[]").isSuccess)
-    assert(arrayTypeParser.runParser("string[][]").isSuccess)
-    assert(arrayTypeParser.runParser("pair(int, int)[]").isSuccess)
-    assert(arrayTypeParser.runParser("pair(pair, int[])[]").isSuccess)
+    arrayTypeParser.runParser("int[]").get shouldBe an[ArrayType]
+    arrayTypeParser.runParser("string[][]").get shouldBe an[ArrayType]
+    arrayTypeParser.runParser("pair(int, int)[]").get shouldBe an[ArrayType]
+    arrayTypeParser.runParser("pair(pair, int[])[]").get shouldBe an[ArrayType]
   }
 
   "A pair type parser" should "parse any valid pair type" in {
-    assert(pairTypeParser.runParser("pair(int, char)").isSuccess)
-    assert(pairTypeParser.runParser("pair(string, string)").isSuccess)
-    assert(pairTypeParser.runParser("pair(pair, pair)").isSuccess)
-    assert(pairTypeParser.runParser("pair(int[], string[][])").isSuccess)
+    pairTypeParser.runParser("pair(int, char)").get shouldBe an[PairType]
+    pairTypeParser.runParser("pair(string, string)").get shouldBe an[PairType]
+    pairTypeParser.runParser("pair(pair, pair)").get shouldBe an[PairType]
+    pairTypeParser
+      .runParser("pair(int[], string[][])")
+      .get shouldBe an[PairType]
   }
 
   "A pair element type parser" should "parse any valid pair element type" in {
-    assert(pairElementTypeParser.runParser("int").isSuccess)
-    assert(pairElementTypeParser.runParser("int[]").isSuccess)
-    assert(pairElementTypeParser.runParser("pair").isSuccess)
+    pairElementTypeParser.runParser("int").get shouldBe an[PairElementType]
+    pairElementTypeParser.runParser("int[]").get shouldBe an[PairElementType]
+    pairElementTypeParser.runParser("pair").get shouldBe an[PairElementType]
   }
 
   "An expression parser" should "parse any literal" in {
-    assert(expressionParser.runParser("-100").isSuccess)
-    assert(expressionParser.runParser("true").isSuccess)
-    assert(expressionParser.runParser("'x'").isSuccess)
-    assert(expressionParser.runParser("\"string\"").isSuccess)
-    assert(expressionParser.runParser("null").isSuccess)
-    assert(expressionParser.runParser("identifier").isSuccess)
-    assert(expressionParser.runParser("array[10][10]").isSuccess)
+    expressionParser.runParser("-100").get shouldBe an[Expression]
+    expressionParser.runParser("true").get shouldBe an[Expression]
+    expressionParser.runParser("'x'").get shouldBe an[Expression]
+    expressionParser.runParser("\"string\"").get shouldBe an[Expression]
+    expressionParser.runParser("null").get shouldBe an[Expression]
+    expressionParser.runParser("identifier").get shouldBe an[Expression]
+    expressionParser.runParser("array[10][10]").get shouldBe an[Expression]
   }
   it should "parse any unary operator application" in {
-    assert(expressionParser.runParser("!true").isSuccess)
-    assert(expressionParser.runParser("--100").isSuccess)
-    assert(expressionParser.runParser("len(\"thisstring\")").isSuccess)
-    assert(expressionParser.runParser("ord('x')").isSuccess)
-    assert(expressionParser.runParser("chr(100)").isSuccess)
+    expressionParser
+      .runParser("!true")
+      .get shouldBe an[UnaryOperatorApplication]
+    expressionParser
+      .runParser("--100")
+      .get shouldBe an[UnaryOperatorApplication]
+    expressionParser
+      .runParser("len(\"thisstring\")")
+      .get shouldBe an[UnaryOperatorApplication]
+    expressionParser
+      .runParser("ord('x')")
+      .get shouldBe an[UnaryOperatorApplication]
+    expressionParser
+      .runParser("chr(100)")
+      .get shouldBe an[UnaryOperatorApplication]
   }
   it should "parse any binary operator application" in {
     for (op <- BinaryOperator.operators) {
-      assert(expressionParser.runParser("5 " + op + " 5").isSuccess)
+      expressionParser
+        .runParser("5 " + op + " 5")
+        .get shouldBe an[BinaryOperatorApplication]
     }
   }
   it should "parse any complex expression" in {
-    assert(expressionParser.runParser("(1 + 2) * (3 + 4)").isSuccess)
-    assert(expressionParser.runParser("len(\"this\") + chr(111)").isSuccess)
-    assert(
-      expressionParser
-        .runParser("true && (false || (false && (ident)))")
-        .isSuccess
-    )
-    assert(expressionParser.runParser("(((((100)))))").isSuccess)
-    assert(expressionParser.runParser("((1 + 2)+len(3))").isSuccess)
+    expressionParser.runParser("(1 + 2) * (3 + 4)").get shouldBe an[Expression]
+    expressionParser
+      .runParser("len(\"this\") + chr(111)")
+      .get shouldBe an[Expression]
+
+    expressionParser
+      .runParser("true && (false || (false && (ident)))")
+      .get shouldBe an[Expression]
+    expressionParser.runParser("(((((100)))))").get shouldBe an[Expression]
+    expressionParser.runParser("((1 + 2)+len(3))").get shouldBe an[Expression]
   }
 
   "An unary operator parser" should "parse all unary operators" in {
     for (op <- UnaryOperator.operators) {
       println(op)
-      assert(unaryOperatorParser.runParser(op).get.equals(UnaryOperator(op)))
+      unaryOperatorParser.runParser(op).get shouldBe an[UnaryOperator]
     }
   }
   it should "not parse anything else" in {
-    assert(unaryOperatorParser.runParser("xyz").isFailure)
-    assert(unaryOperatorParser.runParser("123").isFailure)
-    assert(unaryOperatorParser.runParser("\n ==").isFailure)
+    unaryOperatorParser.runParser("xyz") shouldBe a[Failure]
+    unaryOperatorParser.runParser("123") shouldBe a[Failure]
+    unaryOperatorParser.runParser("\n ==") shouldBe a[Failure]
   }
 
   "A binary operator parser" should "parse all binary operators" in {
     for (op <- BinaryOperator.operators) {
       println(op)
-      assert(binaryOperatorParser.runParser(op).get.equals(BinaryOperator(op)))
+      binaryOperatorParser.runParser(op).get shouldBe a[BinaryOperator]
     }
   }
   it should "not parse anything else" in {
-    assert(binaryOperatorParser.runParser("xyz").isFailure)
-    assert(binaryOperatorParser.runParser("123").isFailure)
-    assert(binaryOperatorParser.runParser("\n ==").isFailure)
+    binaryOperatorParser.runParser("xyz") shouldBe a[Failure]
+    binaryOperatorParser.runParser("123") shouldBe a[Failure]
+    binaryOperatorParser.runParser("\n ==") shouldBe a[Failure]
   }
 
   "An identifier parser" should "parse valid one character strings" in {
-    assert(identifierParser.runParser("_").isSuccess)
-    assert(identifierParser.runParser("x").isSuccess)
-    assert(identifierParser.runParser("X").isSuccess)
+    identifierParser.runParser("_").get shouldBe an[Identifier]
+    identifierParser.runParser("x").get shouldBe an[Identifier]
+    identifierParser.runParser("X").get shouldBe an[Identifier]
   }
   it should "parse any alphanumeric valid identifier string" in {
-    assert(identifierParser.runParser("aVariableName").isSuccess)
-    assert(
-      identifierParser.runParser("aNameContainingNumbers0123456789").isSuccess
-    )
-    assert(identifierParser.runParser("_NameContainingUnderscore_").isSuccess)
-    assert(identifierParser.runParser("RandomLetters_34fsdf5JF9e7").isSuccess)
+    identifierParser.runParser("aVariableName").get shouldBe an[Identifier]
+
+    identifierParser
+      .runParser("aNameContainingNumbers0123456789")
+      .get shouldBe an[Identifier]
+    identifierParser
+      .runParser("_NameContainingUnderscore_")
+      .get shouldBe an[Identifier]
+    identifierParser
+      .runParser("RandomLetters_34fsdf5JF9e7")
+      .get shouldBe an[Identifier]
   }
   it should "fail to parse strings starting with digits" in {
-    assert(identifierParser.runParser("0name").isFailure)
-    assert(identifierParser.runParser("4name").isFailure)
-    assert(identifierParser.runParser("9name").isFailure)
+    identifierParser.runParser("0name") shouldBe a[Failure]
+    identifierParser.runParser("4name") shouldBe a[Failure]
+    identifierParser.runParser("9name") shouldBe a[Failure]
   }
   it should "fail to parse any keyword" in {
     for (keyword <- keywords) {
-      assert(identifierParser.runParser(keyword).isFailure)
+      identifierParser.runParser(keyword) shouldBe a[Failure]
     }
   }
   it should "parse identifiers with keywords as substrings" in {
-    assert(identifierParser.runParser("truetrue").isSuccess)
-    assert(identifierParser.runParser("while0").isSuccess)
-    assert(identifierParser.runParser("xlen").isSuccess)
+    identifierParser.runParser("truetrue").get shouldBe an[Identifier]
+    identifierParser.runParser("while0").get shouldBe an[Identifier]
+    identifierParser.runParser("xlen").get shouldBe an[Identifier]
   }
 
   "An array element parser" should "allow any array access of the form arrayName[expr1][expr2]...[exprN]" in {
-    assert(arrayElementParser.runParser("a[0]").isSuccess)
-    assert(arrayElementParser.runParser("aName[100]").isSuccess)
-    assert(arrayElementParser.runParser("arrayName[10+10]").isSuccess)
-    assert(arrayElementParser.runParser("a[100][100][100][100]").isSuccess)
-    assert(arrayElementParser.runParser("a[1+2+3][5-2][a]").isSuccess)
+    arrayElementParser.runParser("a[0]").get shouldBe an[ArrayElement]
+    arrayElementParser.runParser("aName[100]").get shouldBe an[ArrayElement]
+    arrayElementParser
+      .runParser("arrayName[10+10]")
+      .get shouldBe an[ArrayElement]
+    arrayElementParser
+      .runParser("a[100][100][100][100]")
+      .get shouldBe an[ArrayElement]
+    arrayElementParser
+      .runParser("a[1+2+3][5-2][a]")
+      .get shouldBe an[ArrayElement]
   }
   it should "fail to parse any badly constructed array access" in {
-    assert(arrayElementParser.runParser("a[]").isFailure)
-    assert(arrayElementParser.runParser("[]").isFailure)
-    assert(arrayElementParser.runParser("a[").isFailure)
-    assert(arrayElementParser.runParser("a[]]").isFailure)
-    assert(arrayElementParser.runParser("a[\n]").isFailure)
+    arrayElementParser.runParser("a[]") shouldBe a[Failure]
+    arrayElementParser.runParser("[]") shouldBe a[Failure]
+    arrayElementParser.runParser("a[") shouldBe a[Failure]
+    arrayElementParser.runParser("a[]]") shouldBe a[Failure]
+    arrayElementParser.runParser("a[\n]") shouldBe a[Failure]
   }
 
   "An integer literal parser" should "parse any number (sequence of digits)" in {
-    assert(integerLiterParser.runParser("0").isSuccess)
-    assert(integerLiterParser.runParser("100").isSuccess)
-    assert(integerLiterParser.runParser("123456789").isSuccess)
+    integerLiterParser.runParser("0").get shouldBe an[IntegerLiter]
+    integerLiterParser.runParser("100").get shouldBe an[IntegerLiter]
+    integerLiterParser.runParser("123456789").get shouldBe an[IntegerLiter]
   }
   it should "parse any number preceded by a '+' or '-'" in {
-    assert(integerLiterParser.runParser("+100").isSuccess)
-    assert(integerLiterParser.runParser("-100").isSuccess)
+    integerLiterParser.runParser("+100").get shouldBe an[IntegerLiter]
+    integerLiterParser.runParser("-100").get shouldBe an[IntegerLiter]
   }
   it should "fail to parse multiple signs" in {
-    assert(integerLiterParser.runParser("++100").isFailure)
-    assert(integerLiterParser.runParser("--100").isFailure)
+    integerLiterParser.runParser("++100") shouldBe a[Failure]
+    integerLiterParser.runParser("--100") shouldBe a[Failure]
   }
 
   "A digit parser" should "only parse digits" in {
     for (digit <- "0123456789") {
-      assert(digitParser.runParser(digit + "").isSuccess)
+      digitParser.runParser(digit + "").get shouldBe an[Digit]
     }
-    assert(digitParser.runParser("x").isFailure)
+    digitParser.runParser("x") shouldBe a[Failure]
   }
 
   "An integer sign parser" should "only parse a '+' or '-'" in {
-    assert(integerSignParser.runParser("+").isSuccess)
-    assert(integerSignParser.runParser("-").isSuccess)
-    assert(integerSignParser.runParser("x").isFailure)
-    assert(integerSignParser.runParser("5").isFailure)
+    integerSignParser.runParser("+").get shouldBe an[IntegerSign]
+    integerSignParser.runParser("-").get shouldBe an[IntegerSign]
+    integerSignParser.runParser("x") shouldBe a[Failure]
+    integerSignParser.runParser("5") shouldBe a[Failure]
   }
 
   "A boolean literal parser" should "only parse a 'true' or 'false' string" in {
-    assert(booleanLiterParser.runParser("true").isSuccess)
-    assert(booleanLiterParser.runParser("false").isSuccess)
-    assert(booleanLiterParser.runParser("xyz").isFailure)
-    assert(booleanLiterParser.runParser("tru").isFailure)
+    booleanLiterParser.runParser("true").get shouldBe a[BooleanLiter]
+    booleanLiterParser.runParser("false").get shouldBe a[BooleanLiter]
+    booleanLiterParser.runParser("xyz") shouldBe a[Failure]
+    booleanLiterParser.runParser("tru") shouldBe a[Failure]
   }
 
   "A character literal parser" should "read a single default character surrounded in '\''" in {
@@ -344,10 +386,10 @@ class WACCParserSpec extends AnyFlatSpec {
     }
   }
   it should "fail to parse anything missing the simple quotes" in {
-    assert(characterLiterParser.runParser("\'x").isFailure)
-    assert(characterLiterParser.runParser("x\'").isFailure)
-    assert(characterLiterParser.runParser("x").isFailure)
-    assert(characterLiterParser.runParser("xyz").isFailure)
+    characterLiterParser.runParser("\'x") shouldBe a[Failure]
+    characterLiterParser.runParser("x\'") shouldBe a[Failure]
+    characterLiterParser.runParser("x") shouldBe a[Failure]
+    characterLiterParser.runParser("xyz") shouldBe a[Failure]
   }
 
   "A string literal parser" should "parse any string enclosed in '\"'" in {
@@ -359,27 +401,29 @@ class WACCParserSpec extends AnyFlatSpec {
     }
   }
   it should "fail to parse any string missing a '\"'" in {
-    assert(stringLiterParser.runParser("\"No end quote").isFailure)
-    assert(stringLiterParser.runParser("No beggining quote\"").isFailure)
+    stringLiterParser.runParser("\"No end quote") shouldBe a[Failure]
+    stringLiterParser.runParser("No beggining quote\"") shouldBe a[Failure]
   }
 
   "A default character parser" should "parse any character except '\\', '\'' and '\"'" in {
-    assert(defaultCharacterParser.runParser("a").isSuccess)
-    assert(defaultCharacterParser.runParser("Z").isSuccess)
-    assert(defaultCharacterParser.runParser("9").isSuccess)
-    assert(defaultCharacterParser.runParser("@").isSuccess)
-    assert(defaultCharacterParser.runParser("[").isSuccess)
+    defaultCharacterParser.runParser("a").get shouldBe a[DefaultCharacter]
+    defaultCharacterParser.runParser("Z").get shouldBe a[DefaultCharacter]
+    defaultCharacterParser.runParser("9").get shouldBe a[DefaultCharacter]
+    defaultCharacterParser.runParser("@").get shouldBe a[DefaultCharacter]
+    defaultCharacterParser.runParser("[").get shouldBe a[DefaultCharacter]
   }
   it should "fail to parse '\\', '\'' and '\"'" in {
-    assert(defaultCharacterParser.runParser("\\").isFailure)
-    assert(defaultCharacterParser.runParser("\'").isFailure)
-    assert(defaultCharacterParser.runParser("\"").isFailure)
+    defaultCharacterParser.runParser("\\") shouldBe a[Failure]
+    defaultCharacterParser.runParser("\'") shouldBe a[Failure]
+    defaultCharacterParser.runParser("\"") shouldBe a[Failure]
   }
   it should "only parse escapable characters after '\\'" in {
     for (chr <- EscapedCharacter.escapableCharacters) {
-      assert(defaultCharacterParser.runParser("\\" + chr).isSuccess)
+      defaultCharacterParser
+        .runParser("\\" + chr)
+        .get shouldBe a[DefaultCharacter]
     }
-    assert(defaultCharacterParser.runParser("\\a").isFailure)
+    defaultCharacterParser.runParser("\\a") shouldBe a[Failure]
   }
 
   "An escaped character parser" should "only parse escapable characters" in {
@@ -388,9 +432,9 @@ class WACCParserSpec extends AnyFlatSpec {
       assert(parsed.isSuccess)
     }
 
-    assert(escapedCharParser.runParser("5").isFailure)
-    assert(escapedCharParser.runParser("a").isFailure)
-    assert(escapedCharParser.runParser("X").isFailure)
+    escapedCharParser.runParser("5") shouldBe a[Failure]
+    escapedCharParser.runParser("a") shouldBe a[Failure]
+    escapedCharParser.runParser("X") shouldBe a[Failure]
   }
 
   "An array literal parser" should "" in {}
@@ -405,7 +449,8 @@ class WACCParserSpec extends AnyFlatSpec {
     val parsed2 = pairLiterParser.runParser("not a pair liter")
     val parsed3 = pairLiterParser.runParser("nul")
 
-    assert(parsed2.isFailure && parsed3.isFailure)
+    parsed2 shouldBe a[Failure]
+    parsed3 shouldBe a[Failure]
   }
 
   "A comment parser" should "parse a '#'" in {
