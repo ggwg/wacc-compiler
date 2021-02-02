@@ -1,23 +1,7 @@
 import org.scalatest.flatspec.AnyFlatSpec
 import WACCParser._
 import com.wacc.operator._
-import com.wacc.{
-  Assignment,
-  BeginEnd,
-  EscapedCharacter,
-  Exit,
-  Free,
-  IdentifierDeclaration,
-  If,
-  Parameter,
-  Print,
-  Println,
-  Read,
-  Return,
-  SkipStatement,
-  StatementSequence,
-  While
-}
+import com.wacc._
 import org.scalatest.matchers.should.Matchers.{a, an, convertToAnyShouldWrapper}
 import parsley.{Failure, Success}
 
@@ -26,7 +10,12 @@ class WACCParserSpec extends AnyFlatSpec {
 
   "A function parser" should "" in {}
 
-  "A parameter list parser" should "" in {}
+  "A parameter list parser" should "parse any list of parameters" in {
+    parameterListParser.runParser("char c").get shouldBe a[ParameterList]
+    parameterListParser
+      .runParser("int myInt, char myChar, bool myBool")
+      .get shouldBe a[ParameterList]
+  }
 
   "A parameter parser" should "parse any parameter declaration" in {
     parameterParser.runParser("int x").get shouldBe a[Parameter]
