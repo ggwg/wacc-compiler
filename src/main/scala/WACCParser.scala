@@ -135,7 +135,7 @@ object WACCParser {
                    | 〈array-elem〉
                    | 〈pair-elem〉*/
   lazy val assignmentLeftParser: Parsley[AssignmentLeft] =
-    (identifierParser <\> arrayElementParser <\> pairElementParser) <* skipWhitespace
+    (pairElementParser <\> arrayElementParser <\> identifierParser) <* skipWhitespace
 
   /* 〈assign-rhs〉::=〈expr〉
                    | 〈array-liter〉

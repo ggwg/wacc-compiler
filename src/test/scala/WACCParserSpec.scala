@@ -1,7 +1,23 @@
 import org.scalatest.flatspec.AnyFlatSpec
 import WACCParser._
 import com.wacc.operator._
-import com.wacc.EscapedCharacter
+import com.wacc.{
+  Assignment,
+  BeginEnd,
+  EscapedCharacter,
+  Exit,
+  Free,
+  IdentifierDeclaration,
+  If,
+  Print,
+  Println,
+  Read,
+  Return,
+  SkipStatement,
+  StatementSequence,
+  While
+}
+import org.scalatest.matchers.should.Matchers.{a, an, convertToAnyShouldWrapper}
 import parsley.{Failure, Success}
 
 class WACCParserSpec extends AnyFlatSpec {
@@ -13,9 +29,75 @@ class WACCParserSpec extends AnyFlatSpec {
 
   "A parameter parser" should "" in {}
 
-  "A statement parser" should "" in {}
+  "A statement parser" should "parse the skip statement" in {
+    statementParser.runParser("skip").get shouldBe a[SkipStatement]
+  }
+  it should "parse the identifier declaration statement" in {
+    statementParser
+      .runParser("int x = 10")
+      .get shouldBe a[IdentifierDeclaration]
+    statementParser.runParser(
+      "pair(int, int) myPair = newpair(10, 10)"
+    ) shouldBe a[IdentifierDeclaration]
+  }
+  it should "parse the assignment statement" in {
+    statementParser.runParser("ident = 10") shouldBe a[Assignment]
+    statementParser
+      .runParser("array[10][10] = [1, 2, 3]") shouldBe a[Assignment]
+  }
+  it should "parse a read statement" in {
+    statementParser.runParser("read ident").get shouldBe a[Read]
+  }
+  it should "parse a free statement" in {
+    statementParser.runParser("free ident").get shouldBe a[Free]
+  }
+  it should "parse a return statement" in {
+    statementParser.runParser("return 0").get shouldBe a[Return]
+  }
+  it should "parse an exit statement" in {
+    statementParser.runParser("exit 0").get shouldBe an[Exit]
+  }
+  it should "parse a print statement" in {
+    statementParser
+      .runParser("print \"a printed string\"")
+      .get shouldBe a[Print]
+  }
+  it should "parse a println statement" in {
+    statementParser
+      .runParser("println \"a printed string\"")
+      .get shouldBe a[Println]
+  }
+  it should "parse an if statement" in {
+    statementParser
+      .runParser("if (a > b) println a else println b")
+      .get shouldBe an[If]
+  }
+  it should "parse a while statement" in {
+    statementParser
+      .runParser("while (i < len(\"string\")) do i = i + 1 done")
+      .get shouldBe a[While]
+  }
+  it should "parse a begin-end statement" in {
+    statementParser.runParser("begin skip end").get shouldBe a[BeginEnd]
+  }
+  it should "parse a sequential composition statement" in {
+    statementParser
+      .runParser("int x = 0; x = x + 1; return x")
+      .get shouldBe a[StatementSequence]
+  }
 
-  "An assign left parser" should "" in {}
+  "An assign left parser" should "parse any identifier" in {
+    assert(assignmentLeftParser.runParser("ident").isSuccess)
+    assert(assignmentLeftParser.runParser("_IdenT1").isSuccess)
+  }
+  it should "parse any array element" in {
+    assert(assignmentLeftParser.runParser("array[10]").isSuccess)
+    assert(assignmentLeftParser.runParser("array['a'][10]").isSuccess)
+  }
+  it should "parse any pair element" in {
+    assert(assignmentLeftParser.runParser("fst ident").isSuccess)
+    assert(assignmentLeftParser.runParser("snd array[10][200]").isSuccess)
+  }
 
   "An assign right parser" should "parse any expression" in {
     assert(assignmentRightParser.runParser("1+2+(3*4)").isSuccess)
