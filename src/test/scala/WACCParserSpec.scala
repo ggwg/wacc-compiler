@@ -8,7 +8,20 @@ import parsley.{Failure, Success}
 class WACCParserSpec extends AnyFlatSpec {
   "A program parser" should "" in {}
 
-  "A function parser" should "" in {}
+  "A function parser" should "parse any valid function declaration" in {
+    functionParser
+      .runParser(
+        "int fibonacci(int n) is " +
+          "                  if (n < 2) then" +
+          "                    return 1" +
+          "                  else" +
+          "                    int fib1 = call fibonacci(n-1);" +
+          "                    int fib2 = call fibonacci(n-2); " +
+          "                    return (fib1 + fib2)" +
+          "                  fi end "
+      )
+      .get shouldBe a[Function]
+  }
 
   "A parameter list parser" should "parse any list of parameters" in {
     parameterListParser.runParser("char c").get shouldBe a[ParameterList]
