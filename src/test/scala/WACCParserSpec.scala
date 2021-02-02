@@ -17,7 +17,28 @@ class WACCParserSpec extends AnyFlatSpec {
 
   "An assign left parser" should "" in {}
 
-  "An assign right parser" should "" in {}
+  "An assign right parser" should "parse any expression" in {
+    assert(assignmentRightParser.runParser("1+2+(3*4)").isSuccess)
+    assert(assignmentRightParser.runParser("len(4%4)").isSuccess)
+  }
+  it should "parse any array literal" in {
+    assert(assignmentRightParser.runParser("[1]").isSuccess)
+    assert(assignmentRightParser.runParser("['a', \"aString\"]").isSuccess)
+  }
+  it should "parse any newpair creation" in {
+    assert(
+      assignmentRightParser.runParser("newpair(\"this\", \"that\")").isSuccess
+    )
+    assert(assignmentRightParser.runParser("newpair(1+1, ord('a')").isSuccess)
+  }
+  it should "parse any pair element" in {
+    assert(assignmentRightParser.runParser("fst ident").isSuccess)
+    assert(assignmentRightParser.runParser("snd (a[100][20])").isSuccess)
+  }
+  it should "parse any function call" in {
+    assert(assignmentRightParser.runParser("call fun()").isSuccess)
+    assert(assignmentRightParser.runParser("call fun2(100, 1000)").isSuccess)
+  }
 
   "An argument list parser" should "parse any non-empty list of expressions" in {
     assert(argumentListParser.runParser("100").isSuccess)
