@@ -36,14 +36,17 @@ class WACCParserSpec extends AnyFlatSpec {
     statementParser
       .runParser("int x = 10")
       .get shouldBe a[IdentifierDeclaration]
-    statementParser.runParser(
-      "pair(int, int) myPair = newpair(10, 10)"
-    ) shouldBe a[IdentifierDeclaration]
+    statementParser
+      .runParser(
+        "pair(int, int) myPair = newpair(10, 10)"
+      )
+      .get shouldBe a[IdentifierDeclaration]
   }
   it should "parse the assignment statement" in {
-    statementParser.runParser("ident = 10") shouldBe a[Assignment]
+    statementParser.runParser("ident = 10").get shouldBe a[Assignment]
     statementParser
-      .runParser("array[10][10] = [1, 2, 3]") shouldBe a[Assignment]
+      .runParser("array[10][10] = [1, 2, 3]")
+      .get shouldBe a[Assignment]
   }
   it should "parse a read statement" in {
     statementParser.runParser("read ident").get shouldBe a[Read]
@@ -69,7 +72,7 @@ class WACCParserSpec extends AnyFlatSpec {
   }
   it should "parse an if statement" in {
     statementParser
-      .runParser("if (a > b) println a else println b")
+      .runParser("if (a > b) then println a else println b")
       .get shouldBe an[If]
   }
   it should "parse a while statement" in {

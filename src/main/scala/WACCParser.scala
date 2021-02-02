@@ -110,8 +110,8 @@ object WACCParser {
           "free",
           "return",
           "exit",
-          "print",
-          "println"
+          "println",
+          "print"
         ) <* skipWhitespace,
         expressionParser
       )
