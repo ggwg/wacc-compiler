@@ -1,9 +1,6 @@
 package com.wacc
 
-sealed trait Statement extends ASTNode {
-  // Each statement needs a check function for semantic analysis
-  def check(symbolTable: SymbolTable): Unit
-}
+sealed trait Statement extends ASTNode
 
 case class Assignment(
     assignmentLeft: AssignmentLeft,
@@ -14,7 +11,11 @@ case class Assignment(
 
   // TODO:
   override def check(symbolTable: SymbolTable): Unit = {
+    // Check that assignment-left type is same as return type of assignment-right
+
     println("GOT INSIDE ASSIGNMENT CHECK")
+    assignmentLeft.check(symbolTable)
+    assignmentLeft.check(symbolTable)
   }
 }
 
@@ -56,6 +57,10 @@ case class IdentifierDeclaration(
   // TODO:
   override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE IDENTIFIER-DECLARATION CHECK")
+    // check type matches return type of assignmentRight
+    identType.check(symbolTable)
+    identifier.check(symbolTable)
+    assignmentRight.check(symbolTable)
   }
 }
 

@@ -5,7 +5,7 @@ case class Program(functions: List[Function], body: Statement) extends ASTNode {
     .map(_.toString)
     .reduce((left, right) => left + right) + body.toString + "end"
 
-  def check(symbolTable: SymbolTable): Unit = {
+  override def check(symbolTable: SymbolTable): Unit = {
     // TODO: check function name and return type, slide 31
 
     println("CHECKED INSIDE PROGRAM")
@@ -29,7 +29,7 @@ case class Function (
       .getOrElse("")
       .toString + ")" + "is\n" + body.toString + "end\n"
 
-  def check(symbolTable: SymbolTable): Unit = {
+  override def check(symbolTable: SymbolTable): Unit = {
     // check function name and return type, slide 31
     println("CHECKED INSIDE FUNCTION")
   }
@@ -38,11 +38,21 @@ case class Function (
 case class ParameterList(parameters: List[Parameter]) extends ASTNode {
   override def toString: String =
     parameters.map(_.toString).reduce((left, right) => left + ", " + right)
+
+  // TODO:
+  override def check(symbolTable: SymbolTable): Unit = {
+    println("GOT INSIDE PARAMETER-LIST CHECK")
+  }
 }
 
 case class Parameter(parameterType: Type, identifier: Identifier) extends ASTNode {
   override def toString: String =
     parameterType.toString + " " + identifier.toString
+
+  // TODO:
+  override def check(symbolTable: SymbolTable): Unit = {
+    println("GOT INSIDE PARAMETER-LIST CHECK")
+  }
 }
 
 object Program {

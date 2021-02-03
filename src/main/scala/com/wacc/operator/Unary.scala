@@ -1,8 +1,13 @@
 package com.wacc.operator
 
-import com.wacc.ASTNode
+import com.wacc.{ASTNode, SymbolTable}
 
-sealed trait UnaryOperator extends ASTNode
+sealed trait UnaryOperator extends ASTNode {
+  // TODO: THIS MAY NEED TO BE DONE FOR EVERY UNARY OPERATOR (?)
+  override def check(symbolTable: SymbolTable): Unit = {
+    println("GOT INSIDE UNARY-OPERATOR CHECK")
+  }
+}
 
 case class Chr() extends UnaryOperator {
   override def toString: String = "chr"

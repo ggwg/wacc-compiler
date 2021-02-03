@@ -1,6 +1,11 @@
 package com.wacc
 
-sealed trait Type extends ASTNode
+sealed trait Type extends ASTNode {
+  override def check(symbolTable: SymbolTable): Unit = {
+    // check function name and return type, slide 31
+    println("CHECKED INSIDE TYPE (INT-TYPE, BOOL-TYPE, CHAR-TYPE, STRING-TYPE, PAIR-DEFAULT-TYPE")
+  }
+}
 sealed trait PairElementType extends Type
 sealed trait BaseType extends Type with PairElementType
 
