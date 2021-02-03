@@ -11,26 +11,12 @@ object Playground {
     var topST: SymbolTable = new SymbolTable(None)
     // TODO: Define global data types as mentioned in slides.
 
-    var parsedResult: Result[Program] =
-      programParser
-        .runParser(
-          "begin" +
-            "     int pred(int x) is return (x-1) end" +
-            "     int succ(int x) is return (x+1) end" +
-            "     int a = 0;" +
-            "     a = call succ(a);" +
-            "     a = call pred(a);" +
-            "     if (a == 0) then" +
-            "       return 0" +
-            "     else" +
-            "       return -1" +
-            "     fi" +
-            "     end"
-        )
+    var parsedResult: Result[Statement] =
+      statementParser
+        .runParser("int i = true")
     println(parsedResult)
-    var astProgramType = parsedResult.get
-    astProgramType.check(topST)
-
+    var ast = parsedResult.get
+    ast.check(topST)
     println("End Main")
   }
 }
