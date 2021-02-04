@@ -4,7 +4,7 @@ import com.wacc.{ASTNode, SymbolTable}
 
 trait BinaryOperator extends ASTNode {
   // TODO - THIS MIGHT NEED TO BE DONE FOR EACH ONE INIDIVIDUALLY:
-  override def check(symbolTable: SymbolTable): Unit = {
+  override def check(symbolTable: SymbolTable): Any = {
     println("GOT INSIDE BINARY-OPERATOR CHECK")
   }
 }

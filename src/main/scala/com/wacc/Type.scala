@@ -1,7 +1,7 @@
 package com.wacc
 
 sealed trait Type extends ASTNode {
-  override def check(symbolTable: SymbolTable): Unit = {
+  override def check(symbolTable: SymbolTable): Any = {
     // check function name and return type, slide 31
     println("CHECKED INSIDE TYPE (INT-TYPE, BOOL-TYPE, CHAR-TYPE, STRING-TYPE, PAIR-DEFAULT-TYPE")
   }

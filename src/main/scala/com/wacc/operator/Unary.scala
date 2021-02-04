@@ -4,7 +4,7 @@ import com.wacc.{ASTNode, SymbolTable}
 
 sealed trait UnaryOperator extends ASTNode {
   // TODO: THIS MAY NEED TO BE DONE FOR EVERY UNARY OPERATOR (?)
-  override def check(symbolTable: SymbolTable): Unit = {
+  override def check(symbolTable: SymbolTable): Any = {
     println("GOT INSIDE UNARY-OPERATOR CHECK")
   }
 }

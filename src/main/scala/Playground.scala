@@ -13,10 +13,24 @@ object Playground {
 
     var parsedResult: Result[Statement] =
       statementParser
-        .runParser("int i = true")
+        .runParser("exit 123")
+        // we should run
     println(parsedResult)
+    // Exit if there was a syntax error with code 100
+
     var ast = parsedResult.get
     ast.check(topST)
     println("End Main")
+
+
+
+    // Type matching
+    var x: CharacterLiter = CharacterLiter('a')
+    var y: Any = x
+    println(x.getClass)
+    println(y.getClass)
+    println(x.getClass == y.getClass)
+    println(x.getClass.equals(y.getClass))
+    println("GOT TO END")
   }
 }
