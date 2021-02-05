@@ -262,7 +262,7 @@ object WACCParser {
     Ops(InfixL)(
       (attempt(">=") <* skipWhitespace) #> binaryFunctionGenerator(">="),
       (attempt("<=") <* skipWhitespace) #> binaryFunctionGenerator("<="),
-      ("==" <* skipWhitespace) #> binaryFunctionGenerator("=="),
+      (attempt("==") <* skipWhitespace) #> binaryFunctionGenerator("=="),
       ("!=" <* skipWhitespace) #> binaryFunctionGenerator("!="),
       (">" <* skipWhitespace) #> binaryFunctionGenerator(">"),
       ("<" <* skipWhitespace) #> binaryFunctionGenerator("<")
