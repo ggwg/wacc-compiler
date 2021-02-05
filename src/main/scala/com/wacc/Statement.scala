@@ -47,9 +47,10 @@ case class Exit(expression: Expression) extends Statement {
     println(exitType + " - " + exitType.getClass)
     if (exitType.getClass == IntType.getClass) {
       // Correct
-      print("SUCCESS")
+      println("SUCCESS")
     } else {
-      print("ERROR")
+      println("ERROR: Exit type invalid - expected " +
+        IntType.getClass.toString + "Got: " + exitType.getClass.toString)
     }
     return ()
   }

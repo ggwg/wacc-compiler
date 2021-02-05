@@ -1,32 +1,53 @@
 package com.wacc
 
-sealed trait Type extends ASTNode {
-  override def check(symbolTable: SymbolTable): Any = {
-    // check function name and return type, slide 31
-    println("CHECKED INSIDE TYPE (INT-TYPE, BOOL-TYPE, CHAR-TYPE, STRING-TYPE, PAIR-DEFAULT-TYPE")
-  }
-}
+sealed trait Type extends ASTNode
+
 sealed trait PairElementType extends Type
 sealed trait BaseType extends Type with PairElementType
 
 case class IntType() extends BaseType {
   override def toString: String = "int "
+
+  override def check(symbolTable: SymbolTable): Any = {
+    println("GOT INSIDE INT-TYPE CHECK")
+    return IntType
+  }
 }
 
 case class BooleanType() extends BaseType {
   override def toString: String = "bool "
+
+  override def check(symbolTable: SymbolTable): Any = {
+    println("GOT INSIDE BOOL-TYPE CHECK")
+    return BooleanType
+  }
 }
 
 case class CharacterType() extends BaseType {
   override def toString: String = "char "
+
+  override def check(symbolTable: SymbolTable): Any = {
+    println("GOT INSIDE CHARACTER-TYPE CHECK")
+    return CharacterType
+  }
 }
 
 case class StringType() extends BaseType {
   override def toString: String = "string "
+
+  override def check(symbolTable: SymbolTable): Any = {
+    println("GOT INSIDE STRING-TYPE CHECK")
+    return StringType
+  }
 }
 
 case class PairDefault() extends PairElementType {
   override def toString: String = "pair "
+
+  override def check(symbolTable: SymbolTable): Any = {
+    println("GOT INSIDE PAIR-DEFAULT CHECK")
+    return PairDefault
+  }
 }
 
 case class PairType(
@@ -35,10 +56,20 @@ case class PairType(
 ) extends Type {
   override def toString: String =
     "pair(" + elementType1.toString + ',' + elementType2.toString + ")"
+
+  override def check(symbolTable: SymbolTable): Any = {
+    println("GOT INSIDE PAIR-TYPE CHECK")
+    return PairType
+  }
 }
 
 case class ArrayType(arrayType: Type) extends Type with PairElementType {
   override def toString: String = "type[" + arrayType.toString + "]"
+
+  override def check(symbolTable: SymbolTable): Any = {
+    println("GOT INSIDE ARRAY-TYPE CHECK")
+    return ArrayType
+  }
 }
 
 object BaseType {

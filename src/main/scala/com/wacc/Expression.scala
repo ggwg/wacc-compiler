@@ -45,18 +45,19 @@ case class BinaryOperatorApplication(
 case class BooleanLiter(boolean: Boolean) extends Expression {
   override def toString: String = boolean.toString
 
-  // TODO:
+
   override def check(symbolTable: SymbolTable): Any = {
     println("GOT INSIDE BOOLEAN-LITER CHECK")
+    return BooleanType
   }
 }
 
 case class CharacterLiter(char: Char) extends Expression {
   override def toString: String = "'" + char + "'"
 
-  // TODO:
   override def check(symbolTable: SymbolTable): Any = {
     println("GOT INSIDE CHARACTER-LITER CHECK")
+    return CharacterType
   }
 }
 
@@ -69,6 +70,7 @@ case class Identifier(identifier: String)
   override def check(symbolTable: SymbolTable): Any = {
     println("GOT INSIDE IDENTIFIER CHECK")
     // lookup identifier in symbol table, and extract base type
+    // return the type as specified in the symbol table
   }
 }
 
@@ -79,7 +81,7 @@ case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit])
     case Some(sign) => sign.toString
   }) + digits.mkString
 
-  // TODO:
+
   override def check(symbolTable: SymbolTable): Any = {
     println("GOT INSIDE INTEGER-LITER CHECK")
     return IntType
@@ -92,15 +94,16 @@ case class PairLiter() extends Expression {
   // TODO:
   override def check(symbolTable: SymbolTable): Any = {
     println("GOT INSIDE PAIR-LITER CHECK")
+    return PairType
   }
 }
 
 case class StringLiter(string: String) extends Expression {
   override def toString: String = string
 
-  // TODO:
   override def check(symbolTable: SymbolTable): Any = {
     println("GOT INSIDE STRING-LITER CHECK")
+    return StringType
   }
 }
 
@@ -116,6 +119,43 @@ case class UnaryOperatorApplication(
   // TODO:
   override def check(symbolTable: SymbolTable): Any = {
     println("GOT INSIDE UNARY-OPERATOR-APPLICATION CHECK")
+
+    unaryOperator match {
+      case Chr() =>
+        if (expression.check(symbolTable).getClass != IntType.getClass) {
+          println("ERROR CHR")
+          return ()
+        } else {
+          // check that expression is an int between 0-255
+          return CharacterType
+        }
+      case Length() =>
+        //TODO: NOT DEFINED ARRAYS YET
+        println("NOT DEFINED LENGTH YET")
+      case Negate() =>
+        if (expression.check(symbolTable).getClass != IntType.getClass) {
+          println("ERROR NEGATE")
+          return ()
+        } else {
+          return IntType
+        }
+      case Not() =>
+        if (expression.check(symbolTable).getClass != BooleanType.getClass) {
+          println("ERROR NOT")
+          return ()
+        } else {
+          return BooleanType
+        }
+      case Ord() =>
+        if (expression.check(symbolTable).getClass != IntType.getClass) {
+          println("ERROR ORD")
+          return ()
+        } else {
+          return IntType
+        }
+    }
+    // In case we add more unary operators
+    return ()
   }
 }
 
