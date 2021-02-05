@@ -3,7 +3,8 @@ package com.wacc
 case class Program(functions: List[Function], body: Statement) {
   override def toString: String = "begin\n" + functions
     .map(_.toString)
-    .reduce((left, right) => left + right) + body.toString + "end"
+    .reduceOption((left, right) => left + right)
+    .getOrElse("") + body.toString + "end"
 }
 
 case class Function(

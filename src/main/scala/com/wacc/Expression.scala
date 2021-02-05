@@ -59,7 +59,7 @@ case class PairLiter() extends Expression {
 }
 
 case class StringLiter(string: String) extends Expression {
-  override def toString: String = string
+  override def toString: String = "\"" + string + "\""
 }
 
 case class UnaryOperatorApplication(
