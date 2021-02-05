@@ -146,7 +146,7 @@ object WACCParser {
                    | 〈pair-elem〉
                    | ‘call’〈ident〉‘(’〈arg-list〉?  ‘)’ */
   lazy val assignmentRightParser: Parsley[AssignmentRight] =
-    (expressionParser <\> arrayLiterParser <\> newpairParser <\> pairElementParser <\> functionCallParser) <* skipWhitespace
+    (newpairParser <\> functionCallParser <\> pairElementParser <\> expressionParser <\> arrayLiterParser) <* skipWhitespace
 
   lazy val newpairParser: Parsley[NewPair] =
     NewPair.build.lift(
