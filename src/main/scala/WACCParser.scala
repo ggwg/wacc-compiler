@@ -10,7 +10,7 @@ import parsley.character.{
   satisfy,
   whitespace
 }
-import parsley.combinator.{attemptChoice, manyN, option}
+import parsley.combinator.{attemptChoice, eof, manyN, option}
 import parsley.expr.{InfixL, Ops, Postfix, Prefix, precedence}
 import parsley.implicits.{voidImplicitly => _, _}
 import parsley.{Parsley, combinator}
@@ -57,7 +57,7 @@ object WACCParser {
   lazy val programParser: Parsley[Program] =
     Program.build.lift(
       "begin" *> skipWhitespace *> combinator.many(attempt(functionParser)),
-      statementParser <* "end" <* skipWhitespace
+      statementParser <* "end" <* skipWhitespace <* eof
     )
 
   /* 〈func〉::=〈type〉 〈ident〉‘(’〈param-list〉?  ‘)’ ‘is’〈stat〉‘end’ */
@@ -407,7 +407,7 @@ object WACCParser {
 
   def main(args: Array[String]): Unit = {
     // Testing the parser on some example inputs
-    val resources = new File("src/main/resources/valid_examples/")
+    val resources = new File("src/main/resources/invalid_examples/syntaxErr")
     testAllFiles(resources)
   }
 
@@ -421,7 +421,7 @@ object WACCParser {
         for (line <- Source.fromFile(fileName).getLines()) {
           input += line + '\n'
         }
-        if ((skipWhitespace *> programParser).runParser(input).isFailure) {
+        if ((skipWhitespace *> programParser).runParser(input).isSuccess) {
           println(
             "filename: " + fileName + "\n Content: " + (skipWhitespace *> programParser)
               .runParser(input) + "\n"
