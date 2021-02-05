@@ -15,6 +15,9 @@ import parsley.expr.{InfixL, Ops, Postfix, Prefix, precedence}
 import parsley.implicits.{voidImplicitly => _, _}
 import parsley.{Parsley, combinator}
 
+import java.io.File
+import scala.io.Source
+
 object WACCParser {
   val keywords = List(
     "begin",
@@ -239,11 +242,11 @@ object WACCParser {
       <\> attempt(arrayElementParser)
       <\> attempt(identifierParser),
     Ops(Prefix)(
-      ("!" <* skipWhitespace) #> unaryFunctionGenerator("!"),
-      ("-" <* skipWhitespace) #> unaryFunctionGenerator("-"),
-      ("len" <* skipWhitespace) #> unaryFunctionGenerator("len"),
-      ("ord" <* skipWhitespace) #> unaryFunctionGenerator("ord"),
-      ("chr" <* skipWhitespace) #> unaryFunctionGenerator("chr")
+      attempt(("!" <* skipWhitespace) #> unaryFunctionGenerator("!")),
+      attempt(("-" <* skipWhitespace) #> unaryFunctionGenerator("-")),
+      attempt(("len" <* skipWhitespace) #> unaryFunctionGenerator("len")),
+      attempt(("ord" <* skipWhitespace) #> unaryFunctionGenerator("ord")),
+      attempt(("chr" <* skipWhitespace) #> unaryFunctionGenerator("chr"))
     ),
     Ops(InfixL)(
       ("*" <* skipWhitespace) #> binaryFunctionGenerator("*"),
@@ -402,10 +405,26 @@ object WACCParser {
 
   def main(args: Array[String]): Unit = {
     // Testing the parser on some example inputs
-    println("Hello World!")
-    println(expressionParser.runParser("5+5")) // Should succeed
-    println(expressionParser.runParser("152*55/22!=0")) // Should succeed
-    println(integerLiterParser.runParser("5")) // Should succeed
-    println(integerLiterParser.runParser("a")) // Should fail
+    val resources = new File("src/main/resources/valid_examples/")
+    testAllFiles(resources)
+  }
+
+  def testAllFiles(dir: File): Unit = {
+    for (file <- dir.listFiles()) {
+      if (file.isDirectory) {
+        testAllFiles(file)
+      } else {
+        val fileName = file.getAbsolutePath
+        var input = ""
+        for (line <- Source.fromFile(fileName).getLines()) {
+          input += line + '\n'
+        }
+        println(
+          "filename: " + fileName + "\n Content: " + (skipWhitespace *> programParser)
+            .runParser(input)
+            .isSuccess + "\n"
+        )
+      }
+    }
   }
 }
