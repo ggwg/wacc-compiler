@@ -233,7 +233,9 @@ object WACCParser {
             | ‘(’〈expr〉‘)’ */
 
   lazy val expressionParser: Parsley[Expression] = precedence[Expression](
-    attempt("(" *> skipWhitespace *> expressionParser <* ")")
+    attempt(
+      "(" *> skipWhitespace *> expressionParser <* skipWhitespace <* ")" <* skipWhitespace
+    )
       <\> attempt(integerLiterParser)
       <\> attempt(booleanLiterParser)
       <\> attempt(characterLiterParser)
@@ -419,11 +421,12 @@ object WACCParser {
         for (line <- Source.fromFile(fileName).getLines()) {
           input += line + '\n'
         }
-        println(
-          "filename: " + fileName + "\n Content: " + (skipWhitespace *> programParser)
-            .runParser(input)
-            .isSuccess + "\n"
-        )
+        if ((skipWhitespace *> programParser).runParser(input).isFailure) {
+          println(
+            "filename: " + fileName + "\n Content: " + (skipWhitespace *> programParser)
+              .runParser(input) + "\n"
+          )
+        }
       }
     }
   }
