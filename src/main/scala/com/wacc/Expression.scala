@@ -11,8 +11,8 @@ import com.wacc.operator.{
 }
 
 sealed trait Expression extends AssignmentRight {}
-sealed trait AssignmentRight {}
-sealed trait AssignmentLeft {}
+sealed trait AssignmentRight extends ASTNode {}
+sealed trait AssignmentLeft extends ASTNode {}
 
 case class ArrayElement(
     identifier: Identifier,
@@ -21,6 +21,11 @@ case class ArrayElement(
     with AssignmentLeft {
   override def toString: String =
     identifier.toString + expressions.flatMap("[" + _.toString + "]")
+
+  // TODO:
+  override def check(symbolTable: SymbolTable): Any = {
+    println("GOT INSIDE ARRAY-ELEMENT CHECK")
+  }
 }
 
 case class BinaryOperatorApplication(
@@ -29,21 +34,44 @@ case class BinaryOperatorApplication(
     expression2: Expression
 ) extends Expression {
   override def toString: String =
-    expression1.toString + " " + binaryOperator.toString + " " + expression2.toString
+    expression1.toString + binaryOperator.toString + expression2.toString
+
+  // TODO:
+  override def check(symbolTable: SymbolTable): Any = {
+    println("GOT INSIDE BINARY-OPERATOR CHECK")
+  }
 }
 
 case class BooleanLiter(boolean: Boolean) extends Expression {
   override def toString: String = boolean.toString
+
+
+  override def check(symbolTable: SymbolTable): Any = {
+    println("GOT INSIDE BOOLEAN-LITER CHECK")
+    return BooleanType
+  }
 }
 
 case class CharacterLiter(char: Char) extends Expression {
   override def toString: String = "'" + char + "'"
+
+  override def check(symbolTable: SymbolTable): Any = {
+    println("GOT INSIDE CHARACTER-LITER CHECK")
+    return CharacterType
+  }
 }
 
 case class Identifier(identifier: String)
     extends Expression
     with AssignmentLeft {
   override def toString: String = identifier
+
+  // TODO:
+  override def check(symbolTable: SymbolTable): Any = {
+    println("GOT INSIDE IDENTIFIER CHECK")
+    // lookup identifier in symbol table, and extract base type
+    // return the type as specified in the symbol table
+  }
 }
 
 case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit])
@@ -52,43 +80,118 @@ case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit])
     case None       => ""
     case Some(sign) => sign.toString
   }) + digits.mkString
+
+
+  override def check(symbolTable: SymbolTable): Any = {
+    println("GOT INSIDE INTEGER-LITER CHECK")
+    return IntType
+  }
 }
 
 case class PairLiter() extends Expression {
   override def toString: String = "null"
+
+  // TODO:
+  override def check(symbolTable: SymbolTable): Any = {
+    println("GOT INSIDE PAIR-LITER CHECK")
+    return PairType
+  }
 }
 
 case class StringLiter(string: String) extends Expression {
-  override def toString: String = "\"" + string + "\""
+  override def toString: String = string
+
+  override def check(symbolTable: SymbolTable): Any = {
+    println("GOT INSIDE STRING-LITER CHECK")
+    return StringType
+  }
 }
 
 case class UnaryOperatorApplication(
     unaryOperator: UnaryOperator,
     expression: Expression
 ) extends Expression {
-  override def toString: String =
-    unaryOperator.toString + expression.toString + ")"
+  override def toString: String = unaryOperator match {
+    case Chr() | Length() | Negate() => "(" + expression.toString + ")"
+    case Not() | Ord()               => expression.toString
+  }
+
+  // TODO:
+  override def check(symbolTable: SymbolTable): Any = {
+    println("GOT INSIDE UNARY-OPERATOR-APPLICATION CHECK")
+
+    unaryOperator match {
+      case Chr() =>
+        if (expression.check(symbolTable).getClass != IntType.getClass) {
+          println("ERROR CHR")
+          return ()
+        } else {
+          // check that expression is an int between 0-255
+          return CharacterType
+        }
+      case Length() =>
+        //TODO: NOT DEFINED ARRAYS YET
+        println("NOT DEFINED LENGTH YET")
+      case Negate() =>
+        if (expression.check(symbolTable).getClass != IntType.getClass) {
+          println("ERROR NEGATE")
+          return ()
+        } else {
+          return IntType
+        }
+      case Not() =>
+        if (expression.check(symbolTable).getClass != BooleanType.getClass) {
+          println("ERROR NOT")
+          return ()
+        } else {
+          return BooleanType
+        }
+      case Ord() =>
+        if (expression.check(symbolTable).getClass != IntType.getClass) {
+          println("ERROR ORD")
+          return ()
+        } else {
+          return IntType
+        }
+    }
+    // In case we add more unary operators
+    return ()
+  }
 }
 
 case class ArrayLiter(expressions: List[Expression]) extends AssignmentRight {
   override def toString: String = "[" + expressions
     .map(_.toString)
-    .reduce((left, right) => left + ", " + right) + "]"
+    .reduce((left, right) => left + "," + right) + "]"
+
+  // TODO:
+  override def check(symbolTable: SymbolTable): Any = {
+    println("GOT INSIDE ARRAY-LITER CHECK")
+  }
 }
 
 case class FunctionCall(identifier: Identifier, arguments: Option[ArgumentList])
     extends AssignmentRight {
-  override def toString: String =
-    "call " + identifier + "(" + (arguments match {
-      case Some(args) => args.toString
-      case None       => ""
-    }) + ")"
+  override def toString: String = "call" + identifier + "(" + (arguments match {
+    case Some(args) => args.toString
+    case None       => ""
+  }) + ")"
+
+  // TODO:
+  override def check(symbolTable: SymbolTable): Any = {
+    println("GOT INSIDE FUNCTION-CALL CHECK")
+  }
 }
 
 case class NewPair(expression1: Expression, expression2: Expression)
     extends AssignmentRight {
   override def toString: String =
-    "newpair(" + expression1.toString + ", " + expression2.toString + ")"
+    "newpair(" + expression1.toString + "," + expression2.toString + ")"
+
+  // TODO:
+  override def check(symbolTable: SymbolTable): Any = {
+    println("GOT INSIDE NEW-PAIR CHECK")
+  }
 }
 
 case class PairElement(expression: Expression, isFirst: Boolean)
@@ -96,11 +199,22 @@ case class PairElement(expression: Expression, isFirst: Boolean)
     with AssignmentLeft {
   override def toString: String =
     (if (isFirst) "fst " else "snd ") + expression.toString
+
+  // TODO:
+  override def check(symbolTable: SymbolTable): Any = {
+    println("GOT INSIDE PAIR-ELEMENT CHECK")
+  }
 }
 
-case class ArgumentList(expressions: List[Expression]) {
+case class ArgumentList(expressions: List[Expression])
+    extends ASTNode {
   override def toString: String =
-    expressions.map(_.toString).reduce((left, right) => left + ", " + right)
+    expressions.map(_.toString).reduce((left, right) => left + "," + right)
+
+  // TODO:
+  override def check(symbolTable: SymbolTable): Any = {
+    println("GOT INSIDE ARGUMENT-LIST CHECK")
+  }
 }
 
 object ArrayElement {
