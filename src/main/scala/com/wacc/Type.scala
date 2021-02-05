@@ -5,23 +5,23 @@ sealed trait PairElementType extends Type
 sealed trait BaseType extends Type with PairElementType
 
 case class IntType() extends BaseType {
-  override def toString: String = "int "
+  override def toString: String = "int"
 }
 
 case class BooleanType() extends BaseType {
-  override def toString: String = "bool "
+  override def toString: String = "bool"
 }
 
 case class CharacterType() extends BaseType {
-  override def toString: String = "char "
+  override def toString: String = "char"
 }
 
 case class StringType() extends BaseType {
-  override def toString: String = "string "
+  override def toString: String = "string"
 }
 
 case class PairDefault() extends PairElementType {
-  override def toString: String = "pair "
+  override def toString: String = "pair"
 }
 
 case class PairType(
@@ -29,7 +29,7 @@ case class PairType(
     elementType2: PairElementType
 ) extends Type {
   override def toString: String =
-    "pair(" + elementType1.toString + ',' + elementType2.toString + ")"
+    "pair(" + elementType1.toString + ", " + elementType2.toString + ")"
 }
 
 case class ArrayType(arrayType: Type) extends Type with PairElementType {

@@ -1,9 +1,10 @@
 package com.wacc
 
 case class DefaultCharacter(char: Char, isEscaped: Boolean) {
-  override def toString: String = isEscaped match {
-    case true  => "\\" + char
-    case false => "" + char
+  override def toString: String = if (isEscaped) {
+    "\\" + char
+  } else {
+    "" + char
   }
 }
 

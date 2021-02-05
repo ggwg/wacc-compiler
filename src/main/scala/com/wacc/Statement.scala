@@ -37,7 +37,7 @@ case class If(
     falseStatement: Statement
 ) extends Statement {
   override def toString: String =
-    "if " + condition + " then\n" + trueStatement.toString + "else\n" + falseStatement + "fi\n"
+    "if " + condition + " then\n" + trueStatement.toString + "else\n" + falseStatement.toString + "fi\n"
 }
 
 case class Print(expression: Expression) extends Statement {

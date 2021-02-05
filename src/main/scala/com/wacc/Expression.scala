@@ -29,7 +29,7 @@ case class BinaryOperatorApplication(
     expression2: Expression
 ) extends Expression {
   override def toString: String =
-    expression1.toString + binaryOperator.toString + expression2.toString
+    expression1.toString + " " + binaryOperator.toString + " " + expression2.toString
 }
 
 case class BooleanLiter(boolean: Boolean) extends Expression {
@@ -66,30 +66,29 @@ case class UnaryOperatorApplication(
     unaryOperator: UnaryOperator,
     expression: Expression
 ) extends Expression {
-  override def toString: String = unaryOperator match {
-    case Chr() | Length() | Negate() => "(" + expression.toString + ")"
-    case Not() | Ord()               => expression.toString
-  }
+  override def toString: String =
+    unaryOperator.toString + expression.toString + ")"
 }
 
 case class ArrayLiter(expressions: List[Expression]) extends AssignmentRight {
   override def toString: String = "[" + expressions
     .map(_.toString)
-    .reduce((left, right) => left + "," + right) + "]"
+    .reduce((left, right) => left + ", " + right) + "]"
 }
 
 case class FunctionCall(identifier: Identifier, arguments: Option[ArgumentList])
     extends AssignmentRight {
-  override def toString: String = "call" + identifier + "(" + (arguments match {
-    case Some(args) => args.toString
-    case None       => ""
-  }) + ")"
+  override def toString: String =
+    "call " + identifier + "(" + (arguments match {
+      case Some(args) => args.toString
+      case None       => ""
+    }) + ")"
 }
 
 case class NewPair(expression1: Expression, expression2: Expression)
     extends AssignmentRight {
   override def toString: String =
-    "newpair(" + expression1.toString + "," + expression2.toString + ")"
+    "newpair(" + expression1.toString + ", " + expression2.toString + ")"
 }
 
 case class PairElement(expression: Expression, isFirst: Boolean)
@@ -101,7 +100,7 @@ case class PairElement(expression: Expression, isFirst: Boolean)
 
 case class ArgumentList(expressions: List[Expression]) {
   override def toString: String =
-    expressions.map(_.toString).reduce((left, right) => left + "," + right)
+    expressions.map(_.toString).reduce((left, right) => left + ", " + right)
 }
 
 object ArrayElement {

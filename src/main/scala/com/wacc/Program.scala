@@ -14,9 +14,9 @@ case class Function(
     body: Statement
 ) {
   override def toString: String =
-    functionType.toString + " " + functionName + "(" + parameters
+    functionType.toString + " " + functionName.toString + "(" + parameters
       .getOrElse("")
-      .toString + ")" + "is\n" + body.toString + "end\n"
+      .toString + ")" + " is\n" + body.toString + "end\n"
 }
 
 case class ParameterList(parameters: List[Parameter]) {
