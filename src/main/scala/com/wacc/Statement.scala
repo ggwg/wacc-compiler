@@ -73,13 +73,42 @@ case class IdentifierDeclaration(
   override def toString: String =
     identType.toString + " " + identifier.toString + " = " + assignmentRight.toString + "\n"
 
-  // TODO:
+  /*
+  Check if identifier is already defined in the symbol table (current, not parent)
+    If so, then record error because variable names must not class with existing variable names
+    or any keyword.
+  Extract type of identType, then we check if this is the same type as assignmentRight.
+    If so, add it to symbol table
+    Else, error.
+   */
   override def check(symbolTable: SymbolTable): Any = {
     println("GOT INSIDE IDENTIFIER-DECLARATION CHECK")
-    // check type matches return type of assignmentRight
-    identType.check(symbolTable)
-    identifier.check(symbolTable)
-    assignmentRight.check(symbolTable)
+    var optionTuple: Option[(Any, ASTNode)] = symbolTable.lookup(identifier.identifier)
+      if (optionTuple.isEmpty) {
+        // Don't throw an error - variable is not already defined in current scope
+        println("SUCCESS")
+        // Check identType is the same type as assignmentRight
+        var assignmentRightType = assignmentRight.check(symbolTable)
+
+        println(identType.getClass, assignmentRightType.getClass)
+
+
+        if (identType.getClass == assignmentRightType.getClass) {
+          // Add identifier
+          symbolTable.add(identifier.identifier, identType.getClass, assignmentRight)
+        } else {
+          // Error - identType different type to assignmentRightType
+          println("Error: identType different type to assignmentRightType")
+          return ()
+        }
+      } else {
+        // Error - variable already defined in current scope.
+        print("Error - variable already defined in current scope")
+        return ()
+      }
+//    identType.check(symbolTable)
+//    identifier.check(symbolTable)
+//    assignmentRight.check(symbolTable)
   }
 }
 
@@ -94,6 +123,20 @@ case class If(
   // TODO:
   override def check(symbolTable: SymbolTable): Any = {
     println("GOT INSIDE IF CHECK")
+    // Check the condition check it is a boolean type to a boolean
+    val conditionType = condition.check(symbolTable)
+    if (conditionType.getClass == BooleanType.getClass) {
+      println("Bool type found for if cond")
+      // Create new symbol table for checking types inside trueStatement
+      var trueSymbolTable = new SymbolTable(Option(symbolTable))
+      trueStatement.check(trueSymbolTable)
+      // Create new symbol table for checking types inside falseStatement
+      var falseSymbolTable = new SymbolTable(Option(symbolTable))
+      falseStatement.check(falseSymbolTable)
+    } else {
+      println("Error: Bool type NOT found for if cond")
+      return ()
+    }
   }
 
 }
@@ -153,6 +196,8 @@ case class StatementSequence(
   // TODO:
   override def check(symbolTable: SymbolTable): Any = {
     println("GOT INSIDE STATEMENT-SEQUENCE CHECK")
+    statement1.check(symbolTable)
+    statement2.check(symbolTable)
   }
 }
 

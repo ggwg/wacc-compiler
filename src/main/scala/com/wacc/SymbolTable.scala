@@ -2,34 +2,36 @@ package com.wacc
 
 import scala.collection.mutable
 
-class SymbolTable(enclosingSymbolTable: Option[SymbolTable]) {
+class SymbolTable(_parent: Option[SymbolTable]) {
 
-  var encSymbolTable: Option[SymbolTable] = enclosingSymbolTable
-  var dict = new mutable.HashMap[String, ASTNode]()
+  var parent: Option[SymbolTable] = _parent
+  /* The symbol table contains a mapping from the name of the variable to a tuple
+     containing its type and corresponding AST node. */
+  var dictionary = new mutable.HashMap[String, (Any, ASTNode)]()
 
-  def add(name: String, obj: ASTNode) : Unit = {
-    dict(name) = obj
+  /* Add a variable, along with it's type and corresponding AST node, to the symbol table */
+  def add(varName: String, varType: Any, varObj: ASTNode) : Unit = {
+    dictionary(varName) = (varType, varObj)
   }
 
   // TODO: Refactor null to use Option[]
-  // Returns Type object else null if name not in dict
-  // NOTE: can also use dict.get(), which returns Option[Type]
-  def lookup(name: String) : Option[ASTNode] = {
-    return dict.get(name)
+  // Returns Type object else empty Option if name not in dict
+  def lookup(name: String) : Option[(Any, ASTNode)] = {
+    return dictionary.get(name)
   }
 
-  def lookupAll(name: String) : Option[ASTNode] = {
-    var currST: Option[SymbolTable] = Option(this)
-    while (currST.isDefined) {
-      var obj: Option[ASTNode] = currST.get.lookup(name)
-      if (obj.isDefined) {
-        return obj
+  /* Looks up all the symbol tables */
+  def lookupAll(varName: String) : Option[(Any, ASTNode)] = {
+    var current = Option(this)
+    while (current.isDefined) {
+      val varObj = current.get.lookup(varName)
+      if (varObj.isDefined) {
+        return varObj
       }
-      currST = currST.get.encSymbolTable
+      current = current.get.parent
     }
     return None
   }
 
-  override def toString: String = dict.toString()
-
+  override def toString: String = dictionary.toString()
 }

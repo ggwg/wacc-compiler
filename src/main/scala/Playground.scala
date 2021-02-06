@@ -11,9 +11,9 @@ object Playground {
     var topST: SymbolTable = new SymbolTable(None)
     // TODO: Define global data types as mentioned in slides.
 
-    var parsedResult: Result[Expression] =
-      expressionParser
-        .runParser("5*2")
+    var parsedResult: Result[Statement] =
+      statementParser
+        .runParser("int x = 10 ; int x = 12")
         // we should run
     println(parsedResult)
     // Exit if there was a syntax error with code 100
@@ -22,6 +22,17 @@ object Playground {
     ast.check(topST)
     println("End Main")
 
+    /*
+    enum that indicates the different types:
+    int, bool, char, string, array, T
+
+    typeTable = ["int", "bool", "char", "string", "array", ...
+                 (user-defined stuff would be appended here)]
+
+    symbolTable = [("x", 0), ]
+    symbolTable = [("var_name":(UserType, ASTNode))]
+
+    */
 
 
 //    // Type matching

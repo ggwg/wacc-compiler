@@ -185,6 +185,7 @@ case class UnaryOperatorApplication(
   }
 }
 
+
 case class ArrayLiter(expressions: List[Expression]) extends AssignmentRight {
   override def toString: String = "[" + expressions
     .map(_.toString)
