@@ -13,7 +13,7 @@ object Playground {
 
     var parsedResult: Result[Expression] =
       expressionParser
-        .runParser("!true")
+        .runParser("5*2")
         // we should run
     println(parsedResult)
     // Exit if there was a syntax error with code 100

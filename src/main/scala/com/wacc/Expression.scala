@@ -1,14 +1,6 @@
 package com.wacc
 
-import com.wacc.operator.{
-  BinaryOperator,
-  Chr,
-  Length,
-  Negate,
-  Not,
-  Ord,
-  UnaryOperator
-}
+import com.wacc.operator._
 
 sealed trait Expression extends AssignmentRight {}
 sealed trait AssignmentRight extends ASTNode {}
@@ -29,16 +21,49 @@ case class ArrayElement(
 }
 
 case class BinaryOperatorApplication(
-    expression1: Expression,
-    binaryOperator: BinaryOperator,
-    expression2: Expression
-) extends Expression {
+                                      expression1: Expression,
+                                      binaryOperator: BinaryOperator,
+                                      expression2: Expression
+                                    ) extends Expression {
   override def toString: String =
     expression1.toString + binaryOperator.toString + expression2.toString
 
   // TODO:
   override def check(symbolTable: SymbolTable): Any = {
-    println("GOT INSIDE BINARY-OPERATOR CHECK")
+    println("GOT INSIDE BINARY-OPERATOR-APPLICATION CHECK")
+
+    binaryOperator match {
+      case Add() | Divide() | Modulo() | Multiply() | Subtract() =>
+        if (expression1.check(symbolTable).getClass == IntType.getClass
+          && expression2.check(symbolTable).getClass == IntType.getClass) {
+          return IntType
+        } else {
+          println("ERROR: INTEGER BIN-OP, expected type Int for "+ binaryOperator,getClass.toString)
+          return ()
+        }
+      case GreaterThan() | GreaterEqualThan() | SmallerThan() | SmallerEqualThan() =>
+        if ((expression1.check(symbolTable).getClass == IntType.getClass
+          || expression1.check(symbolTable).getClass == CharacterType.getClass)
+          && (expression2.check(symbolTable).getClass == IntType.getClass
+          || expression2.check(symbolTable).getClass == CharacterType.getClass)) {
+          return BooleanType
+        } else {
+          println("ERROR: COMPARIONS/EQUALS BIN-OP, expected type Int/Char for "+ binaryOperator,getClass.toString)
+          return ()
+        }
+      case Equals() | NotEquals() =>
+        return BooleanType
+      case And() | Or() =>
+        if (expression1.check(symbolTable).getClass == BooleanType.getClass
+          && expression2.check(symbolTable).getClass == BooleanType.getClass) {
+          return BooleanType
+        } else {
+          println("ERROR: AND/OR BIN-OP, expected type Bool for "+ binaryOperator,getClass.toString)
+          return ()
+        }
+    }
+    // In case we add more unary operators
+    return ()
   }
 }
 
@@ -108,9 +133,9 @@ case class StringLiter(string: String) extends Expression {
 }
 
 case class UnaryOperatorApplication(
-    unaryOperator: UnaryOperator,
-    expression: Expression
-) extends Expression {
+                                     unaryOperator: UnaryOperator,
+                                     expression: Expression
+                                   ) extends Expression {
   override def toString: String = unaryOperator match {
     case Chr() | Length() | Negate() => "(" + expression.toString + ")"
     case Not() | Ord()               => expression.toString
@@ -122,16 +147,17 @@ case class UnaryOperatorApplication(
 
     unaryOperator match {
       case Chr() =>
-        if (expression.check(symbolTable).getClass != IntType.getClass) {
+        if (expression.check(symbolTable).getClass == IntType.getClass) {
+          // TODO: check that expression is an int between 0-255
+          return CharacterType
+        } else {
           println("ERROR CHR")
           return ()
-        } else {
-          // check that expression is an int between 0-255
-          return CharacterType
         }
       case Length() =>
         //TODO: NOT DEFINED ARRAYS YET
-        println("NOT DEFINED LENGTH YET")
+        println("NOT DEFINED LENGTH FOR ARRAYS YET")
+        return ()
       case Negate() =>
         if (expression.check(symbolTable).getClass != IntType.getClass) {
           println("ERROR NEGATE")
