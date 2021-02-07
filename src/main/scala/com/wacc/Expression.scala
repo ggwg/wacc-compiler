@@ -21,12 +21,12 @@ case class ArrayElement(
 }
 
 case class BinaryOperatorApplication(
-                                      expression1: Expression,
-                                      binaryOperator: BinaryOperator,
-                                      expression2: Expression
-                                    ) extends Expression {
+    expression1: Expression,
+    binaryOperator: BinaryOperator,
+    expression2: Expression
+) extends Expression {
   override def toString: String =
-    expression1.toString + binaryOperator.toString + expression2.toString
+    expression1.toString + " " + binaryOperator.toString + " " + expression2.toString
 
   // TODO:
   override def check(symbolTable: SymbolTable): Any = {
@@ -34,31 +34,51 @@ case class BinaryOperatorApplication(
 
     binaryOperator match {
       case Add() | Divide() | Modulo() | Multiply() | Subtract() =>
-        if (expression1.check(symbolTable).getClass == IntType.getClass
-          && expression2.check(symbolTable).getClass == IntType.getClass) {
+        if (
+          expression1.check(symbolTable).getClass == IntType.getClass
+          && expression2.check(symbolTable).getClass == IntType.getClass
+        ) {
           return IntType
         } else {
-          println("ERROR: INTEGER BIN-OP, expected type Int for "+ binaryOperator,getClass.toString)
+          println(
+            "ERROR: INTEGER BIN-OP, expected type Int for " + binaryOperator,
+            getClass.toString
+          )
           return ()
         }
-      case GreaterThan() | GreaterEqualThan() | SmallerThan() | SmallerEqualThan() =>
-        if ((expression1.check(symbolTable).getClass == IntType.getClass
-          || expression1.check(symbolTable).getClass == CharacterType.getClass)
+      case GreaterThan() | GreaterEqualThan() | SmallerThan() |
+          SmallerEqualThan() =>
+        if (
+          (expression1.check(symbolTable).getClass == IntType.getClass
+            || expression1
+              .check(symbolTable)
+              .getClass == CharacterType.getClass)
           && (expression2.check(symbolTable).getClass == IntType.getClass
-          || expression2.check(symbolTable).getClass == CharacterType.getClass)) {
+            || expression2
+              .check(symbolTable)
+              .getClass == CharacterType.getClass)
+        ) {
           return BooleanType
         } else {
-          println("ERROR: COMPARIONS/EQUALS BIN-OP, expected type Int/Char for "+ binaryOperator,getClass.toString)
+          println(
+            "ERROR: COMPARIONS/EQUALS BIN-OP, expected type Int/Char for " + binaryOperator,
+            getClass.toString
+          )
           return ()
         }
       case Equals() | NotEquals() =>
         return BooleanType
       case And() | Or() =>
-        if (expression1.check(symbolTable).getClass == BooleanType.getClass
-          && expression2.check(symbolTable).getClass == BooleanType.getClass) {
+        if (
+          expression1.check(symbolTable).getClass == BooleanType.getClass
+          && expression2.check(symbolTable).getClass == BooleanType.getClass
+        ) {
           return BooleanType
         } else {
-          println("ERROR: AND/OR BIN-OP, expected type Bool for "+ binaryOperator,getClass.toString)
+          println(
+            "ERROR: AND/OR BIN-OP, expected type Bool for " + binaryOperator,
+            getClass.toString
+          )
           return ()
         }
     }
@@ -69,7 +89,6 @@ case class BinaryOperatorApplication(
 
 case class BooleanLiter(boolean: Boolean) extends Expression {
   override def toString: String = boolean.toString
-
 
   override def check(symbolTable: SymbolTable): Any = {
     println("GOT INSIDE BOOLEAN-LITER CHECK")
@@ -89,7 +108,7 @@ case class CharacterLiter(char: Char) extends Expression {
 case class Identifier(identifier: String)
     extends Expression
     with AssignmentLeft {
-  override def toString: String = identifier
+  override def toString: String = identifier.toString
 
   // TODO:
   override def check(symbolTable: SymbolTable): Any = {
@@ -105,7 +124,6 @@ case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit])
     case None       => ""
     case Some(sign) => sign.toString
   }) + digits.mkString
-
 
   override def check(symbolTable: SymbolTable): Any = {
     println("GOT INSIDE INTEGER-LITER CHECK")
@@ -124,7 +142,7 @@ case class PairLiter() extends Expression {
 }
 
 case class StringLiter(string: String) extends Expression {
-  override def toString: String = string
+  override def toString: String = "\"" + string + "\""
 
   override def check(symbolTable: SymbolTable): Any = {
     println("GOT INSIDE STRING-LITER CHECK")
@@ -133,13 +151,10 @@ case class StringLiter(string: String) extends Expression {
 }
 
 case class UnaryOperatorApplication(
-                                     unaryOperator: UnaryOperator,
-                                     expression: Expression
-                                   ) extends Expression {
-  override def toString: String = unaryOperator match {
-    case Chr() | Length() | Negate() => "(" + expression.toString + ")"
-    case Not() | Ord()               => expression.toString
-  }
+    unaryOperator: UnaryOperator,
+    expression: Expression
+) extends Expression {
+  override def toString: String = unaryOperator.toString + expression.toString
 
   // TODO:
   override def check(symbolTable: SymbolTable): Any = {
@@ -185,11 +200,10 @@ case class UnaryOperatorApplication(
   }
 }
 
-
 case class ArrayLiter(expressions: List[Expression]) extends AssignmentRight {
   override def toString: String = "[" + expressions
     .map(_.toString)
-    .reduce((left, right) => left + "," + right) + "]"
+    .reduce((left, right) => left + ", " + right) + "]"
 
   // TODO:
   override def check(symbolTable: SymbolTable): Any = {
@@ -199,10 +213,11 @@ case class ArrayLiter(expressions: List[Expression]) extends AssignmentRight {
 
 case class FunctionCall(identifier: Identifier, arguments: Option[ArgumentList])
     extends AssignmentRight {
-  override def toString: String = "call" + identifier + "(" + (arguments match {
-    case Some(args) => args.toString
-    case None       => ""
-  }) + ")"
+  override def toString: String =
+    "call " + identifier + "(" + (arguments match {
+      case Some(args) => args.toString
+      case None       => ""
+    }) + ")"
 
   // TODO:
   override def check(symbolTable: SymbolTable): Any = {
@@ -213,7 +228,7 @@ case class FunctionCall(identifier: Identifier, arguments: Option[ArgumentList])
 case class NewPair(expression1: Expression, expression2: Expression)
     extends AssignmentRight {
   override def toString: String =
-    "newpair(" + expression1.toString + "," + expression2.toString + ")"
+    "newpair(" + expression1.toString + ", " + expression2.toString + ")"
 
   // TODO:
   override def check(symbolTable: SymbolTable): Any = {
@@ -233,10 +248,9 @@ case class PairElement(expression: Expression, isFirst: Boolean)
   }
 }
 
-case class ArgumentList(expressions: List[Expression])
-    extends ASTNode {
+case class ArgumentList(expressions: List[Expression]) extends ASTNode {
   override def toString: String =
-    expressions.map(_.toString).reduce((left, right) => left + "," + right)
+    expressions.map(_.toString).reduce((left, right) => left + ", " + right)
 
   // TODO:
   override def check(symbolTable: SymbolTable): Any = {

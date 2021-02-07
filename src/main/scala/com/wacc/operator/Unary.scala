@@ -10,10 +10,10 @@ sealed trait UnaryOperator extends ASTNode {
 }
 
 case class Chr() extends UnaryOperator {
-  override def toString: String = "chr"
+  override def toString: String = "chr "
 }
 case class Length() extends UnaryOperator {
-  override def toString: String = "len"
+  override def toString: String = "len "
 }
 case class Negate() extends UnaryOperator {
   override def toString: String = "-"
@@ -22,7 +22,7 @@ case class Not() extends UnaryOperator {
   override def toString: String = "!"
 }
 case class Ord() extends UnaryOperator {
-  override def toString: String = "ord"
+  override def toString: String = "ord "
 }
 
 object UnaryOperator {

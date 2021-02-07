@@ -49,8 +49,10 @@ case class Exit(expression: Expression) extends Statement {
       // Correct
       println("SUCCESS")
     } else {
-      println("ERROR: Exit type invalid - expected " +
-        IntType.getClass.toString + "Got: " + exitType.getClass.toString)
+      println(
+        "ERROR: Exit type invalid - expected " +
+          IntType.getClass.toString + "Got: " + exitType.getClass.toString
+      )
     }
     return ()
   }
@@ -83,29 +85,33 @@ case class IdentifierDeclaration(
    */
   override def check(symbolTable: SymbolTable): Any = {
     println("GOT INSIDE IDENTIFIER-DECLARATION CHECK")
-    var optionTuple: Option[(Any, ASTNode)] = symbolTable.lookup(identifier.identifier)
-      if (optionTuple.isEmpty) {
-        // Don't throw an error - variable is not already defined in current scope
-        println("SUCCESS")
-        // Check identType is the same type as assignmentRight
-        var assignmentRightType = assignmentRight.check(symbolTable)
+    var optionTuple: Option[(Any, ASTNode)] =
+      symbolTable.lookup(identifier.identifier)
+    if (optionTuple.isEmpty) {
+      // Don't throw an error - variable is not already defined in current scope
+      println("SUCCESS")
+      // Check identType is the same type as assignmentRight
+      var assignmentRightType = assignmentRight.check(symbolTable)
 
-        println(identType.getClass, assignmentRightType.getClass)
+      println(identType.getClass, assignmentRightType.getClass)
 
-
-        if (identType.getClass == assignmentRightType.getClass) {
-          // Add identifier
-          symbolTable.add(identifier.identifier, identType.getClass, assignmentRight)
-        } else {
-          // Error - identType different type to assignmentRightType
-          println("Error: identType different type to assignmentRightType")
-          return ()
-        }
+      if (identType == assignmentRightType) {
+        // Add identifier
+        symbolTable.add(
+          identifier.identifier,
+          identType.getClass,
+          assignmentRight
+        )
       } else {
-        // Error - variable already defined in current scope.
-        print("Error - variable already defined in current scope")
+        // Error - identType different type to assignmentRightType
+        println("Error: identType different type to assignmentRightType")
         return ()
       }
+    } else {
+      // Error - variable already defined in current scope.
+      print("Error - variable already defined in current scope")
+      return ()
+    }
 //    identType.check(symbolTable)
 //    identifier.check(symbolTable)
 //    assignmentRight.check(symbolTable)

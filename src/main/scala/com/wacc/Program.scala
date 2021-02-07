@@ -3,7 +3,8 @@ package com.wacc
 case class Program(functions: List[Function], body: Statement) extends ASTNode {
   override def toString: String = "begin\n" + functions
     .map(_.toString)
-    .reduce((left, right) => left + right) + body.toString + "end"
+    .reduceOption((left, right) => left + right)
+    .getOrElse("") + body.toString + "end"
 
   override def check(symbolTable: SymbolTable): Any = {
     // TODO: check function name and return type, slide 31
@@ -12,13 +13,13 @@ case class Program(functions: List[Function], body: Statement) extends ASTNode {
 
     val newSymbolTable = new SymbolTable(Option(symbolTable))
 
-    functions.foreach {
-      func => func.check(newSymbolTable)
+    functions.foreach { func =>
+      func.check(newSymbolTable)
     }
   }
 }
 
-case class Function (
+case class Function(
     functionType: Type,
     functionName: Identifier,
     parameters: Option[ParameterList],
@@ -27,7 +28,7 @@ case class Function (
   override def toString: String =
     functionType.toString + " " + functionName.toString + "(" + parameters
       .getOrElse("")
-      .toString + ")" + "is\n" + body.toString + "end\n"
+      .toString + ") is\n" + body.toString + "end\n"
 
   override def check(symbolTable: SymbolTable): Any = {
     // check function name and return type, slide 31
@@ -37,7 +38,10 @@ case class Function (
 
 case class ParameterList(parameters: List[Parameter]) extends ASTNode {
   override def toString: String =
-    parameters.map(_.toString).reduce((left, right) => left + ", " + right)
+    parameters
+      .map(_.toString)
+      .reduceOption((left, right) => left + ", " + right)
+      .getOrElse("")
 
   // TODO:
   override def check(symbolTable: SymbolTable): Any = {
@@ -45,7 +49,8 @@ case class ParameterList(parameters: List[Parameter]) extends ASTNode {
   }
 }
 
-case class Parameter(parameterType: Type, identifier: Identifier) extends ASTNode {
+case class Parameter(parameterType: Type, identifier: Identifier)
+    extends ASTNode {
   override def toString: String =
     parameterType.toString + " " + identifier.toString
 
