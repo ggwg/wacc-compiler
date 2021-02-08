@@ -8,12 +8,12 @@ object Playground {
     println("Start Main")
 
     // Initialize top level Symbol Table
-    var topST: SymbolTable = new SymbolTable(None)
+    var topST: SymbolTable = new SymbolTable()
     // TODO: Define global data types as mentioned in slides.
 
     var parsedResult: Result[Statement] =
       statementParser
-        .runParser("int x = 10 ; int x = 12")
+        .runParser("int x = 10 ; int x = 10")
         // we should run
     println(parsedResult)
     // Exit if there was a syntax error with code 100

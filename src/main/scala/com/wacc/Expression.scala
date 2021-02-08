@@ -1,5 +1,6 @@
 package com.wacc
 
+import com.wacc.TypeEnum.TypeEnum
 import com.wacc.operator._
 
 sealed trait Expression extends AssignmentRight {}
@@ -15,7 +16,7 @@ case class ArrayElement(
     identifier.toString + expressions.flatMap("[" + _.toString + "]")
 
   // TODO:
-  override def check(symbolTable: SymbolTable): Any = {
+  override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE ARRAY-ELEMENT CHECK")
   }
 }
@@ -29,7 +30,7 @@ case class BinaryOperatorApplication(
     expression1.toString + " " + binaryOperator.toString + " " + expression2.toString
 
   // TODO:
-  override def check(symbolTable: SymbolTable): Any = {
+  override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE BINARY-OPERATOR-APPLICATION CHECK")
 
     binaryOperator match {
@@ -51,11 +52,11 @@ case class BinaryOperatorApplication(
         if (
           (expression1.check(symbolTable).getClass == IntType.getClass
             || expression1
-              .check(symbolTable)
+                                      .check(symbolTable)
               .getClass == CharacterType.getClass)
           && (expression2.check(symbolTable).getClass == IntType.getClass
             || expression2
-              .check(symbolTable)
+                                      .check(symbolTable)
               .getClass == CharacterType.getClass)
         ) {
           return BooleanType
@@ -90,7 +91,7 @@ case class BinaryOperatorApplication(
 case class BooleanLiter(boolean: Boolean) extends Expression {
   override def toString: String = boolean.toString
 
-  override def check(symbolTable: SymbolTable): Any = {
+  override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE BOOLEAN-LITER CHECK")
     return BooleanType
   }
@@ -99,7 +100,7 @@ case class BooleanLiter(boolean: Boolean) extends Expression {
 case class CharacterLiter(char: Char) extends Expression {
   override def toString: String = "'" + char + "'"
 
-  override def check(symbolTable: SymbolTable): Any = {
+  override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE CHARACTER-LITER CHECK")
     return CharacterType
   }
@@ -111,7 +112,7 @@ case class Identifier(identifier: String)
   override def toString: String = identifier.toString
 
   // TODO:
-  override def check(symbolTable: SymbolTable): Any = {
+  override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE IDENTIFIER CHECK")
     // lookup identifier in symbol table, and extract base type
     // return the type as specified in the symbol table
@@ -125,17 +126,19 @@ case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit])
     case Some(sign) => sign.toString
   }) + digits.mkString
 
-  override def check(symbolTable: SymbolTable): Any = {
+  override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE INTEGER-LITER CHECK")
     return IntType
   }
+
+  override def getType(symbolTable: SymbolTable): TypeEnum = TypeEnum.Int
 }
 
 case class PairLiter() extends Expression {
   override def toString: String = "null"
 
   // TODO:
-  override def check(symbolTable: SymbolTable): Any = {
+  override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE PAIR-LITER CHECK")
     return PairType
   }
@@ -144,7 +147,7 @@ case class PairLiter() extends Expression {
 case class StringLiter(string: String) extends Expression {
   override def toString: String = "\"" + string + "\""
 
-  override def check(symbolTable: SymbolTable): Any = {
+  override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE STRING-LITER CHECK")
     return StringType
   }
@@ -157,7 +160,7 @@ case class UnaryOperatorApplication(
   override def toString: String = unaryOperator.toString + expression.toString
 
   // TODO:
-  override def check(symbolTable: SymbolTable): Any = {
+  override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE UNARY-OPERATOR-APPLICATION CHECK")
 
     unaryOperator match {
@@ -206,7 +209,7 @@ case class ArrayLiter(expressions: List[Expression]) extends AssignmentRight {
     .reduce((left, right) => left + ", " + right) + "]"
 
   // TODO:
-  override def check(symbolTable: SymbolTable): Any = {
+  override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE ARRAY-LITER CHECK")
   }
 }
@@ -220,7 +223,7 @@ case class FunctionCall(identifier: Identifier, arguments: Option[ArgumentList])
     }) + ")"
 
   // TODO:
-  override def check(symbolTable: SymbolTable): Any = {
+  override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE FUNCTION-CALL CHECK")
   }
 }
@@ -231,7 +234,7 @@ case class NewPair(expression1: Expression, expression2: Expression)
     "newpair(" + expression1.toString + ", " + expression2.toString + ")"
 
   // TODO:
-  override def check(symbolTable: SymbolTable): Any = {
+  override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE NEW-PAIR CHECK")
   }
 }
@@ -243,7 +246,7 @@ case class PairElement(expression: Expression, isFirst: Boolean)
     (if (isFirst) "fst " else "snd ") + expression.toString
 
   // TODO:
-  override def check(symbolTable: SymbolTable): Any = {
+  override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE PAIR-ELEMENT CHECK")
   }
 }
@@ -253,7 +256,7 @@ case class ArgumentList(expressions: List[Expression]) extends ASTNode {
     expressions.map(_.toString).reduce((left, right) => left + ", " + right)
 
   // TODO:
-  override def check(symbolTable: SymbolTable): Any = {
+  override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE ARGUMENT-LIST CHECK")
   }
 }

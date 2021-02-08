@@ -10,7 +10,7 @@ case class Assignment(
     assignmentLeft.toString + " = " + assignmentRight.toString + "\n"
 
   // TODO:
-  override def check(symbolTable: SymbolTable): Any = {
+  override def check(symbolTable: SymbolTable): Unit = {
     // Check that assignment-left type is same as return type of assignment-right
 
     println("GOT INSIDE ASSIGNMENT CHECK")
@@ -31,7 +31,7 @@ case class BeginEnd(statement: Statement) extends Statement {
   override def toString: String = "begin\n" + statement.toString + "end\n"
 
   // TODO:
-  override def check(symbolTable: SymbolTable): Any = {
+  override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE BEGIN-END CHECK")
   }
 }
@@ -40,7 +40,7 @@ case class Exit(expression: Expression) extends Statement {
   override def toString: String = "exit " + expression.toString + "\n"
 
   // TODO:
-  override def check(symbolTable: SymbolTable): Any = {
+  override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE EXIT CHECK")
     // Exit must return an integer literal error code.
     var exitType = expression.check(symbolTable)
@@ -62,7 +62,7 @@ case class Free(expression: Expression) extends Statement {
   override def toString: String = "free " + expression.toString + "\n"
 
   // TODO:
-  override def check(symbolTable: SymbolTable): Any = {
+  override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE FREE CHECK")
   }
 }
@@ -83,25 +83,21 @@ case class IdentifierDeclaration(
     If so, add it to symbol table
     Else, error.
    */
-  override def check(symbolTable: SymbolTable): Any = {
+  override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE IDENTIFIER-DECLARATION CHECK")
-    var optionTuple: Option[(Any, ASTNode)] =
-      symbolTable.lookup(identifier.identifier)
+    var optionTuple: Option[(Any, ASTNode)] = symbolTable.lookup(identifier.identifier)
     if (optionTuple.isEmpty) {
       // Don't throw an error - variable is not already defined in current scope
-      println("SUCCESS")
+      println("Identifier not found in current Symbol Table")
       // Check identType is the same type as assignmentRight
-      var assignmentRightType = assignmentRight.check(symbolTable)
-
-      println(identType.getClass, assignmentRightType.getClass)
-
-      if (identType == assignmentRightType) {
+      if (identType.getType(symbolTable) == assignmentRight.getType(symbolTable)) {
         // Add identifier
         symbolTable.add(
           identifier.identifier,
           identType.getClass,
           assignmentRight
         )
+        println("Added to ST")
       } else {
         // Error - identType different type to assignmentRightType
         println("Error: identType different type to assignmentRightType")
@@ -127,17 +123,17 @@ case class If(
     "if " + condition + " then\n" + trueStatement.toString + "else\n" + falseStatement + "fi\n"
 
   // TODO:
-  override def check(symbolTable: SymbolTable): Any = {
+  override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE IF CHECK")
     // Check the condition check it is a boolean type to a boolean
     val conditionType = condition.check(symbolTable)
     if (conditionType.getClass == BooleanType.getClass) {
       println("Bool type found for if cond")
       // Create new symbol table for checking types inside trueStatement
-      var trueSymbolTable = new SymbolTable(Option(symbolTable))
+      var trueSymbolTable = new SymbolTable(symbolTable)
       trueStatement.check(trueSymbolTable)
       // Create new symbol table for checking types inside falseStatement
-      var falseSymbolTable = new SymbolTable(Option(symbolTable))
+      var falseSymbolTable = new SymbolTable(symbolTable)
       falseStatement.check(falseSymbolTable)
     } else {
       println("Error: Bool type NOT found for if cond")
@@ -151,7 +147,7 @@ case class Print(expression: Expression) extends Statement {
   override def toString: String = "print " + expression.toString + "\n"
 
   // TODO:
-  override def check(symbolTable: SymbolTable): Any = {
+  override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE PRINT CHECK")
   }
 }
@@ -160,7 +156,7 @@ case class Println(expression: Expression) extends Statement {
   override def toString: String = "println " + expression.toString + "\n"
 
   // TODO:
-  override def check(symbolTable: SymbolTable): Any = {
+  override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE PRINTLN CHECK")
   }
 }
@@ -169,7 +165,7 @@ case class Read(assignmentLeft: AssignmentLeft) extends Statement {
   override def toString: String = "read " + assignmentLeft.toString + "\n"
 
   // TODO:
-  override def check(symbolTable: SymbolTable): Any = {
+  override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE READ CHECK")
   }
 }
@@ -178,7 +174,7 @@ case class Return(expression: Expression) extends Statement {
   override def toString: String = "return " + expression.toString + "\n"
 
   // TODO:
-  override def check(symbolTable: SymbolTable): Any = {
+  override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE RETURN CHECK")
   }
 }
@@ -187,7 +183,7 @@ case class SkipStatement() extends Statement {
   override def toString: String = "skip\n"
 
   // TODO:
-  override def check(symbolTable: SymbolTable): Any = {
+  override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE SKIP-STATEMENT CHECK")
   }
 }
@@ -200,7 +196,7 @@ case class StatementSequence(
     statement1.toString.stripSuffix("\n") + ";\n" + statement2.toString
 
   // TODO:
-  override def check(symbolTable: SymbolTable): Any = {
+  override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE STATEMENT-SEQUENCE CHECK")
     statement1.check(symbolTable)
     statement2.check(symbolTable)
@@ -213,7 +209,7 @@ case class While(condition: Expression, statement: Statement)
     "while " + condition.toString + " do\n" + statement.toString + "done\n"
 
   // TODO:
-  override def check(symbolTable: SymbolTable): Any = {
+  override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE WHILE CHECK")
   }
 }

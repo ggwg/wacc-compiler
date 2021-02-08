@@ -6,12 +6,12 @@ case class Program(functions: List[Function], body: Statement) extends ASTNode {
     .reduceOption((left, right) => left + right)
     .getOrElse("") + body.toString + "end"
 
-  override def check(symbolTable: SymbolTable): Any = {
+  override def check(symbolTable: SymbolTable): Unit = {
     // TODO: check function name and return type, slide 31
 
     println("CHECKED INSIDE PROGRAM")
 
-    val newSymbolTable = new SymbolTable(Option(symbolTable))
+    val newSymbolTable = new SymbolTable(symbolTable)
 
     functions.foreach { func =>
       func.check(newSymbolTable)
@@ -30,7 +30,7 @@ case class Function(
       .getOrElse("")
       .toString + ") is\n" + body.toString + "end\n"
 
-  override def check(symbolTable: SymbolTable): Any = {
+  override def check(symbolTable: SymbolTable): Unit = {
     // check function name and return type, slide 31
     println("CHECKED INSIDE FUNCTION")
   }
@@ -44,7 +44,7 @@ case class ParameterList(parameters: List[Parameter]) extends ASTNode {
       .getOrElse("")
 
   // TODO:
-  override def check(symbolTable: SymbolTable): Any = {
+  override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE PARAMETER-LIST CHECK")
   }
 }
@@ -55,7 +55,7 @@ case class Parameter(parameterType: Type, identifier: Identifier)
     parameterType.toString + " " + identifier.toString
 
   // TODO:
-  override def check(symbolTable: SymbolTable): Any = {
+  override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE PARAMETER-LIST CHECK")
   }
 }

@@ -2,9 +2,11 @@ package com.wacc
 
 import scala.collection.mutable
 
-class SymbolTable(_parent: Option[SymbolTable]) {
+class SymbolTable(_parent: SymbolTable) {
+  // default parameter to null
+  def this() = this(null)
 
-  var parent: Option[SymbolTable] = _parent
+  var parent: Option[SymbolTable] = Option(_parent)
   /* The symbol table contains a mapping from the name of the variable to a tuple
      containing its type and corresponding AST node. */
   var dictionary = new mutable.HashMap[String, (Any, ASTNode)]()
