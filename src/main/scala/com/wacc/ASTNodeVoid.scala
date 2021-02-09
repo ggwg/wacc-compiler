@@ -8,8 +8,8 @@ trait ASTNode {
 
 // create a new trait that extends ASTNode and defined default void return
 trait ASTNodeVoid extends ASTNode {
-  override def check(symbolTable: SymbolTable): Unit = {
-    println("* NO CHECK DEFINED FOR THIS NODE *")
-  }
+//  override def check(symbolTable: SymbolTable): Unit = {
+//    println("* NO CHECK DEFINED FOR THIS NODE *")
+//  }
   override def getType(symbolTable: SymbolTable): Type = VoidType()
 }

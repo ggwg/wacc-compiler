@@ -52,56 +52,41 @@ case class BinaryOperatorApplication(
 
     binaryOperator match {
       case Add() | Divide() | Modulo() | Multiply() | Subtract() =>
-        if (
-          expression1.check(symbolTable).getClass == IntType.getClass
-          && expression2.check(symbolTable).getClass == IntType.getClass
-        ) {
-          return IntType
-        } else {
-          println(
-            "ERROR: INTEGER BIN-OP, expected type Int for " + binaryOperator,
-            getClass.toString
-          )
-          return ()
+        if (!expression1.getType(symbolTable).unifies(IntType())){
+          println("ERROR: INTEGER BIN-OP, expected type Int")
         }
-      case GreaterThan() | GreaterEqualThan() | SmallerThan() |
-          SmallerEqualThan() =>
-        if (
-          (expression1.check(symbolTable).getClass == IntType.getClass
-            || expression1
-                                      .check(symbolTable)
-              .getClass == CharacterType.getClass)
-          && (expression2.check(symbolTable).getClass == IntType.getClass
-            || expression2
-                                      .check(symbolTable)
-              .getClass == CharacterType.getClass)
-        ) {
-          return BooleanType
-        } else {
-          println(
-            "ERROR: COMPARIONS/EQUALS BIN-OP, expected type Int/Char for " + binaryOperator,
-            getClass.toString
-          )
-          return ()
+        if (!expression2.getType(symbolTable).unifies(IntType())) {
+          println("ERROR: INTEGER BIN-OP, expected type Int")
+        }
+      case GreaterThan() | GreaterEqualThan() | SmallerThan() | SmallerEqualThan() =>
+        val result1 = expression1.getType(symbolTable).unifies(IntType()) ||
+          expression1.getType(symbolTable).unifies(CharacterType())
+        val result2 = expression2.getType(symbolTable).unifies(IntType()) ||
+          expression2.getType(symbolTable).unifies(CharacterType())
+        if (!result1) {
+          println("ERROR: COMPARIONS/EQUALS BIN-OP, expected type Int/Char")
+        }
+        if (!result2) {
+          println("ERROR: COMPARIONS/EQUALS BIN-OP, expected type Int/Char")
         }
       case Equals() | NotEquals() =>
-        return BooleanType
+        println("BIN-OP, nothing to do for equals")
       case And() | Or() =>
-        if (
-          expression1.check(symbolTable).getClass == BooleanType.getClass
-          && expression2.check(symbolTable).getClass == BooleanType.getClass
-        ) {
-          return BooleanType
-        } else {
-          println(
-            "ERROR: AND/OR BIN-OP, expected type Bool for " + binaryOperator,
-            getClass.toString
-          )
-          return ()
+        if (!expression1.getType(symbolTable).unifies(BooleanType())) {
+          println("ERROR: AND/OR BIN-OP, expected type Bool")
+        }
+        if (!expression2.getType(symbolTable).unifies(BooleanType())) {
+          println("ERROR: AND/OR BIN-OP, expected type Bool")
         }
     }
-    // In case we add more unary operators
-    return ()
+  }
+
+  override def getType(symbolTable: SymbolTable): Type = {
+    println("getType(): BINARY-OPERATOR-APPLICATION")
+    binaryOperator match {
+      case Add() | Divide() | Modulo() | Multiply() | Subtract() => IntType()
+      case _ => BooleanType()
+    }
   }
 }
 
@@ -122,15 +107,26 @@ case class CharacterLiter(char: Char) extends Expression {
   override def getType(symbolTable: SymbolTable): Type = CharacterType()
 }
 
+/*
+assignment:
+x = 5
+assignment.check()
+compare types
+x.getType() -> VoidType
+5.getTpye() -> IntType
+Different
+x.check()
+
+ */
 case class Identifier(identifier: String)
     extends Expression
     with AssignmentLeft {
   override def toString: String = identifier.toString
-  // TODO:
   override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE IDENTIFIER CHECK")
-    // lookup identifier in symbol table, and extract base type
-    // return the type as specified in the symbol table
+    if (getType(symbolTable).unifies(VoidType())) {
+      println("Error - undefined identifier")
+    }
   }
   override def getType(symbolTable: SymbolTable): Type = {
     var lookupVal: Option[(Type, ASTNodeVoid)] = symbolTable.lookupAll(identifier)
@@ -145,10 +141,6 @@ case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit])
     case Some(sign) => sign.toString
   }) + digits.mkString
 
-  override def check(symbolTable: SymbolTable): Unit = {
-    println("GOT INSIDE INTEGER-LITER CHECK")
-    return IntType
-  }
   override def getType(symbolTable: SymbolTable): Type = IntType()
 }
 
@@ -165,12 +157,6 @@ case class PairLiter() extends Expression {
 
 case class StringLiter(string: String) extends Expression {
   override def toString: String = "\"" + string + "\""
-
-  override def check(symbolTable: SymbolTable): Unit = {
-    println("GOT INSIDE STRING-LITER CHECK")
-    return StringType
-  }
-
   override def getType(symbolTable: SymbolTable): Type = StringType()
 }
 
@@ -180,39 +166,33 @@ case class UnaryOperatorApplication(
 ) extends Expression {
   override def toString: String = unaryOperator.toString + expression.toString
 
-  // TODO:
   override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE UNARY-OPERATOR-APPLICATION CHECK")
-
     unaryOperator match {
       case Chr() =>
-        if (expression.check(symbolTable).getClass == IntType.getClass) {
+        if (expression.getType(symbolTable).unifies(IntType())) {
           // TODO: check that expression is an int between 0-255
-          return CharacterType
+          expression.check(symbolTable)
         } else {
-          println("ERROR CHR")
-          return ()
+          println("ERROR IN UNARY-OPERATOR APPLICATION: CHR")
         }
       case Length() =>
-        //TODO: NOT DEFINED ARRAYS YET
-        println("NOT DEFINED LENGTH FOR ARRAYS YET")
-        return ()
+        // TODO: Type checking for arrays
+        // if (expression.getType(symbolTable).unifies(ArrayType()))
       case Negate() =>
-        if (expression.check(symbolTable).getClass != IntType.getClass) {
-          println("ERROR NEGATE")
-          return ()
+        if (expression.getType(symbolTable).unifies(IntType())) {
+          expression.check(symbolTable)
         } else {
-          return IntType
+          println("ERROR NEGATE")
         }
       case Not() =>
-        if (expression.check(symbolTable).getClass != BooleanType.getClass) {
-          println("ERROR NOT")
-          return ()
+        if (expression.getType(symbolTable).unifies(BooleanType())) {
+          expression.check(symbolTable)
         } else {
-          return BooleanType
+          println("ERROR NOT")
         }
       case Ord() =>
-        if (expression.check(symbolTable).getClass != IntType.getClass) {
+        if (expression.getType(symbolTable).unifies(CharacterType())) {
           println("ERROR ORD")
           return ()
         } else {
