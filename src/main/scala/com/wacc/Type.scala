@@ -28,7 +28,10 @@ case class CharacterType() extends BaseType {
 case class StringType() extends BaseType {
   override def toString: String = "string"
 
-  override def getType(symbolTable: SymbolTable): Type = StringType()
+  override def getType(symbolTable: SymbolTable): Type = {
+    println("GOT INSIDE STRING-TYPE")
+    StringType()
+  }
 }
 
 case class PairDefault() extends PairElementType {

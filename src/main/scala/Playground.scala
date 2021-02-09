@@ -5,7 +5,7 @@ import parsley._
 object Playground {
 
   def main(args: Array[String]): Unit = {
-    println("Start Main")
+    println("Start Main\n")
 
     // Initialize top level Symbol Table
     var topST: SymbolTable = new SymbolTable()
@@ -13,14 +13,13 @@ object Playground {
 
     var parsedResult: Result[Statement] =
       statementParser
-        .runParser("int a = hello ; int x = 10 ; int x = 10")
+        .runParser("int x = 10 ; z = 5")
         // we should run
     println(parsedResult)
-    // Exit if there was a syntax error with code 100
 
     var ast = parsedResult.get
     ast.check(topST)
-    println("End Main")
+    println("\nEnd Main")
 
     /*
     enum that indicates the different types:

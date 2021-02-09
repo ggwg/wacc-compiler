@@ -6,6 +6,7 @@ sealed trait Expression extends AssignmentRight {}
 sealed trait AssignmentRight extends ASTNodeVoid {}
 sealed trait AssignmentLeft extends ASTNodeVoid {}
 
+/* Since array element may be empty, the type may either be ArrayType(SomeType()) or ArrayType(VoidType()) */
 case class ArrayElement(
     identifier: Identifier,
     expressions: List[Expression]
@@ -14,9 +15,25 @@ case class ArrayElement(
   override def toString: String =
     identifier.toString + expressions.flatMap("[" + _.toString + "]")
 
-  // TODO:
   override def check(symbolTable: SymbolTable): Unit = {
-    println("GOT INSIDE ARRAY-ELEMENT CHECK")
+    // If the list is non-empty, check that all the types of the elements of the array
+    // are the same.
+    if (!expressions.isEmpty) {
+      val arrayElementType = expressions.head.getType(symbolTable)
+      for (expression <- expressions) {
+        if (!expression.getType(symbolTable).unifies(arrayElementType)) {
+          println("Array type not equal to expected array type. Got: " + expression.getType(symbolTable)
+          + ", Expected: " + arrayElementType)
+        }
+      }
+    }
+  }
+  override def getType(symbolTable: SymbolTable): Type = {
+    if (expressions.isEmpty) {
+      ArrayType(VoidType())
+    } else {
+      ArrayType(expressions.head.getType(symbolTable))
+    }
   }
   // TODO: what type to return if ArrayElement is empty? (how to define getType function)
 }
@@ -115,7 +132,10 @@ case class Identifier(identifier: String)
     // lookup identifier in symbol table, and extract base type
     // return the type as specified in the symbol table
   }
-  override def getType(symbolTable: SymbolTable): Type = StringType()
+  override def getType(symbolTable: SymbolTable): Type = {
+    var lookupVal: Option[(Type, ASTNodeVoid)] = symbolTable.lookupAll(identifier)
+    return lookupVal.getOrElse((VoidType(), null))._1
+  }
 }
 
 case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit])
