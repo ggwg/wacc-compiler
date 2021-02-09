@@ -1,8 +1,8 @@
 package com.wacc.operator
 
-import com.wacc.{ASTNode, SymbolTable}
+import com.wacc.{ASTNodeVoid, SymbolTable}
 
-trait BinaryOperator extends ASTNode {
+trait BinaryOperator extends ASTNodeVoid {
   // TODO - THIS MIGHT NEED TO BE DONE FOR EACH ONE INIDIVIDUALLY:
   override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE BINARY-OPERATOR CHECK")

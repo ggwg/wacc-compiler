@@ -1,6 +1,6 @@
 package com.wacc
 
-sealed trait Statement extends ASTNode
+sealed trait Statement extends ASTNodeVoid
 
 case class Assignment(
     assignmentLeft: AssignmentLeft,
@@ -74,7 +74,6 @@ case class IdentifierDeclaration(
 ) extends Statement {
   override def toString: String =
     identType.toString + " " + identifier.toString + " = " + assignmentRight.toString + "\n"
-
   /*
   Check if identifier is already defined in the symbol table (current, not parent)
     If so, then record error because variable names must not class with existing variable names
@@ -85,35 +84,21 @@ case class IdentifierDeclaration(
    */
   override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE IDENTIFIER-DECLARATION CHECK")
-    var optionTuple: Option[(Any, ASTNode)] = symbolTable.lookup(identifier.identifier)
-    // symbolTable.getOrElseUpdate(...)
-    // updateWith(...)
-    if (optionTuple.isEmpty) {
-      // Don't throw an error - variable is not already defined in current scope
-      println("Identifier not found in current Symbol Table")
-      // Check identType is the same type as assignmentRight
-      if (identType.getType(symbolTable).unifies(assignmentRight.getType(symbolTable))) {
-        // Add identifier
-        println("Unifies successful")
-        symbolTable.add(
-          identifier.identifier,
-          identType.getClass,
-          assignmentRight
-        )
-        println("Added to ST")
-      } else {
-        // Error - identType different type to assignmentRightType
-        println("Error: identType different type to assignmentRightType")
-        return ()
+    symbolTable.dictionary.updateWith(identifier.identifier)({
+      case Some(x) => {
+        println("Already in Dictionary - throw error")
+        Some(x)
       }
-    } else {
-      // Error - variable already defined in current scope.
-      print("Error - variable already defined in current scope")
-      return ()
-    }
-//    identType.check(symbolTable)
-//    identifier.check(symbolTable)
-//    assignmentRight.check(symbolTable)
+      case None => {
+        if (identType.getType(symbolTable).unifies(assignmentRight.getType(symbolTable))) {
+          println("Added to dictionary")
+          Some((identType.getType(symbolTable), assignmentRight))
+        } else {
+          println("Invalid Types!")
+          None
+        }
+      }
+    })
   }
 }
 

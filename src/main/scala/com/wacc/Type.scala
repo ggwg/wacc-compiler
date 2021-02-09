@@ -1,11 +1,13 @@
 package com.wacc
 
-sealed trait Type extends ASTNode {
+sealed trait Type extends ASTNodeVoid {
   def unifies(otherType: Type) = this == otherType
 }
 
 sealed trait PairElementType extends Type
 sealed trait BaseType extends Type with PairElementType
+
+case class VoidType() extends Type
 
 case class IntType() extends BaseType {
   override def toString: String = "int"

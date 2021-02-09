@@ -3,8 +3,8 @@ package com.wacc
 import com.wacc.operator._
 
 sealed trait Expression extends AssignmentRight {}
-sealed trait AssignmentRight extends ASTNode {}
-sealed trait AssignmentLeft extends ASTNode {}
+sealed trait AssignmentRight extends ASTNodeVoid {}
+sealed trait AssignmentLeft extends ASTNodeVoid {}
 
 case class ArrayElement(
     identifier: Identifier,
@@ -18,6 +18,7 @@ case class ArrayElement(
   override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE ARRAY-ELEMENT CHECK")
   }
+  // TODO: what type to return if ArrayElement is empty? (how to define getType function)
 }
 
 case class BinaryOperatorApplication(
@@ -89,31 +90,32 @@ case class BinaryOperatorApplication(
 
 case class BooleanLiter(boolean: Boolean) extends Expression {
   override def toString: String = boolean.toString
-
   override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE BOOLEAN-LITER CHECK")
   }
+  override def getType(symbolTable: SymbolTable): Type = BooleanType()
 }
 
 case class CharacterLiter(char: Char) extends Expression {
   override def toString: String = "'" + char + "'"
-
   override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE CHARACTER-LITER CHECK")
   }
+
+  override def getType(symbolTable: SymbolTable): Type = CharacterType()
 }
 
 case class Identifier(identifier: String)
     extends Expression
     with AssignmentLeft {
   override def toString: String = identifier.toString
-
   // TODO:
   override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE IDENTIFIER CHECK")
     // lookup identifier in symbol table, and extract base type
     // return the type as specified in the symbol table
   }
+  override def getType(symbolTable: SymbolTable): Type = StringType()
 }
 
 case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit])
@@ -127,7 +129,6 @@ case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit])
     println("GOT INSIDE INTEGER-LITER CHECK")
     return IntType
   }
-
   override def getType(symbolTable: SymbolTable): Type = IntType()
 }
 
@@ -137,8 +138,9 @@ case class PairLiter() extends Expression {
   // TODO:
   override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE PAIR-LITER CHECK")
-    return PairType
   }
+
+  // TODO: What should type of PairLiter be?
 }
 
 case class StringLiter(string: String) extends Expression {
@@ -148,6 +150,8 @@ case class StringLiter(string: String) extends Expression {
     println("GOT INSIDE STRING-LITER CHECK")
     return StringType
   }
+
+  override def getType(symbolTable: SymbolTable): Type = StringType()
 }
 
 case class UnaryOperatorApplication(
@@ -248,7 +252,7 @@ case class PairElement(expression: Expression, isFirst: Boolean)
   }
 }
 
-case class ArgumentList(expressions: List[Expression]) extends ASTNode {
+case class ArgumentList(expressions: List[Expression]) extends ASTNodeVoid {
   override def toString: String =
     expressions.map(_.toString).reduce((left, right) => left + ", " + right)
 

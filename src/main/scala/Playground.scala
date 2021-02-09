@@ -13,7 +13,7 @@ object Playground {
 
     var parsedResult: Result[Statement] =
       statementParser
-        .runParser("int x = 10 ; int x = 10")
+        .runParser("int a = hello ; int x = 10 ; int x = 10")
         // we should run
     println(parsedResult)
     // Exit if there was a syntax error with code 100

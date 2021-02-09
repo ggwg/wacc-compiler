@@ -1,6 +1,6 @@
 package com.wacc
 
-case class Program(functions: List[Function], body: Statement) extends ASTNode {
+case class Program(functions: List[Function], body: Statement) extends ASTNodeVoid {
   override def toString: String = "begin\n" + functions
     .map(_.toString)
     .reduceOption((left, right) => left + right)
@@ -24,7 +24,7 @@ case class Function(
     functionName: Identifier,
     parameters: Option[ParameterList],
     body: Statement
-) extends ASTNode {
+) extends ASTNodeVoid {
   override def toString: String =
     functionType.toString + " " + functionName.toString + "(" + parameters
       .getOrElse("")
@@ -36,7 +36,7 @@ case class Function(
   }
 }
 
-case class ParameterList(parameters: List[Parameter]) extends ASTNode {
+case class ParameterList(parameters: List[Parameter]) extends ASTNodeVoid {
   override def toString: String =
     parameters
       .map(_.toString)
@@ -50,7 +50,7 @@ case class ParameterList(parameters: List[Parameter]) extends ASTNode {
 }
 
 case class Parameter(parameterType: Type, identifier: Identifier)
-    extends ASTNode {
+    extends ASTNodeVoid {
   override def toString: String =
     parameterType.toString + " " + identifier.toString
 

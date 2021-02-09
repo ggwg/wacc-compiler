@@ -1,21 +1,21 @@
 package com.wacc
 
-case class DefaultCharacter(char: Char, isEscaped: Boolean) extends ASTNode {
+case class DefaultCharacter(char: Char, isEscaped: Boolean) extends ASTNodeVoid {
   override def toString: String = isEscaped match {
     case true  => "\\" + char
     case false => "" + char
   }
 }
 
-case class Digit(digit: Char) extends ASTNode {
+case class Digit(digit: Char) extends ASTNodeVoid {
   override def toString: String = digit.toString
 }
 
-case class EscapedCharacter(char: Char) extends ASTNode {
+case class EscapedCharacter(char: Char) extends ASTNodeVoid {
   override def toString: String = char.toString
 }
 
-case class IntegerSign(sign: Char) extends ASTNode {
+case class IntegerSign(sign: Char) extends ASTNodeVoid {
   override def toString: String = sign.toString
 }
 
