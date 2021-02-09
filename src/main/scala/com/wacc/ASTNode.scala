@@ -1,6 +1,5 @@
 package com.wacc
 
-import com.wacc.TypeEnum.TypeEnum
 
 trait ASTNode {
   // Each statement needs a check function for semantic analysis
@@ -8,7 +7,9 @@ trait ASTNode {
     println("* NO CHECK DEFINED *")
   }
 
-  def getType(symbolTable: SymbolTable): TypeEnum = {
-    return TypeEnum.Void
+  def getType(symbolTable: SymbolTable): Type = {
+    return IntType()
   }
 }
+
+// create a new trait that extends ASTNode and defined default void return

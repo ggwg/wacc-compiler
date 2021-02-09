@@ -1,6 +1,5 @@
 package com.wacc
 
-import com.wacc.TypeEnum.TypeEnum
 import com.wacc.operator._
 
 sealed trait Expression extends AssignmentRight {}
@@ -93,7 +92,6 @@ case class BooleanLiter(boolean: Boolean) extends Expression {
 
   override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE BOOLEAN-LITER CHECK")
-    return BooleanType
   }
 }
 
@@ -102,7 +100,6 @@ case class CharacterLiter(char: Char) extends Expression {
 
   override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE CHARACTER-LITER CHECK")
-    return CharacterType
   }
 }
 
@@ -131,7 +128,7 @@ case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit])
     return IntType
   }
 
-  override def getType(symbolTable: SymbolTable): TypeEnum = TypeEnum.Int
+  override def getType(symbolTable: SymbolTable): Type = IntType()
 }
 
 case class PairLiter() extends Expression {

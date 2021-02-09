@@ -1,42 +1,38 @@
 package com.wacc
 
-sealed trait Type extends ASTNode
-
-object TypeEnum extends Enumeration {
-  type TypeEnum = Value
-  val Void, Int, Boolean, String, Character, Pair, Array = Value
+sealed trait Type extends ASTNode {
+  def unifies(otherType: Type) = this == otherType
 }
-import com.wacc.TypeEnum.{Pair, TypeEnum}
 
 sealed trait PairElementType extends Type
 sealed trait BaseType extends Type with PairElementType
 
 case class IntType() extends BaseType {
   override def toString: String = "int"
-  override def getType(symbolTable: SymbolTable): TypeEnum = TypeEnum.Int
+  override def getType(symbolTable: SymbolTable): Type = IntType()
 }
 
 case class BooleanType() extends BaseType {
   override def toString: String = "bool"
-  override def getType(symbolTable: SymbolTable): TypeEnum = TypeEnum.Boolean
+  override def getType(symbolTable: SymbolTable): Type = BooleanType()
 }
 
 case class CharacterType() extends BaseType {
   override def toString: String = "char"
 
-  override def getType(symbolTable: SymbolTable): TypeEnum = TypeEnum.Character
+  override def getType(symbolTable: SymbolTable): Type = CharacterType()
 }
 
 case class StringType() extends BaseType {
   override def toString: String = "string"
 
-  override def getType(symbolTable: SymbolTable): TypeEnum = TypeEnum.String
+  override def getType(symbolTable: SymbolTable): Type = StringType()
 }
 
 case class PairDefault() extends PairElementType {
   override def toString: String = "pair"
 
-  override def getType(symbolTable: SymbolTable): TypeEnum = TypeEnum.Pair
+  override def getType(symbolTable: SymbolTable): Type = PairDefault()
 }
 
 case class PairType(
@@ -45,7 +41,7 @@ case class PairType(
 ) extends Type {
   override def toString: String =
     "pair(" + elementType1.toString + ", " + elementType2.toString + ")"
-  override def getType(symbolTable: SymbolTable): TypeEnum = TypeEnum.Pair
+  override def getType(symbolTable: SymbolTable): Type = PairType(elementType1, elementType2)
 }
 
 case class ArrayType(arrayType: Type) extends Type with PairElementType {
@@ -57,7 +53,7 @@ case class ArrayType(arrayType: Type) extends Type with PairElementType {
     return ArrayType
   }
 
-  override def getType(symbolTable: SymbolTable): TypeEnum = TypeEnum.Array
+  override def getType(symbolTable: SymbolTable): Type = ArrayType(arrayType)
 }
 
 object BaseType {

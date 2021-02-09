@@ -86,12 +86,15 @@ case class IdentifierDeclaration(
   override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE IDENTIFIER-DECLARATION CHECK")
     var optionTuple: Option[(Any, ASTNode)] = symbolTable.lookup(identifier.identifier)
+    // symbolTable.getOrElseUpdate(...)
+    // updateWith(...)
     if (optionTuple.isEmpty) {
       // Don't throw an error - variable is not already defined in current scope
       println("Identifier not found in current Symbol Table")
       // Check identType is the same type as assignmentRight
-      if (identType.getType(symbolTable) == assignmentRight.getType(symbolTable)) {
+      if (identType.getType(symbolTable).unifies(assignmentRight.getType(symbolTable))) {
         // Add identifier
+        println("Unifies successful")
         symbolTable.add(
           identifier.identifier,
           identType.getClass,
