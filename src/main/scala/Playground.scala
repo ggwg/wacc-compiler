@@ -9,6 +9,7 @@ object Playground {
 
     // Initialize top level Symbol Table
     var topST: SymbolTable = new SymbolTable()
+    topST.add("int", VoidType(), null)
     // TODO: Define global data types as mentioned in slides.
 
     var parsedResult: Result[Statement] =

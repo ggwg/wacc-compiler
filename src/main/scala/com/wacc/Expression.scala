@@ -128,7 +128,7 @@ case class Identifier(identifier: String)
     }
   }
   override def getType(symbolTable: SymbolTable): PairElementType = {
-    var lookupVal: Option[(PairElementType, ASTNodeVoid)] = symbolTable.lookupAll(identifier)
+    var lookupVal: Option[(PairElementType, ASTNode)] = symbolTable.lookupAll(identifier)
     return lookupVal.getOrElse((VoidType(), null))._1
   }
 }
@@ -218,7 +218,18 @@ case class ArrayLiter(expressions: List[Expression]) extends AssignmentRight {
 
   // TODO:
   override def check(symbolTable: SymbolTable): Unit = {
-    println("GOT INSIDE ARRAY-LITER CHECK")
+    for (expression <- expressions) {
+      expression.check(symbolTable)
+    }
+  }
+  // If there are expressions then we will return ArrayType(VoidType) - this case needs to be
+  // caught in type checking
+  override def getType(symbolTable: SymbolTable): PairElementType = {
+    if (expressions.isEmpty) {
+      ArrayType(VoidType())
+    } else {
+      ArrayType(expressions.head.getType(symbolTable))
+    }
   }
 }
 
@@ -233,10 +244,15 @@ case class FunctionCall(identifier: Identifier, arguments: Option[ArgumentList])
   // TODO:
   override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE FUNCTION-CALL CHECK")
+    var func: Option[(PairElementType, ASTNode)] =
+      symbolTable.lookupAll(identifier.identifier)
+    if (func.isEmpty) {
+      print("Error - unknown function name")
+    }
   }
 }
 
-/* Check pending */
+/* Check done */
 case class NewPair(expression1: Expression, expression2: Expression)
     extends AssignmentRight {
   override def toString: String =

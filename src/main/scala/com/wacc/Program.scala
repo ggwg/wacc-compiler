@@ -19,6 +19,7 @@ case class Program(functions: List[Function], body: Statement) extends ASTNodeVo
   }
 }
 
+/* Function declaration - see P31 of semantic analysis slides */
 case class Function(
     functionType: Type,
     functionName: Identifier,
@@ -31,8 +32,9 @@ case class Function(
       .toString + ") is\n" + body.toString + "end\n"
 
   override def check(symbolTable: SymbolTable): Unit = {
-    // check function name and return type, slide 31
     println("CHECKED INSIDE FUNCTION")
+    // Check function name and return type:
+    
   }
 }
 
