@@ -183,7 +183,7 @@ case class Return(expression: Expression) extends Statement {
     expression.check(symbolTable)
   }
 
-  override def getType(symbolTable: SymbolTable): Type = expression.getType(symbolTable)
+  override def getType(symbolTable: SymbolTable): PairElementType = expression.getType(symbolTable)
 }
 
 /* Check done */

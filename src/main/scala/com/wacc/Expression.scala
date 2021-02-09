@@ -28,7 +28,7 @@ case class ArrayElement(
       }
     }
   }
-  override def getType(symbolTable: SymbolTable): Type = {
+  override def getType(symbolTable: SymbolTable): PairElementType = {
     if (expressions.isEmpty) {
       ArrayType(VoidType())
     } else {
@@ -81,7 +81,7 @@ case class BinaryOperatorApplication(
     }
   }
 
-  override def getType(symbolTable: SymbolTable): Type = {
+  override def getType(symbolTable: SymbolTable): PairElementType = {
     println("getType(): BINARY-OPERATOR-APPLICATION")
     binaryOperator match {
       case Add() | Divide() | Modulo() | Multiply() | Subtract() => IntType()
@@ -95,7 +95,7 @@ case class BooleanLiter(boolean: Boolean) extends Expression {
   override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE BOOLEAN-LITER CHECK")
   }
-  override def getType(symbolTable: SymbolTable): Type = BooleanType()
+  override def getType(symbolTable: SymbolTable): PairElementType = BooleanType()
 }
 
 case class CharacterLiter(char: Char) extends Expression {
@@ -104,7 +104,7 @@ case class CharacterLiter(char: Char) extends Expression {
     println("GOT INSIDE CHARACTER-LITER CHECK")
   }
 
-  override def getType(symbolTable: SymbolTable): Type = CharacterType()
+  override def getType(symbolTable: SymbolTable): PairElementType = CharacterType()
 }
 
 /*
@@ -116,7 +116,6 @@ x.getType() -> VoidType
 5.getTpye() -> IntType
 Different
 x.check()
-
  */
 case class Identifier(identifier: String)
     extends Expression
@@ -128,8 +127,8 @@ case class Identifier(identifier: String)
       println("Error - undefined identifier")
     }
   }
-  override def getType(symbolTable: SymbolTable): Type = {
-    var lookupVal: Option[(Type, ASTNodeVoid)] = symbolTable.lookupAll(identifier)
+  override def getType(symbolTable: SymbolTable): PairElementType = {
+    var lookupVal: Option[(PairElementType, ASTNodeVoid)] = symbolTable.lookupAll(identifier)
     return lookupVal.getOrElse((VoidType(), null))._1
   }
 }
@@ -141,7 +140,7 @@ case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit])
     case Some(sign) => sign.toString
   }) + digits.mkString
 
-  override def getType(symbolTable: SymbolTable): Type = IntType()
+  override def getType(symbolTable: SymbolTable): PairElementType = IntType()
 }
 
 case class PairLiter() extends Expression {
@@ -157,7 +156,7 @@ case class PairLiter() extends Expression {
 
 case class StringLiter(string: String) extends Expression {
   override def toString: String = "\"" + string + "\""
-  override def getType(symbolTable: SymbolTable): Type = StringType()
+  override def getType(symbolTable: SymbolTable): PairElementType = StringType()
 }
 
 case class UnaryOperatorApplication(
@@ -202,6 +201,14 @@ case class UnaryOperatorApplication(
     // In case we add more unary operators
     return ()
   }
+  override def getType(symbolTable: SymbolTable): PairElementType = {
+    println("getType(): BINARY-OPERATOR-APPLICATION")
+    unaryOperator match {
+      case Chr() => CharacterType()
+      case Not() => BooleanType()
+      case _ => IntType()
+    }
+  }
 }
 
 case class ArrayLiter(expressions: List[Expression]) extends AssignmentRight {
@@ -229,14 +236,20 @@ case class FunctionCall(identifier: Identifier, arguments: Option[ArgumentList])
   }
 }
 
+/* Check pending */
 case class NewPair(expression1: Expression, expression2: Expression)
     extends AssignmentRight {
   override def toString: String =
     "newpair(" + expression1.toString + ", " + expression2.toString + ")"
 
-  // TODO:
+  // pair(int, char) x = newpair(10, 'c')
   override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE NEW-PAIR CHECK")
+    expression1.check(symbolTable)
+    expression2.check(symbolTable)
+  }
+  override def getType(symbolTable: SymbolTable): PairElementType = {
+    PairType(expression1.getType(symbolTable), expression2.getType(symbolTable))
   }
 }
 
@@ -261,6 +274,8 @@ case class ArgumentList(expressions: List[Expression]) extends ASTNodeVoid {
     println("GOT INSIDE ARGUMENT-LIST CHECK")
   }
 }
+
+/*  -----------------------------  Class objects  -----------------------------  */
 
 object ArrayElement {
   val build: (Identifier, List[Expression]) => ArrayElement = ArrayElement(_, _)
