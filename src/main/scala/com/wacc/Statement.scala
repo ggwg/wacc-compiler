@@ -1,6 +1,18 @@
 package com.wacc
 
-sealed trait Statement extends ASTNodeVoid
+sealed trait Statement extends ASTNodeVoid {
+  def exitable(): Boolean = {
+    this match {
+      case Exit(_) | Return(_) => true
+      case BeginEnd(statement) => statement.exitable()
+      case If(_, trueStatement, falseStatement) =>
+        trueStatement.exitable() && falseStatement.exitable()
+      case StatementSequence(_, statement) => statement.exitable()
+      case While(_, statement)             => statement.exitable()
+      case _                               => false
+    }
+  }
+}
 
 /* Check Done */
 case class Assignment(
@@ -12,11 +24,15 @@ case class Assignment(
 
   override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE ASSIGNMENT CHECK")
-    
+
     /* Check that assignment-left type is same as return type of assignment-right */
     println(assignmentLeft.getType(symbolTable))
     println(assignmentRight.getType(symbolTable))
-    if (assignmentLeft.getType(symbolTable).unifies(assignmentRight.getType(symbolTable))) {
+    if (
+      assignmentLeft
+        .getType(symbolTable)
+        .unifies(assignmentRight.getType(symbolTable))
+    ) {
       assignmentLeft.check(symbolTable)
       assignmentRight.check(symbolTable)
     } else {
@@ -47,8 +63,10 @@ case class Exit(expression: Expression) extends Statement {
     if (expression.getType(symbolTable).unifies(IntType())) {
       println("Success")
     } else {
-      println("Error: Exit type invalid -- expected IntType, but got"
-        + expression.getClass.toString)
+      println(
+        "Error: Exit type invalid -- expected IntType, but got"
+          + expression.getClass.toString
+      )
     }
     return ()
   }
@@ -63,8 +81,10 @@ case class Free(expression: Expression) extends Statement {
     if (expression.getType(symbolTable).unifies(StringType())) {
       println("Success")
     } else {
-      println("Error: Type invalid -- expected StringType, but got"
-        + expression.getClass.toString)
+      println(
+        "Error: Type invalid -- expected StringType, but got"
+          + expression.getClass.toString
+      )
     }
     return ()
   }
@@ -91,7 +111,11 @@ case class IdentifierDeclaration(
         Some(x)
       }
       case None => {
-        if (identType.getType(symbolTable).unifies(assignmentRight.getType(symbolTable))) {
+        if (
+          identType
+            .getType(symbolTable)
+            .unifies(assignmentRight.getType(symbolTable))
+        ) {
           println("Added to dictionary")
           Some((identType.getType(symbolTable), assignmentRight))
         } else {
@@ -121,8 +145,10 @@ case class If(
       var falseSymbolTable = new SymbolTable(symbolTable)
       falseStatement.check(falseSymbolTable)
     } else {
-      println("Error -- Condition of if statment expects a boolean, but found " +
-        condition.getClass.toString)
+      println(
+        "Error -- Condition of if statment expects a boolean, but found " +
+          condition.getClass.toString
+      )
     }
   }
 }
@@ -136,8 +162,10 @@ case class Print(expression: Expression) extends Statement {
     if (expression.getType(symbolTable).unifies(StringType())) {
       expression.check(symbolTable)
     } else {
-      println("Error -- Print statement expects String, but found " +
-        expression.getClass.toString)
+      println(
+        "Error -- Print statement expects String, but found " +
+          expression.getClass.toString
+      )
     }
   }
 }
@@ -151,8 +179,10 @@ case class Println(expression: Expression) extends Statement {
     if (expression.getType(symbolTable).unifies(StringType())) {
       expression.check(symbolTable)
     } else {
-      println("Error -- Println statement expects String, but found " +
-        expression.getClass.toString)
+      println(
+        "Error -- Println statement expects String, but found " +
+          expression.getClass.toString
+      )
     }
   }
 }
@@ -164,12 +194,16 @@ case class Read(assignmentLeft: AssignmentLeft) extends Statement {
   override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE READ CHECK")
     val assignmentLeftType = assignmentLeft.getType(symbolTable)
-    if (assignmentLeftType.unifies(CharacterType()) ||
-      assignmentLeftType.unifies(IntType())) {
+    if (
+      assignmentLeftType.unifies(CharacterType()) ||
+      assignmentLeftType.unifies(IntType())
+    ) {
       assignmentLeft.check(symbolTable)
     } else {
-      println("Error -- Read expects Char or Int, but found " +
-        assignmentLeft.getClass.toString)
+      println(
+        "Error -- Read expects Char or Int, but found " +
+          assignmentLeft.getClass.toString
+      )
     }
   }
 }
@@ -183,7 +217,8 @@ case class Return(expression: Expression) extends Statement {
     expression.check(symbolTable)
   }
 
-  override def getType(symbolTable: SymbolTable): PairElementType = expression.getType(symbolTable)
+  override def getType(symbolTable: SymbolTable): PairElementType =
+    expression.getType(symbolTable)
 }
 
 /* Check done */
@@ -222,8 +257,10 @@ case class While(condition: Expression, statement: Statement)
       var whileSymbolTable = new SymbolTable(symbolTable)
       statement.check(whileSymbolTable)
     } else {
-      println("Error -- Condition of if statement expects a boolean, but found " +
-        condition.getClass.toString)
+      println(
+        "Error -- Condition of if statement expects a boolean, but found " +
+          condition.getClass.toString
+      )
     }
   }
 }
