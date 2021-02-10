@@ -7,28 +7,37 @@ sealed trait Type extends ASTNodeVoid {
 sealed trait PairElementType extends Type
 sealed trait BaseType extends Type with PairElementType
 
-case class VoidType() extends BaseType
+/* New types for categorising statements in Semantic Analysis */
+case class VoidType() extends Type {
+  override def unifies(otherType: Type): Boolean = false
+}
+
+case class FunctionType(
+                   returnType: Type,
+                   parameters: Option[List[Type]]
+                   ) extends Type
+
 
 case class IntType() extends BaseType {
   override def toString: String = "int"
-  override def getType(symbolTable: SymbolTable): PairElementType = IntType()
+  override def getType(symbolTable: SymbolTable): Type = IntType()
 }
 
 case class BooleanType() extends BaseType {
   override def toString: String = "bool"
-  override def getType(symbolTable: SymbolTable): PairElementType = BooleanType()
+  override def getType(symbolTable: SymbolTable): Type = BooleanType()
 }
 
 case class CharacterType() extends BaseType {
   override def toString: String = "char"
 
-  override def getType(symbolTable: SymbolTable): PairElementType = CharacterType()
+  override def getType(symbolTable: SymbolTable): Type = CharacterType()
 }
 
 case class StringType() extends BaseType {
   override def toString: String = "string"
 
-  override def getType(symbolTable: SymbolTable): PairElementType = {
+  override def getType(symbolTable: SymbolTable): Type = {
     println("GOT INSIDE STRING-TYPE")
     StringType()
   }
@@ -37,7 +46,7 @@ case class StringType() extends BaseType {
 case class PairDefault() extends PairElementType {
   override def toString: String = "pair"
 
-  override def getType(symbolTable: SymbolTable): PairElementType = PairDefault()
+  override def getType(symbolTable: SymbolTable): Type = PairDefault()
 }
 
 case class PairType(
@@ -46,7 +55,7 @@ case class PairType(
 ) extends PairElementType {
   override def toString: String =
     "pair(" + elementType1.toString + ", " + elementType2.toString + ")"
-  override def getType(symbolTable: SymbolTable): PairElementType = PairType(elementType1, elementType2)
+  override def getType(symbolTable: SymbolTable): Type = PairType(elementType1, elementType2)
 }
 
 case class ArrayType(arrayType: Type) extends Type with PairElementType {
@@ -57,7 +66,7 @@ case class ArrayType(arrayType: Type) extends Type with PairElementType {
     println("GOT INSIDE ARRAY-TYPE CHECK")
   }
 
-  override def getType(symbolTable: SymbolTable): PairElementType = ArrayType(arrayType)
+  override def getType(symbolTable: SymbolTable): Type = ArrayType(arrayType)
 }
 
 object BaseType {

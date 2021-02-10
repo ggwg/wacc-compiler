@@ -1,6 +1,8 @@
 #ignore generated binary files and auto-generated ANTLR code
 bin
 src/antlr
+antlr_config/BasicLexer.tokens
+gen/
 
 #ignore Java class files
 *.class
@@ -12,6 +14,7 @@ src/antlr
 # IntelliJ & VSCode files
 .idea/
 .vscode/
+.metals/
 
 # MacOS Desktop Services Store
 .DS_Store
