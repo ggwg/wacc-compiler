@@ -6,4 +6,4 @@ libraryDependencies += "org.scalactic" %% "scalactic" % "3.2.2"
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.2" % "test"
 
-libraryDependencies += "com.github.j-mie6" %% "parsley" % "2.3.0"
+libraryDependencies += "com.github.j-mie6" %% "parsley" % "2.7.0"
