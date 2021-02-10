@@ -147,7 +147,7 @@ class WACCParserSpec extends AnyFlatSpec {
       .runParser("newpair(\"this\", \"that\")")
       .get shouldBe a[AssignmentRight]
     assignmentRightParser
-      .runParser("newpair(1+1, ord('a')")
+      .runParser("newpair(1+1, ord('a'))")
       .get shouldBe a[AssignmentRight]
   }
   it should "parse any pair element" in {
