@@ -247,6 +247,16 @@ case class FunctionCall(identifier: Identifier, arguments: Option[ArgumentList])
     var func: Option[(Type, ASTNode)] = symbolTable.lookupAll(identifier.identifier)
     if (func.isEmpty) {
       print("Error - unknown function name " + identifier.identifier)
+    } else {
+      var newFuncType = new FunctionType(
+        identifier.getType(symbolTable),
+        arguments.map(params => params.expressions.map(param => param.getType(symbolTable)))
+      )
+      if (func.get._1.unifies(newFuncType)) {
+        // No error
+      } else {
+        println("Error - type mismatch in Function type (Function Call)")
+      }
     }
   }
 }
@@ -265,8 +275,18 @@ case class NewPair(expression1: Expression, expression2: Expression)
   }
   override def getType(symbolTable: SymbolTable): Type = {
     // TODO:
-    VoidType()
-    // PairType(expression1.getType(symbolTable), expression2.getType(symbolTable))
+    // VoidType()
+    var type1 = expression1.getType(symbolTable)
+    var type2 = expression2.getType(symbolTable)
+    if (!type1.isInstanceOf[PairElementType] || !type2.isInstanceOf[PairElementType]) {
+      return VoidType()
+    } else {
+      return PairType(
+        type1.asInstanceOf[PairElementType],
+        type2.asInstanceOf[PairElementType]
+      )
+    }
+
   }
 }
 

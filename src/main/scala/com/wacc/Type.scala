@@ -7,7 +7,16 @@ sealed trait Type extends ASTNodeVoid {
 sealed trait PairElementType extends Type
 sealed trait BaseType extends Type with PairElementType
 
-case class VoidType() extends BaseType
+/* New types for categorising statements in Semantic Analysis */
+case class VoidType() extends Type {
+  override def unifies(otherType: Type): Boolean = false
+}
+
+case class FunctionType(
+                   returnType: Type,
+                   parameters: Option[List[Type]]
+                   ) extends Type
+
 
 case class IntType() extends BaseType {
   override def toString: String = "int"
