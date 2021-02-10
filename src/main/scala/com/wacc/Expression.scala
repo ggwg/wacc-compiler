@@ -28,7 +28,7 @@ case class ArrayElement(
       }
     }
   }
-  override def getType(symbolTable: SymbolTable): PairElementType = {
+  override def getType(symbolTable: SymbolTable): Type = {
     if (expressions.isEmpty) {
       ArrayType(VoidType())
     } else {
@@ -81,7 +81,7 @@ case class BinaryOperatorApplication(
     }
   }
 
-  override def getType(symbolTable: SymbolTable): PairElementType = {
+  override def getType(symbolTable: SymbolTable): Type = {
     println("getType(): BINARY-OPERATOR-APPLICATION")
     binaryOperator match {
       case Add() | Divide() | Modulo() | Multiply() | Subtract() => IntType()
@@ -95,7 +95,7 @@ case class BooleanLiter(boolean: Boolean) extends Expression {
   override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE BOOLEAN-LITER CHECK")
   }
-  override def getType(symbolTable: SymbolTable): PairElementType = BooleanType()
+  override def getType(symbolTable: SymbolTable): Type = BooleanType()
 }
 
 case class CharacterLiter(char: Char) extends Expression {
@@ -104,7 +104,7 @@ case class CharacterLiter(char: Char) extends Expression {
     println("GOT INSIDE CHARACTER-LITER CHECK")
   }
 
-  override def getType(symbolTable: SymbolTable): PairElementType = CharacterType()
+  override def getType(symbolTable: SymbolTable): Type = CharacterType()
 }
 
 /*
@@ -127,8 +127,8 @@ case class Identifier(identifier: String)
       println("Error - undefined identifier")
     }
   }
-  override def getType(symbolTable: SymbolTable): PairElementType = {
-    var lookupVal: Option[(PairElementType, ASTNode)] = symbolTable.lookupAll(identifier)
+  override def getType(symbolTable: SymbolTable): Type = {
+    var lookupVal: Option[(Type, ASTNode)] = symbolTable.lookupAll(identifier)
     return lookupVal.getOrElse((VoidType(), null))._1
   }
 }
@@ -140,7 +140,7 @@ case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit])
     case Some(sign) => sign.toString
   }) + digits.mkString
 
-  override def getType(symbolTable: SymbolTable): PairElementType = IntType()
+  override def getType(symbolTable: SymbolTable): Type = IntType()
 }
 
 case class PairLiter() extends Expression {
@@ -156,7 +156,7 @@ case class PairLiter() extends Expression {
 
 case class StringLiter(string: String) extends Expression {
   override def toString: String = "\"" + string + "\""
-  override def getType(symbolTable: SymbolTable): PairElementType = StringType()
+  override def getType(symbolTable: SymbolTable): Type = StringType()
 }
 
 case class UnaryOperatorApplication(
@@ -201,7 +201,7 @@ case class UnaryOperatorApplication(
     // In case we add more unary operators
     return ()
   }
-  override def getType(symbolTable: SymbolTable): PairElementType = {
+  override def getType(symbolTable: SymbolTable): Type = {
     println("getType(): BINARY-OPERATOR-APPLICATION")
     unaryOperator match {
       case Chr() => CharacterType()
@@ -224,7 +224,7 @@ case class ArrayLiter(expressions: List[Expression]) extends AssignmentRight {
   }
   // If there are expressions then we will return ArrayType(VoidType) - this case needs to be
   // caught in type checking
-  override def getType(symbolTable: SymbolTable): PairElementType = {
+  override def getType(symbolTable: SymbolTable): Type = {
     if (expressions.isEmpty) {
       ArrayType(VoidType())
     } else {
@@ -244,10 +244,9 @@ case class FunctionCall(identifier: Identifier, arguments: Option[ArgumentList])
   // TODO:
   override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE FUNCTION-CALL CHECK")
-    var func: Option[(PairElementType, ASTNode)] =
-      symbolTable.lookupAll(identifier.identifier)
+    var func: Option[(Type, ASTNode)] = symbolTable.lookupAll(identifier.identifier)
     if (func.isEmpty) {
-      print("Error - unknown function name")
+      print("Error - unknown function name " + identifier.identifier)
     }
   }
 }
@@ -264,8 +263,10 @@ case class NewPair(expression1: Expression, expression2: Expression)
     expression1.check(symbolTable)
     expression2.check(symbolTable)
   }
-  override def getType(symbolTable: SymbolTable): PairElementType = {
-    PairType(expression1.getType(symbolTable), expression2.getType(symbolTable))
+  override def getType(symbolTable: SymbolTable): Type = {
+    // TODO:
+    VoidType()
+    // PairType(expression1.getType(symbolTable), expression2.getType(symbolTable))
   }
 }
 

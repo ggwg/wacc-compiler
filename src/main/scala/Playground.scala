@@ -3,25 +3,25 @@ import com.wacc._
 import parsley._
 
 object Playground {
-
-  def main(args: Array[String]): Unit = {
-    println("Start Main\n")
-
+  def testFunction(): Unit = {
+    println("Testing Function:\n")
     // Initialize top level Symbol Table
     var topST: SymbolTable = new SymbolTable()
-    topST.add("int", VoidType(), null)
+    topST.add("int", IntType(), null)
     // TODO: Define global data types as mentioned in slides.
-
-    var parsedResult: Result[Statement] =
-      statementParser
-        .runParser("int x = 10 ; z = 5")
-        // we should run
-    println(parsedResult)
-
+    var parsedResult: Result[Function] =
+      functionParser
+        .runParser(
+          "int fibonacci(int n, int j, int j) is " +
+            "                    return 1 end"
+        )
     var ast = parsedResult.get
     ast.check(topST)
-    println("\nEnd Main")
+    println("Finished Testing Function\n")
+  }
 
+  def main(args: Array[String]): Unit = {
+    testFunction()
     /*
     enum that indicates the different types:
     int, bool, char, string, array, T

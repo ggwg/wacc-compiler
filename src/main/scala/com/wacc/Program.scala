@@ -19,6 +19,7 @@ case class Program(functions: List[Function], body: Statement) extends ASTNodeVo
   }
 }
 
+/* Check done */
 /* Function declaration - see P31 of semantic analysis slides */
 case class Function(
     functionType: Type,
@@ -34,7 +35,17 @@ case class Function(
   override def check(symbolTable: SymbolTable): Unit = {
     println("CHECKED INSIDE FUNCTION")
     // Check function name and return type:
-    
+    var F = symbolTable.lookup(functionName.identifier)
+    if (!F.isEmpty) {
+      println("Error - already declared identifier " + functionName.identifier)
+    } else {
+      // Add to symbol table
+      symbolTable.add(functionName.identifier, functionType, this)
+      var functionSymbolTable = new SymbolTable(symbolTable)
+      if (!parameters.isEmpty) {
+        parameters.get.check(functionSymbolTable)
+      }
+    }
   }
 }
 
@@ -48,6 +59,9 @@ case class ParameterList(parameters: List[Parameter]) extends ASTNodeVoid {
   // TODO:
   override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE PARAMETER-LIST CHECK")
+    for (parameter <- parameters) {
+      parameter.check(symbolTable)
+    }
   }
 }
 
@@ -58,7 +72,13 @@ case class Parameter(parameterType: Type, identifier: Identifier)
 
   // TODO:
   override def check(symbolTable: SymbolTable): Unit = {
-    println("GOT INSIDE PARAMETER-LIST CHECK")
+    println("GOT INSIDE PARAMETER CHECK")
+    var parameterInfo = symbolTable.lookup(identifier.identifier)
+    if (parameterInfo.isEmpty) {
+      symbolTable.add(identifier.identifier, parameterType, this)
+    } else {
+      println("Error - parameter already defined in scope.")
+    }
   }
 }
 

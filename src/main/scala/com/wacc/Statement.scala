@@ -12,7 +12,7 @@ case class Assignment(
 
   override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE ASSIGNMENT CHECK")
-    
+
     /* Check that assignment-left type is same as return type of assignment-right */
     println(assignmentLeft.getType(symbolTable))
     println(assignmentRight.getType(symbolTable))
@@ -183,7 +183,7 @@ case class Return(expression: Expression) extends Statement {
     expression.check(symbolTable)
   }
 
-  override def getType(symbolTable: SymbolTable): PairElementType = expression.getType(symbolTable)
+  override def getType(symbolTable: SymbolTable): Type = expression.getType(symbolTable)
 }
 
 /* Check done */
