@@ -310,6 +310,12 @@ class WACCParserSpec extends AnyFlatSpec {
     identifierParser.runParser("4name") shouldBe a[Failure]
     identifierParser.runParser("9name") shouldBe a[Failure]
   }
+  it should "fail to parse any keyword" in {
+    for (keyword <- keywords) {
+      identifierParser.runParser(keyword) shouldBe a[Failure]
+    }
+  }
+
   it should "parse identifiers with keywords as substrings" in {
     identifierParser.runParser("truetrue").get shouldBe an[Identifier]
     identifierParser.runParser("while0").get shouldBe an[Identifier]

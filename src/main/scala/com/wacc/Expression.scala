@@ -22,8 +22,11 @@ case class ArrayElement(
       val arrayElementType = expressions.head.getType(symbolTable)
       for (expression <- expressions) {
         if (!expression.getType(symbolTable).unifies(arrayElementType)) {
-          println("Array type not equal to expected array type. Got: " + expression.getType(symbolTable)
-          + ", Expected: " + arrayElementType)
+          println(
+            "Array type not equal to expected array type. Got: " + expression
+              .getType(symbolTable)
+              + ", Expected: " + arrayElementType
+          )
         }
       }
     }
@@ -52,13 +55,14 @@ case class BinaryOperatorApplication(
 
     binaryOperator match {
       case Add() | Divide() | Modulo() | Multiply() | Subtract() =>
-        if (!expression1.getType(symbolTable).unifies(IntType())){
+        if (!expression1.getType(symbolTable).unifies(IntType())) {
           println("ERROR: INTEGER BIN-OP, expected type Int")
         }
         if (!expression2.getType(symbolTable).unifies(IntType())) {
           println("ERROR: INTEGER BIN-OP, expected type Int")
         }
-      case GreaterThan() | GreaterEqualThan() | SmallerThan() | SmallerEqualThan() =>
+      case GreaterThan() | GreaterEqualThan() | SmallerThan() |
+          SmallerEqualThan() =>
         val result1 = expression1.getType(symbolTable).unifies(IntType()) ||
           expression1.getType(symbolTable).unifies(CharacterType())
         val result2 = expression2.getType(symbolTable).unifies(IntType()) ||
@@ -85,7 +89,7 @@ case class BinaryOperatorApplication(
     println("getType(): BINARY-OPERATOR-APPLICATION")
     binaryOperator match {
       case Add() | Divide() | Modulo() | Multiply() | Subtract() => IntType()
-      case _ => BooleanType()
+      case _                                                     => BooleanType()
     }
   }
 }
@@ -95,7 +99,8 @@ case class BooleanLiter(boolean: Boolean) extends Expression {
   override def check(symbolTable: SymbolTable): Unit = {
     println("GOT INSIDE BOOLEAN-LITER CHECK")
   }
-  override def getType(symbolTable: SymbolTable): PairElementType = BooleanType()
+  override def getType(symbolTable: SymbolTable): PairElementType =
+    BooleanType()
 }
 
 case class CharacterLiter(char: Char) extends Expression {
@@ -104,7 +109,8 @@ case class CharacterLiter(char: Char) extends Expression {
     println("GOT INSIDE CHARACTER-LITER CHECK")
   }
 
-  override def getType(symbolTable: SymbolTable): PairElementType = CharacterType()
+  override def getType(symbolTable: SymbolTable): PairElementType =
+    CharacterType()
 }
 
 /*
@@ -128,7 +134,8 @@ case class Identifier(identifier: String)
     }
   }
   override def getType(symbolTable: SymbolTable): PairElementType = {
-    var lookupVal: Option[(PairElementType, ASTNode)] = symbolTable.lookupAll(identifier)
+    var lookupVal: Option[(PairElementType, ASTNode)] =
+      symbolTable.lookupAll(identifier)
     return lookupVal.getOrElse((VoidType(), null))._1
   }
 }
@@ -176,8 +183,8 @@ case class UnaryOperatorApplication(
           println("ERROR IN UNARY-OPERATOR APPLICATION: CHR")
         }
       case Length() =>
-        // TODO: Type checking for arrays
-        // if (expression.getType(symbolTable).unifies(ArrayType()))
+      // TODO: Type checking for arrays
+      // if (expression.getType(symbolTable).unifies(ArrayType()))
       case Negate() =>
         if (expression.getType(symbolTable).unifies(IntType())) {
           expression.check(symbolTable)
@@ -206,7 +213,7 @@ case class UnaryOperatorApplication(
     unaryOperator match {
       case Chr() => CharacterType()
       case Not() => BooleanType()
-      case _ => IntType()
+      case _     => IntType()
     }
   }
 }
@@ -322,6 +329,9 @@ object CharacterLiter {
 }
 
 object Identifier {
+  val buildKeywordPrefix: (String, List[Char]) => Identifier =
+    (prefix, suffix) => Identifier(prefix + suffix.mkString)
+
   val build: (Char, List[Char]) => Identifier = (letter, letters) =>
     Identifier((letter :: letters).mkString)
 }
