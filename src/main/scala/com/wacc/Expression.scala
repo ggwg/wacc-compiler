@@ -221,7 +221,8 @@ case class UnaryOperatorApplication(
 case class ArrayLiter(expressions: List[Expression]) extends AssignmentRight {
   override def toString: String = "[" + expressions
     .map(_.toString)
-    .reduce((left, right) => left + ", " + right) + "]"
+    .reduceOption((left, right) => left + ", " + right)
+    .getOrElse("") + "]"
 
   // TODO:
   override def check(symbolTable: SymbolTable): Unit = {
