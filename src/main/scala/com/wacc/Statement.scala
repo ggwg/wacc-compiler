@@ -277,23 +277,16 @@ object Statement {
 }
 
 object Assignment {
-  val build: (AssignmentLeft, AssignmentRight) => Assignment = Assignment(_, _)
-
   def apply(left: Parsley[AssignmentLeft], right: Parsley[AssignmentRight]): Parsley[Assignment] =
     (left, right).map(Assignment(_, _))
 }
 
 object BeginEnd {
-  val build: Statement => BeginEnd = BeginEnd(_)
-
   def apply(statement: Parsley[Statement]): Parsley[BeginEnd] =
     statement.map(BeginEnd(_))
 }
 
 object IdentifierDeclaration {
-  val build: (Type, Identifier, AssignmentRight) => IdentifierDeclaration =
-    IdentifierDeclaration(_, _, _)
-
   def apply(
     identType: Parsley[Type],
     name: Parsley[Identifier],
@@ -302,8 +295,6 @@ object IdentifierDeclaration {
 }
 
 object If {
-  val build: (Expression, Statement, Statement) => If = If(_, _, _)
-
   def apply(
     cond: Parsley[Expression],
     trueStatement: Parsley[Statement],
@@ -312,27 +303,18 @@ object If {
 }
 
 object Read {
-  val build: AssignmentLeft => Read = Read(_)
-
   def apply(left: Parsley[AssignmentLeft]): Parsley[Read] = left.map(Read(_))
 }
 
 object SkipStatement {
-  val build: String => SkipStatement = _ => SkipStatement()
-
   def apply(skip: Parsley[String]): Parsley[SkipStatement] = skip.map(_ => SkipStatement())
 }
 
 object StatementSequence {
-  val build: (Statement, Statement) => StatementSequence =
-    StatementSequence(_, _)
-
   def apply(statementLeft: Parsley[Statement], statementRight: Parsley[Statement]): Parsley[StatementSequence] =
     (statementLeft, statementRight).map(StatementSequence(_, _))
 }
 
 object While {
-  val build: (Expression, Statement) => While = While(_, _)
-
   def apply(cond: Parsley[Expression], body: Parsley[Statement]): Parsley[While] = (cond, body).map(While(_, _))
 }

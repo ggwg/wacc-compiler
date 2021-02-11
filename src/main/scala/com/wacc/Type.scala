@@ -71,15 +71,6 @@ case class ArrayType(arrayType: Type) extends Type with PairElementType {
 
 object BaseType {
   val types = List("int", "bool", "char", "string")
-
-  val build: (String => BaseType) = (typeString: String) =>
-    typeString match {
-      case "int"    => IntType()
-      case "bool"   => BooleanType()
-      case "char"   => CharacterType()
-      case "string" => StringType()
-    }
-
   def apply(typeString: Parsley[String]): Parsley[BaseType] = typeString.map {
     case "int"    => IntType()
     case "bool"   => BooleanType()
@@ -89,20 +80,14 @@ object BaseType {
 }
 
 object PairDefault {
-  val build: String => PairDefault = _ => PairDefault()
-
   def apply(string: Parsley[String]): Parsley[PairDefault] = string.map(_ => PairDefault())
 }
 
 object PairType {
-  val build: (PairElementType, PairElementType) => PairType = PairType(_, _)
-
   def apply(type1: Parsley[PairElementType], type2: Parsley[PairElementType]): Parsley[PairType] =
     (type1, type2).map(PairType(_, _))
 }
 
 object ArrayType {
-  val build: Type => ArrayType = ArrayType(_)
-
   def apply(arrayType: Parsley[Type]): Parsley[ArrayType] = arrayType.map(ArrayType(_))
 }

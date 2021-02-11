@@ -32,7 +32,7 @@ case class Function(returnType: Type, name: Identifier, parameters: Option[Param
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     println("CHECKED INSIDE FUNCTION")
-    var pos = (0,0)
+    var pos = (0, 0)
     // Check function name and return type:
     var F = symbolTable.lookup(name.identifier)
     if (!F.isEmpty) {
@@ -73,7 +73,7 @@ case class Parameter(parameterType: Type, identifier: Identifier) extends ASTNod
   // TODO:
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     println("GOT INSIDE PARAMETER CHECK")
-    var pos = (0,0)
+    var pos = (0, 0)
     var parameterInfo = symbolTable.lookup(identifier.identifier)
     if (parameterInfo.isEmpty) {
       symbolTable.add(identifier.identifier, parameterType, this)
@@ -85,14 +85,10 @@ case class Parameter(parameterType: Type, identifier: Identifier) extends ASTNod
 }
 
 object Program {
-  val build: (List[Function], Statement) => Program = Program(_, _)
   def apply(funs: Parsley[List[Function]], body: Parsley[Statement]): Parsley[Program] = (funs, body).map(Program(_, _))
 }
 
 object Function {
-  val build: (Type, Identifier, Option[ParameterList], Statement) => Function =
-    Function(_, _, _, _)
-
   def apply(
     returnType: Parsley[Type],
     name: Parsley[Identifier],
@@ -102,15 +98,11 @@ object Function {
 }
 
 object ParameterList {
-  val build: (Parameter, List[Parameter]) => ParameterList = (p, ps) => ParameterList(p :: ps)
-
   def apply(param: Parsley[Parameter], params: Parsley[List[Parameter]]): Parsley[ParameterList] =
     (param, params).map((p, ps) => ParameterList(p :: ps))
 }
 
 object Parameter {
-  val build: (Type, Identifier) => Parameter = Parameter(_, _)
-
   def apply(paramType: Parsley[Type], name: Parsley[Identifier]): Parsley[Parameter] =
     (paramType, name).map(Parameter(_, _))
 }

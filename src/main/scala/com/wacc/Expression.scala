@@ -303,18 +303,11 @@ case class PairElement(expression: Expression, isFirst: Boolean) extends Assignm
 /*  -----------------------------  Class objects  -----------------------------  */
 
 object ArrayElement {
-  val build: (Identifier, List[Expression]) => ArrayElement = ArrayElement(_, _)
-
   def apply(ident: Parsley[Identifier], exprs: Parsley[List[Expression]]): Parsley[ArrayElement] =
     (ident, exprs).map(ArrayElement(_, _))
 }
 
 object ArrayLiter {
-  val build: Option[(Expression, List[Expression])] => ArrayLiter = {
-    case None          => ArrayLiter(List())
-    case Some((e, es)) => ArrayLiter(e :: es)
-  }
-
   def apply(option: Parsley[Option[(Expression, List[Expression])]]): Parsley[ArrayLiter] =
     option.map {
       case None          => ArrayLiter(List())
@@ -323,9 +316,6 @@ object ArrayLiter {
 }
 
 object BinaryOperatorApplication {
-  val build: (Expression, BinaryOperator, Expression) => BinaryOperatorApplication = (e1, op, e2) =>
-    BinaryOperatorApplication(e1, op, e2)
-
   def apply(
     expr1: Parsley[Expression],
     operator: Parsley[BinaryOperator],
@@ -335,75 +325,52 @@ object BinaryOperatorApplication {
 }
 
 object BooleanLiter {
-  val build: String => BooleanLiter = bool => BooleanLiter(bool.equals("true"))
-
   def apply(bool: Parsley[String]): Parsley[BooleanLiter] = bool.map(b => BooleanLiter(b.equals("true")))
 }
 
 object CharacterLiter {
-  val build: DefaultCharacter => CharacterLiter = chr => CharacterLiter(chr.char)
-
   def apply(chr: Parsley[DefaultCharacter]): Parsley[CharacterLiter] = chr.map(c => CharacterLiter(c.char))
 }
 
 object Identifier {
-  val buildKeywordPrefix: (String, List[Char]) => Identifier = (prefix, suffix) => Identifier(prefix + suffix.mkString)
-  val build: (Char, List[Char]) => Identifier = (letter, letters) => Identifier((letter :: letters).mkString)
-
   def apply(prefix: Parsley[String], suffix: Parsley[List[Char]]): Parsley[Identifier] =
     (prefix, suffix).map((p, s) => Identifier(p + s.mkString))
 }
 
 object IntegerLiter {
-  val build: (Option[IntegerSign], List[Digit]) => IntegerLiter = IntegerLiter(_, _)
-
   def apply(option: Parsley[Option[IntegerSign]], digits: Parsley[List[Digit]]): Parsley[IntegerLiter] =
     (option, digits).map(IntegerLiter(_, _))
 }
 
 object PairLiter {
-  val build: String => PairLiter = _ => PairLiter()
-
   def apply(string: Parsley[String]): Parsley[PairLiter] = string.map(_ => PairLiter())
 }
 
 object StringLiter {
-  val build: List[DefaultCharacter] => StringLiter = dcs => StringLiter(dcs.mkString)
-
   def apply(chars: Parsley[List[DefaultCharacter]]): Parsley[StringLiter] = chars.map(dcs => StringLiter(dcs.mkString))
 }
 
 object UnaryOperatorApplication {
-  val build: (UnaryOperator, Expression) => UnaryOperatorApplication = UnaryOperatorApplication(_, _)
-
   def apply(operator: Parsley[UnaryOperator], expression: Parsley[Expression]): Parsley[UnaryOperatorApplication] =
     (operator, expression).map(UnaryOperatorApplication(_, _))
 }
 
 object FunctionCall {
-  val build: (Identifier, Option[ArgumentList]) => FunctionCall = FunctionCall(_, _)
-
   def apply(identifier: Parsley[Identifier], option: Parsley[Option[ArgumentList]]): Parsley[FunctionCall] =
     (identifier, option).map(FunctionCall(_, _))
 }
 
 object NewPair {
-  val build: (Expression, Expression) => NewPair = NewPair(_, _)
-
   def apply(expr1: Parsley[Expression], expr2: Parsley[Expression]): Parsley[NewPair] =
     (expr1, expr2).map(NewPair(_, _))
 }
 
 object PairElement {
-  val build: (Expression, Boolean) => PairElement = PairElement(_, _)
-
   def apply(expression: Parsley[Expression], isFirst: Boolean): Parsley[PairElement] =
     expression.map(PairElement(_, isFirst))
 }
 
 object ArgumentList {
-  val build: (Expression, List[Expression]) => ArgumentList = (e, es) => ArgumentList(e :: es)
-
   def apply(expr: Parsley[Expression], exprs: Parsley[List[Expression]]): Parsley[ArgumentList] =
     (expr, exprs).map((e, es) => ArgumentList(e :: es))
 }

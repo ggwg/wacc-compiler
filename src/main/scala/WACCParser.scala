@@ -60,7 +60,7 @@ object WACCParser {
         "do" *> skipWhitespace *> statementParser <* "done" <* skipWhitespace
       )
       <\> BeginEnd("begin" *> skipWhitespace *> statementParser <* "end" <* skipWhitespace),
-    Ops(InfixL)((";" <* skipWhitespace) #> StatementSequence.build)
+    Ops(InfixL)((";" <* skipWhitespace) #> ((st1: Statement, st2: Statement) => StatementSequence(st1, st2)))
   ) <* skipWhitespace)
   /* 〈assign-lhs〉::=〈ident〉
                    | 〈array-elem〉
