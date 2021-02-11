@@ -30,16 +30,28 @@ case class Assignment(assignmentLeft: AssignmentLeft, assignmentRight: Assignmen
     println("GOT INSIDE ASSIGNMENT CHECK")
     var pos = getPos()
     /* Check that assignment-left type is same as return type of assignment-right */
-    if (
-      assignmentLeft
-        .getType(symbolTable)
-        .unifies(assignmentRight.getType(symbolTable))
-    ) {
-      assignmentLeft.check(symbolTable)
-      assignmentRight.check(symbolTable)
-    } else {
-      errors += DefaultError("Type mismatch in Assigment for " + this.toString, pos)
+    assignmentRight match {
+      case expression: Expression => {
+        if (assignmentLeft
+          .getType(symbolTable)
+          .unifies(assignmentRight.getType(symbolTable))) {
+          assignmentLeft.check(symbolTable)
+          assignmentRight.check(symbolTable)
+        } else {
+          errors += DefaultError("Type mismatch in Assigment for " + this.toString, pos)
+        }
+      }
+      case _ => println("ASSIGNMENT NOT DONE YET")
+//      case FunctionCall(name, arguments) => {
+//        /* Number and types of functions arguments must match the functions definition. */
+//        var func = symbolTable.lookupAll(name.identifier)
+//
+//      }
+//      case ArrayLiter(expressions) =>
+//      case NewPair(first, second) =>
+//      case PairElement(expression, isFirst) =>
     }
+
   }
 
   override def getPos(): (Int, Int) = position

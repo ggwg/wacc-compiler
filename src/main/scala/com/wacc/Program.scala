@@ -39,10 +39,11 @@ case class Function(returnType: Type, name: Identifier, parameters: Option[Param
     } else {
       // Add to symbol table
       symbolTable.add(name.identifier, returnType, this)
-      val functionSymbolTable = new SymbolTable(symbolTable)
+      val functionSymbolTable = new SymbolTable(symbolTable, true)
       if (!parameters.isEmpty) {
         parameters.get.check(functionSymbolTable)
       }
+      body.check(functionSymbolTable)
     }
   }
 }
