@@ -2,9 +2,13 @@ package com.wacc
 
 import scala.collection.mutable
 
-class SymbolTable(parentSymbolTable: SymbolTable) {
+class SymbolTable(parentSymbolTable: SymbolTable, isFunctionSymbolTable: Boolean) {
   // default parameter to null
-  def this() = this(null)
+  def this() = this(null, false)
+
+  def this(parentSymbolTable: SymbolTable) = this(parentSymbolTable, false)
+
+  var isFunction = isFunctionSymbolTable
 
   var parent: Option[SymbolTable] = Option(parentSymbolTable)
   /* The symbol table contains a mapping from the name of the variable to a tuple
@@ -19,7 +23,7 @@ class SymbolTable(parentSymbolTable: SymbolTable) {
   // TODO: Refactor null to use Option[]
   // Returns Type object else empty Option if name not in dict
   def lookup(name: String): Option[(Type, ASTNode)] = {
-    return dictionary.get(name)
+    dictionary.get(name)
   }
 
   /* Looks up all the symbol tables */
@@ -32,7 +36,16 @@ class SymbolTable(parentSymbolTable: SymbolTable) {
       }
       current = current.get.parent
     }
-    return None
+    None
+  }
+
+  def isInsideFunctionSymbolTable(): Boolean = {
+    var current = Option(this)
+    while (current.isDefined) {
+      if (current.get.isFunction)
+        return true
+    }
+    false
   }
 
   override def toString: String = dictionary.toString()

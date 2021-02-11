@@ -16,17 +16,19 @@ case class DefaultError(message: String, pos: (Int, Int)) extends Error {
 }
 
 case class UnaryOperatorError(op: String, expected: String, actual: String, pos: (Int, Int)) extends Error {
-  def getError(): Error =
+  override def getError(): Error =
     DefaultError("Pre-defined function " + op + " expected " + expected + ", but found " + actual, pos)
+
+  override def throwError(): Unit = getError().throwError()
 }
 
 case class BinaryOperatorError(op: String, expected: String, actual: String, pos: (Int, Int), isLeft: Boolean)
     extends Error {
-  def getError(): Error = {
+  override def getError(): Error = {
     val side = if (isLeft) "left" else "right"
     DefaultError(
-      "Pre-defined function " + op + " expected " + expected + " for " + side + " operand, but found " + actual,
-      pos
-    )
+      "Pre-defined function " + op + " expected " + expected + " for " + side + " operand, but found " + actual, pos)
   }
+
+  override def throwError(): Unit = getError().throwError()
 }

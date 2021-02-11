@@ -13,26 +13,7 @@ object Playground {
     var parsedResult: Result[Program] = {
       programParser
         .runParser(
-          "begin" +
-            "     if (a == 0) then" +
-            "       return 0" +
-            "     else" +
-            "       return -1" +
-            "     fi" +
-            "     end"
-//          "begin" +
-//            "     int pred(int x, int j, char x) is return (x-1) end" +
-//            "     int succ(int x) is return (x+1) end" +
-//            "     int a = 0;" +
-//            "     int a = 2;" +
-//            "     a = call succ(a);" +
-//            "     a = call pred(a);" +
-//            "     if (a == 0) then" +
-//            "       return 0" +
-//            "     else" +
-//            "       return -1" +
-//            "     fi" +
-//            "     end"
+          "begin\n  int b = 15 + 6 || 19\nend"
         )
     }
     var ast = parsedResult.get

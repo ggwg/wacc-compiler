@@ -91,6 +91,7 @@ case class IdentifierDeclaration(identType: Type, identifier: Identifier, assign
     extends Statement {
   override def toString: String =
     identType.toString + " " + identifier.toString + " = " + assignmentRight.toString + "\n"
+
   /* Check if identifier is already defined in the symbol table (current, not parent)
    * If so, then record error because variable names must not class with existing
    * variable names or any keyword. Extract type of identType, then we check if this
@@ -108,13 +109,12 @@ case class IdentifierDeclaration(identType: Type, identifier: Identifier, assign
       case None => {
         // If left type == right type, then we can add it to dictionary.
         if (identType.sameTypes(assignmentRight, symbolTable)) {
+          assignmentRight.check(symbolTable)
           Some((identType.getType(symbolTable), assignmentRight))
         } else {
           errors += DefaultError(
             "Invalid types in identifier assignment. Got: " +
-              identType.getType(symbolTable) + assignmentRight.getType(symbolTable),
-            pos
-          )
+              assignmentRight.getType(symbolTable) + ", Expected: " + identType.getType(symbolTable), pos)
           None
         }
       }
@@ -132,6 +132,7 @@ case class If(condition: Expression, trueStatement: Statement, falseStatement: S
     println("GOT INSIDE IF CHECK")
     var pos = (0, 0)
     if (condition.getType(symbolTable).unifies(BooleanType())) {
+      condition.check(symbolTable)
       condition.check(symbolTable)
       var trueSymbolTable = new SymbolTable(symbolTable)
       trueStatement.check(trueSymbolTable)
@@ -210,8 +211,13 @@ case class Read(assignmentLeft: AssignmentLeft) extends Statement {
 case class Return(expression: Expression) extends Statement {
   override def toString: String = "return " + expression.toString + "\n"
 
+  /* Ensure that Return call is inside a function and not global */
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     println("GOT INSIDE RETURN CHECK")
+    var pos = (0,0)
+    if (!symbolTable.isFunction) {
+      errors += DefaultError("Return called in global scope - must be called within a function", pos)
+    }
     expression.check(symbolTable)
   }
 

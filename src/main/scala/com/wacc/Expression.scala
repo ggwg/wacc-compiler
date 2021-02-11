@@ -133,8 +133,6 @@ case class ArrayElement(name: Identifier, expressions: List[Expression]) extends
           errors += DefaultError("Array index expected type int, but found " + expressionType.toString, pos)
         expression.check(symbolTable)
       }
-
-      errors
     }
   }
 }
@@ -157,40 +155,50 @@ case class BinaryOperatorApplication(leftOperand: Expression, binaryOperator: Bi
           errors += BinaryOperatorError(op, IntType.toString(), leftType.toString, pos, isLeft = true)
         else if (!rightType.unifies(IntType()))
           errors += BinaryOperatorError(op, IntType.toString(), rightType.toString, pos, isLeft = false)
-        else
+        else {
           leftType.check(symbolTable)
-        rightType.check(symbolTable)
+          rightType.check(symbolTable)
+        }
+
 
       case GreaterThan() | GreaterEqualThan() | SmallerThan() | SmallerEqualThan() =>
         val expected = IntType.toString() + " or " + CharacterType.toString()
 
-        if (!(leftType.unifies(IntType()) || leftType.unifies(CharacterType())))
+        if (!(leftType.unifies(IntType()) || leftType.unifies(CharacterType()))) {
           errors += BinaryOperatorError(op, expected, leftType.toString, pos, isLeft = true)
-        else if (!(rightType.unifies(IntType()) || rightType.unifies(CharacterType())))
+        } else if (!(rightType.unifies(IntType()) || rightType.unifies(CharacterType()))) {
           errors += BinaryOperatorError(op, expected, rightType.toString, pos, isLeft = false)
-        else
+        } else {
           leftType.check(symbolTable)
-        rightType.check(symbolTable)
+          rightType.check(symbolTable)
+        }
 
       case Equals() | NotEquals() =>
-        if (!leftType.unifies(rightType))
-          errors += DefaultError(
-            "Cannot compare " + leftType.toString + " and " + rightType.toString + " types " +
-              " in " + this.toString,
-            pos
-          )
-        else
+        if (!leftType.unifies(rightType)) {
+          errors += DefaultError("Cannot compare " + leftType.toString + " and " + rightType.toString + " types " +
+              " in " + this.toString, pos)
+        } else {
           leftType.check(symbolTable)
-        rightType.check(symbolTable)
+          rightType.check(symbolTable)
+        }
+
 
       case And() | Or() =>
-        if (!leftOperand.getType(symbolTable).unifies(BooleanType()))
+        println("GOT INSIDE AND OR")
+        println(leftOperand.getType(symbolTable))
+        println(rightOperand.getType(symbolTable))
+        if (!leftType.unifies(BooleanType())) {
+          println("GOT HERE 1")
           errors += BinaryOperatorError(op, BooleanType.toString(), leftType.toString, pos, isLeft = true)
-        else if (!rightOperand.getType(symbolTable).unifies(BooleanType()))
+        } else if (!rightType.unifies(BooleanType())) {
+          println("GOT HERE 2")
           errors += BinaryOperatorError(op, BooleanType.toString(), rightType.toString, pos, isLeft = false)
-        else
+        } else {
+          println("GOT HERE 3")
           leftType.check(symbolTable)
-        check(symbolTable)
+          rightType.check(symbolTable)
+        }
+
     }
   }
 
