@@ -39,12 +39,11 @@ case class Function(returnType: Type, name: Identifier, parameters: Option[Param
     } else {
       // Add to symbol table
       symbolTable.add(name.identifier, returnType, this)
-      var functionSymbolTable = new SymbolTable(symbolTable)
+      val functionSymbolTable = new SymbolTable(symbolTable)
       if (!parameters.isEmpty) {
         parameters.get.check(functionSymbolTable)
       }
     }
-    List.empty
   }
 }
 
@@ -55,7 +54,6 @@ case class ParameterList(parameters: List[Parameter]) extends ASTNodeVoid {
       .reduceOption((left, right) => left + ", " + right)
       .getOrElse("")
 
-  // TODO:
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     println("GOT INSIDE PARAMETER-LIST CHECK")
     for (parameter <- parameters) {
@@ -68,7 +66,6 @@ case class Parameter(parameterType: Type, identifier: Identifier) extends ASTNod
   override def toString: String =
     parameterType.toString + " " + identifier.toString
 
-  // TODO:
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     println("GOT INSIDE PARAMETER CHECK")
     var pos = (0, 0)

@@ -30,18 +30,19 @@ case class UnaryOperatorApplication(unaryOperator: UnaryOperator, expression: Ex
     unaryOperator match {
       case Chr() =>
         if (expressionType.unifies(IntType())) expression.check(symbolTable)
-        else List(UnaryOperatorError("chr", "int", expressionType.toString, pos))
+        else errors += UnaryOperatorError("chr", "int", expressionType.toString, pos)
       case Length() =>
-        List.empty
+        // TODO:
+        println("TODO: Unary Operator Length()")
       case Negate() =>
         if (expressionType.unifies(IntType())) expression.check(symbolTable)
-        else List(UnaryOperatorError("(-) (i.e. negate)", "int", expressionType.toString, pos))
+        else errors += UnaryOperatorError("(-) (i.e. negate)", "int", expressionType.toString, pos)
       case Not() =>
         if (expressionType.unifies(BooleanType())) expression.check(symbolTable)
-        else List(UnaryOperatorError("not", "boolean", expressionType.toString, pos))
+        else errors += UnaryOperatorError("not", "boolean", expressionType.toString, pos)
       case Ord() =>
         if (expressionType.unifies(CharacterType())) expression.check(symbolTable)
-        else List(UnaryOperatorError("ord", "char", expressionType.toString, pos))
+        else errors += UnaryOperatorError("ord", "char", expressionType.toString, pos)
     }
   }
 
@@ -90,23 +91,23 @@ case class FunctionCall(name: Identifier, arguments: Option[ArgumentList])(posit
       errors += DefaultError("Function " + name.identifier + " not defined in scope", pos)
     } else {
       func.get._2 match {
-          // func is a function type
+        // func is a function type
         case Function(returnType: Type, name: Identifier, parameters: Option[ParameterList], body: Statement) =>
-          var expectedParameters = {
+          val expectedParameters = {
             parameters match {
               case Some(parameterList: ParameterList) => Some(parameterList.parameters.map(parameter => parameter.parameterType))
               case None => None
             }
           }
-          var expectedFunctionType = new FunctionType(returnType, expectedParameters)
-          var calledParameters = {
+          val expectedFunctionType = new FunctionType(returnType, expectedParameters)
+          val calledParameters = {
             arguments match {
               case Some(argumentList: ArgumentList) =>
                 Some(argumentList.expressions.map(expression => expression.getType(symbolTable)))
               case None => None
             }
           }
-          var calledFunctionType = new FunctionType(returnType, calledParameters)
+          val calledFunctionType = new FunctionType(returnType, calledParameters)
           if (!expectedFunctionType.unifies(calledFunctionType)) {
             errors += DefaultError("Type mismatch for Functions with function in symbol table (TODO)", pos)
           }
@@ -115,13 +116,6 @@ case class FunctionCall(name: Identifier, arguments: Option[ArgumentList])(posit
             DefaultError("Function call " + name.identifier + " is not of type Function. Got of type " + func.get._1, pos)
       }
     }
-//    } else if (!func.get._2.isInstanceOf[Function]) { // Pattern match
-//      // Checking if statement is function
-//      List(DefaultError(name.identifier + " is not a function", pos))
-//    } else {
-//      // Check that function types and parameter types all match
-//      var expectedFunctionType = new FunctionType(func.get)
-//    }
   }
 
   override def getPos(): (Int, Int) = position
@@ -164,7 +158,6 @@ case class ArrayElement(name: Identifier, expressions: List[Expression])(positio
     if (expressions.isEmpty) {
       errors += DefaultError("No array index specified in attempt to access array " + name.identifier, pos)
     } else {
-
       /* Go through each expression and check if it's of type int and recursively call check on each one */
       for (expression <- expressions) {
         val expressionType = expression.getType(symbolTable)
@@ -241,7 +234,6 @@ case class BinaryOperatorApplication(leftOperand: Expression, binaryOperator: Bi
           leftOperand.check(symbolTable)
           rightOperand.check(symbolTable)
         }
-
     }
   }
 
@@ -297,6 +289,8 @@ case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit])(position
   }) + digits.mkString
 
   override def getPos(): (Int, Int) = position
+
+  // TODO: Does BigInt check need to go here?
 
   override def getType(symbolTable: SymbolTable): Type = IntType()
 }

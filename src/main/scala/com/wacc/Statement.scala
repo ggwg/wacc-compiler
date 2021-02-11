@@ -1,7 +1,7 @@
 package com.wacc
 
 import parsley.Parsley
-import parsley.Parsley.pos
+import parsley.Parsley.{pos, select}
 import parsley.implicits.{voidImplicitly => _, _}
 
 import scala.collection.mutable
@@ -66,7 +66,7 @@ case class Exit(expression: Expression)(position: (Int, Int)) extends Statement 
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     println("GOT INSIDE EXIT CHECK")
-    var pos = getPos()
+    val pos = getPos()
     if (!expression.getType(symbolTable).unifies(IntType())) {
       errors += DefaultError("Exit expression not type Int", pos)
     }
@@ -149,9 +149,9 @@ case class If(condition: Expression, trueStatement: Statement, falseStatement: S
     if (condition.getType(symbolTable).unifies(BooleanType())) {
       condition.check(symbolTable)
       condition.check(symbolTable)
-      var trueSymbolTable = new SymbolTable(symbolTable)
+      val trueSymbolTable = new SymbolTable(symbolTable)
       trueStatement.check(trueSymbolTable)
-      var falseSymbolTable = new SymbolTable(symbolTable)
+      val falseSymbolTable = new SymbolTable(symbolTable)
       falseStatement.check(falseSymbolTable)
     } else {
       errors += DefaultError(
@@ -160,7 +160,6 @@ case class If(condition: Expression, trueStatement: Statement, falseStatement: S
         pos
       )
     }
-    List.empty
   }
 
   override def getPos(): (Int, Int) = position
@@ -190,25 +189,28 @@ case class Println(expression: Expression)(position: (Int, Int)) extends Stateme
   override def getPos(): (Int, Int) = position
 }
 
-/* Check done */
+/* TODO: Check
+*   Read Statements:
+A read statement ‘read’ is a special assignment statement that takes its value
+from the standard input and writes it to its argument. Just like a general assignment statement, a
+read statement can target a program variable, an array element or a pair element. However, the read
+statement can only handle character or integer input.
+* The read statement determines how it will interpret the value from the standard input based on the
+type of the target. For example, if the target is a variable of type ‘int’ then it will convert the input
+string into an integer.
+* */
 case class Read(assignmentLeft: AssignmentLeft)(position: (Int, Int)) extends Statement {
   override def toString: String = "read " + assignmentLeft.toString + "\n"
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     println("GOT INSIDE READ CHECK")
     val assignmentLeftType = assignmentLeft.getType(symbolTable)
-    if (
-      assignmentLeftType.unifies(CharacterType()) ||
-      assignmentLeftType.unifies(IntType())
-    ) {
+    if (assignmentLeftType.unifies(CharacterType()) ||
+      assignmentLeftType.unifies(IntType())) {
       assignmentLeft.check(symbolTable)
     } else {
-      println(
-        "Error -- Read expects Char or Int, but found " +
-          assignmentLeft.getClass.toString
-      )
+      errors += DefaultError("Read statement can only target ", (0,0))
     }
-    List.empty
   }
 
   override def getPos(): (Int, Int) = position
@@ -250,7 +252,6 @@ case class StatementSequence(statement1: Statement, statement2: Statement)(posit
     println("GOT INSIDE STATEMENT-SEQUENCE CHECK")
     statement1.check(symbolTable)
     statement2.check(symbolTable)
-    List.empty
   }
 
   override def getPos(): (Int, Int) = position
@@ -263,15 +264,14 @@ case class While(condition: Expression, statement: Statement)(position: (Int, In
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     println("GOT INSIDE WHILE CHECK")
-    if (condition.getType(symbolTable).unifies(BooleanType())) {
+    val conditionType = condition.getType(symbolTable)
+    if (conditionType.unifies(BooleanType())) {
       condition.check(symbolTable)
-      var whileSymbolTable = new SymbolTable(symbolTable)
+      val whileSymbolTable = new SymbolTable(symbolTable)
       statement.check(whileSymbolTable)
     } else {
-      println(
-        "Error -- Condition of if statement expects a boolean, but found " +
-          condition.getClass.toString
-      )
+      errors += DefaultError("While condition does not evaluate to boolean. Got type: " + conditionType.toString +
+      ", in expression: " + condition.toString, position)
     }
   }
 

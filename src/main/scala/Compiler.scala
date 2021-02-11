@@ -1,5 +1,7 @@
+import com.wacc.{Error, SymbolTable}
 import parsley.Failure
 
+import scala.collection.mutable
 import scala.io.Source
 
 object Compiler {
@@ -14,13 +16,25 @@ object Compiler {
       input += line + "\n"
     }
 
+    // Parsing
     val parseResult = WACCParser.programParser.runParser(input)
     if (parseResult.isFailure) {
       println("#syntax_error#\nexit:\n100")
-//      sys.error("Exit code 100 returned\n" + parseResult.asInstanceOf[Failure].msg)
       sys.exit(100)
     }
 
-    // TODO: Semantic check
+    // Semantic Analysis
+    // Initialize top level Symbol Table
+    var topST: SymbolTable = new SymbolTable()
+
+    var res = parseResult.get
+    implicit val semanticErrors: mutable.ListBuffer[Error] = mutable.ListBuffer.empty
+    res.check(topST)(semanticErrors)
+    for (error <- semanticErrors) {
+      error.throwError()
+    }
+    if (!semanticErrors.isEmpty) {
+      sys.exit(200)
+    }
   }
 }
