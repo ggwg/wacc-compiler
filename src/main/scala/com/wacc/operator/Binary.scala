@@ -3,12 +3,7 @@ package com.wacc.operator
 import com.wacc
 import com.wacc.{ASTNodeVoid, SymbolTable}
 
-trait BinaryOperator extends ASTNodeVoid {
-  // TODO - THIS MIGHT NEED TO BE DONE FOR EACH ONE INIDIVIDUALLY:
-  override def check(symbolTable: SymbolTable): List[wacc.Error] = {
-    println("GOT INSIDE BINARY-OPERATOR CHECK")
-  }
-}
+trait BinaryOperator extends ASTNodeVoid
 
 case class Add() extends BinaryOperator {
   override def toString: String = "+"

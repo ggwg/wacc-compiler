@@ -61,10 +61,7 @@ case class PairType(
 case class ArrayType(arrayType: Type) extends Type with PairElementType {
   override def toString: String = "type[" + arrayType.toString + "]"
 
-  // TODO?
-  override def check(symbolTable: SymbolTable): List[Error] = {
-    println("GOT INSIDE ARRAY-TYPE CHECK")
-  }
+  // TODO - define check
 
   override def getType(symbolTable: SymbolTable): Type = ArrayType(arrayType)
 }

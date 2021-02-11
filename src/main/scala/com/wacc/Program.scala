@@ -16,6 +16,7 @@ case class Program(functions: List[Function], body: Statement) extends ASTNodeVo
     functions.foreach { func =>
       func.check(newSymbolTable)
     }
+    List.empty
   }
 }
 
@@ -33,6 +34,7 @@ case class Function(returnType: Type, name: Identifier, parameters: Option[Param
     var F = symbolTable.lookup(name.identifier)
     if (!F.isEmpty) {
       println("Error - already declared identifier " + name.identifier)
+
     } else {
       // Add to symbol table
       symbolTable.add(name.identifier, returnType, this)
@@ -41,6 +43,7 @@ case class Function(returnType: Type, name: Identifier, parameters: Option[Param
         parameters.get.check(functionSymbolTable)
       }
     }
+    List.empty
   }
 }
 
@@ -57,6 +60,7 @@ case class ParameterList(parameters: List[Parameter]) extends ASTNodeVoid {
     for (parameter <- parameters) {
       parameter.check(symbolTable)
     }
+    List.empty
   }
 }
 
@@ -73,6 +77,7 @@ case class Parameter(parameterType: Type, identifier: Identifier) extends ASTNod
     } else {
       println("Error - parameter already defined in scope.")
     }
+    List.empty
   }
 }
 

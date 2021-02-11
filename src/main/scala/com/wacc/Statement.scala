@@ -38,6 +38,7 @@ case class Assignment(
     } else {
       println("Left assignment type does not match right assigment type")
     }
+    List.empty
   }
 }
 
@@ -51,6 +52,7 @@ case class BeginEnd(statement: Statement) extends Statement {
     var newSymbolTable = new SymbolTable(symbolTable)
     // Recursively call check.
     statement.check(newSymbolTable)
+    List.empty
   }
 }
 
@@ -68,7 +70,7 @@ case class Exit(expression: Expression) extends Statement {
           + expression.getClass.toString
       )
     }
-    return ()
+    List.empty
   }
 }
 
@@ -86,7 +88,7 @@ case class Free(expression: Expression) extends Statement {
           + expression.getClass.toString
       )
     }
-    return ()
+    List.empty
   }
 }
 
@@ -124,6 +126,7 @@ case class IdentifierDeclaration(
         }
       }
     })
+    List.empty
   }
 }
 
@@ -150,6 +153,7 @@ case class If(
           condition.getClass.toString
       )
     }
+    List.empty
   }
 }
 
@@ -167,6 +171,7 @@ case class Print(expression: Expression) extends Statement {
           expression.getClass.toString
       )
     }
+    List.empty
   }
 }
 
@@ -184,6 +189,7 @@ case class Println(expression: Expression) extends Statement {
           expression.getClass.toString
       )
     }
+    List.empty
   }
 }
 
@@ -205,6 +211,7 @@ case class Read(assignmentLeft: AssignmentLeft) extends Statement {
           assignmentLeft.getClass.toString
       )
     }
+    List.empty
   }
 }
 
@@ -226,7 +233,9 @@ case class SkipStatement() extends Statement {
   override def toString: String = "skip\n"
   override def check(symbolTable: SymbolTable): List[Error] = {
     println("GOT INSIDE SKIP-STATEMENT CHECK")
+    List.empty
   }
+
 }
 
 /* Check done */
@@ -241,6 +250,7 @@ case class StatementSequence(
     println("GOT INSIDE STATEMENT-SEQUENCE CHECK")
     statement1.check(symbolTable)
     statement2.check(symbolTable)
+    List.empty
   }
 }
 
@@ -262,6 +272,7 @@ case class While(condition: Expression, statement: Statement)
           condition.getClass.toString
       )
     }
+    List.empty
   }
 }
 
