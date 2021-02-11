@@ -13,7 +13,7 @@ object Playground {
     var parsedResult: Result[Program] = {
       programParser
         .runParser(
-          "begin\n  int b = 15 + 6 || 19\nend"
+          "begin\n  int b = 1 + 2 + true + 4 + 5\nend"
         )
     }
     var ast = parsedResult.get
