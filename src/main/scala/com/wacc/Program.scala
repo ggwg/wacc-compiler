@@ -3,23 +3,22 @@ package com.wacc
 import parsley.Parsley
 import parsley.implicits.{voidImplicitly => _, _}
 
+import scala.collection.mutable
+
 case class Program(functions: List[Function], body: Statement) extends ASTNodeVoid {
   override def toString: String = "begin\n" + functions
     .map(_.toString)
     .reduceOption((left, right) => left + right)
     .getOrElse("") + body.toString + "end"
 
-  override def check(symbolTable: SymbolTable): List[Error] = {
+  override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     // TODO: check function name and return type, slide 31
     println("CHECKED INSIDE PROGRAM")
-    var errors = List[Error]()
-
     val programSymbolTable = new SymbolTable(symbolTable)
     functions.foreach { func =>
-      errors ++= func.check(programSymbolTable)
+      func.check(programSymbolTable)
     }
-    errors ++= body.check(programSymbolTable)
-    errors
+    body.check(programSymbolTable)
   }
 }
 
@@ -31,13 +30,14 @@ case class Function(returnType: Type, name: Identifier, parameters: Option[Param
     returnType.toString + " " + name.toString + "(" +
       parameters.getOrElse("").toString + ") is\n" + body.toString + "end\n"
 
-  override def check(symbolTable: SymbolTable): List[Error] = {
+  override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     println("CHECKED INSIDE FUNCTION")
+    var pos = (0,0)
     // Check function name and return type:
     var F = symbolTable.lookup(name.identifier)
     if (!F.isEmpty) {
-      println("Error - already declared identifier " + name.identifier)
-
+      errors +=
+        DefaultError("Function " + name.identifier + " conflicts with another variable in the current scope.", pos)
     } else {
       // Add to symbol table
       symbolTable.add(name.identifier, returnType, this)
@@ -58,12 +58,11 @@ case class ParameterList(parameters: List[Parameter]) extends ASTNodeVoid {
       .getOrElse("")
 
   // TODO:
-  override def check(symbolTable: SymbolTable): List[Error] = {
+  override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     println("GOT INSIDE PARAMETER-LIST CHECK")
     for (parameter <- parameters) {
       parameter.check(symbolTable)
     }
-    List.empty
   }
 }
 
@@ -72,21 +71,21 @@ case class Parameter(parameterType: Type, identifier: Identifier) extends ASTNod
     parameterType.toString + " " + identifier.toString
 
   // TODO:
-  override def check(symbolTable: SymbolTable): List[Error] = {
+  override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     println("GOT INSIDE PARAMETER CHECK")
+    var pos = (0,0)
     var parameterInfo = symbolTable.lookup(identifier.identifier)
     if (parameterInfo.isEmpty) {
       symbolTable.add(identifier.identifier, parameterType, this)
     } else {
-      println("Error - parameter already defined in scope.")
+      errors +=
+        DefaultError("Function parameter " + identifier.identifier + " conflicts with another parameter in scope.", pos)
     }
-    List.empty
   }
 }
 
 object Program {
   val build: (List[Function], Statement) => Program = Program(_, _)
-
   def apply(funs: Parsley[List[Function]], body: Parsley[Statement]): Parsley[Program] = (funs, body).map(Program(_, _))
 }
 
