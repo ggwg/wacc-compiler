@@ -14,11 +14,8 @@ case class Program(functions: List[Function], body: Statement) extends ASTNodeVo
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     // TODO: check function name and return type, slide 31
     println("CHECKED INSIDE PROGRAM")
-    val programSymbolTable = new SymbolTable(symbolTable)
-    functions.foreach { func =>
-      func.check(programSymbolTable)
-    }
-    body.check(programSymbolTable)
+    functions.foreach { func => func.check(symbolTable) }
+    body.check(symbolTable)
   }
 }
 
@@ -32,15 +29,17 @@ case class Function(returnType: Type, name: Identifier, parameters: Option[Param
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     println("CHECKED INSIDE FUNCTION")
-    var pos = (0, 0)
+    val pos = (0, 0)
     // Check function name and return type:
-    var F = symbolTable.lookup(name.identifier)
+    val F = symbolTable.lookup(name.identifier)
     if (!F.isEmpty) {
       errors +=
         DefaultError("Function " + name.identifier + " conflicts with another variable in the current scope.", pos)
+      println("DIDNT ADD TO SYMBOL TABLE")
     } else {
       // Add to symbol table
       symbolTable.add(name.identifier, returnType, this)
+      println("ADDED 2 SYMBOL TABLE, FUNCTION " + name.identifier)
       var functionSymbolTable = new SymbolTable(symbolTable)
       if (!parameters.isEmpty) {
         parameters.get.check(functionSymbolTable)

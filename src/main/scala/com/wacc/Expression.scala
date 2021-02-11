@@ -92,6 +92,7 @@ case class FunctionCall(name: Identifier, arguments: Option[ArgumentList])(posit
       // Checking if statement is function
       List(DefaultError(name.identifier + " is not a function", pos))
     } else {
+      // TODO!
 //      val thisFunctionType = FunctionType(name.getType(symbolTable), arguments.map(_.expressions.map(_.getType(symbolTable))))
 //      if (!func.get._1.unifies(funcType)) List(DefaultError("Type mismatch in arguments of " + name.identifier, pos))
       List.empty
@@ -167,15 +168,16 @@ case class BinaryOperatorApplication(leftOperand: Expression, binaryOperator: Bi
 
     binaryOperator match {
       case Add() | Divide() | Modulo() | Multiply() | Subtract() =>
-        if (!leftType.unifies(IntType()))
+        println(leftType)
+        println(rightType)
+        if (!leftType.unifies(IntType())) {
           errors += BinaryOperatorError(op, IntType.toString(), leftType.toString, pos, isLeft = true)
-        else if (!rightType.unifies(IntType()))
+        } else if (!rightType.unifies(IntType())) {
           errors += BinaryOperatorError(op, IntType.toString(), rightType.toString, pos, isLeft = false)
-        else {
-          leftType.check(symbolTable)
-          rightType.check(symbolTable)
+        } else {
+          leftOperand.check(symbolTable)
+          rightOperand.check(symbolTable)
         }
-
 
       case GreaterThan() | GreaterEqualThan() | SmallerThan() | SmallerEqualThan() =>
         val expected = IntType.toString() + " or " + CharacterType.toString()
@@ -185,8 +187,8 @@ case class BinaryOperatorApplication(leftOperand: Expression, binaryOperator: Bi
         } else if (!(rightType.unifies(IntType()) || rightType.unifies(CharacterType()))) {
           errors += BinaryOperatorError(op, expected, rightType.toString, pos, isLeft = false)
         } else {
-          leftType.check(symbolTable)
-          rightType.check(symbolTable)
+          leftOperand.check(symbolTable)
+          rightOperand.check(symbolTable)
         }
 
       case Equals() | NotEquals() =>
@@ -194,8 +196,8 @@ case class BinaryOperatorApplication(leftOperand: Expression, binaryOperator: Bi
           errors += DefaultError("Cannot compare " + leftType.toString + " and " + rightType.toString + " types " +
               " in " + this.toString, pos)
         } else {
-          leftType.check(symbolTable)
-          rightType.check(symbolTable)
+          leftOperand.check(symbolTable)
+          rightOperand.check(symbolTable)
         }
 
 
@@ -211,8 +213,8 @@ case class BinaryOperatorApplication(leftOperand: Expression, binaryOperator: Bi
           errors += BinaryOperatorError(op, BooleanType.toString(), rightType.toString, pos, isLeft = false)
         } else {
           println("GOT HERE 3")
-          leftType.check(symbolTable)
-          rightType.check(symbolTable)
+          leftOperand.check(symbolTable)
+          rightOperand.check(symbolTable)
         }
 
     }

@@ -126,7 +126,7 @@ case class IdentifierDeclaration(identType: Type, identifier: Identifier, assign
         } else {
           errors += DefaultError(
             "Invalid types in identifier assignment. Got: " +
-              assignmentRight.getType(symbolTable) + ", Expected: " + identType.getType(symbolTable), pos)
+              assignmentRight.getType(symbolTable) + ", Expected: " + identType, pos)
           None
         }
       }
@@ -172,15 +172,7 @@ case class Print(expression: Expression)(position: (Int, Int)) extends Statement
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     println("GOT INSIDE PRINT CHECK")
-    if (expression.getType(symbolTable).unifies(StringType())) {
-      expression.check(symbolTable)
-    } else {
-      println(
-        "Error -- Print statement expects String, but found " +
-          expression.getClass.toString
-      )
-    }
-    List.empty
+    expression.check(symbolTable)
   }
 
   override def getPos(): (Int, Int) = position
@@ -192,15 +184,7 @@ case class Println(expression: Expression)(position: (Int, Int)) extends Stateme
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     println("GOT INSIDE PRINTLN CHECK")
-    if (expression.getType(symbolTable).unifies(StringType())) {
-      expression.check(symbolTable)
-    } else {
-      println(
-        "Error -- Println statement expects String, but found " +
-          expression.getClass.toString
-      )
-    }
-    List.empty
+    expression.check(symbolTable)
   }
 
   override def getPos(): (Int, Int) = position
