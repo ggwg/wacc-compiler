@@ -1,10 +1,11 @@
 package com.wacc.operator
 
+import com.wacc
 import com.wacc.{ASTNodeVoid, SymbolTable}
 
 trait BinaryOperator extends ASTNodeVoid {
   // TODO - THIS MIGHT NEED TO BE DONE FOR EACH ONE INIDIVIDUALLY:
-  override def check(symbolTable: SymbolTable): Unit = {
+  override def check(symbolTable: SymbolTable): List[wacc.Error] = {
     println("GOT INSIDE BINARY-OPERATOR CHECK")
   }
 }

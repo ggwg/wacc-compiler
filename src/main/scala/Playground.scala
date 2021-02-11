@@ -8,22 +8,26 @@ object Playground {
     var topST: SymbolTable = new SymbolTable()
     topST.add("int", IntType(), null)
 
-    var parsedResult: Result[Program] =
-      programParser
-      .runParser(
-        "begin" +
-          "     int pred(int x) is return (x-1) end" +
-          "     int succ(int x) is return (x+1) end" +
-          "     int a = 0;" +
-          "     a = call succ(a);" +
-          "     a = call pred(a);" +
-          "     if (a == 0) then" +
-          "       return 0" +
-          "     else" +
-          "       return -1" +
-          "     fi" +
-          "     end"
-      )
+    var parsedResult: Result[Expression] = {
+      expressionParser.runParser("chr 'a'")
+      //      programParser
+      //      .runParser(
+      //        "begin" +
+      //          "     int pred(int x) is return (x-1) end" +
+      //          "     int succ(int x) is return (x+1) end" +
+      //          "     int a = 0;" +
+      //          "     chr 'a';" +
+      //          "     a = call succ(a);" +
+      //          "     a = call pred(a);" +
+      //          "     if (a == 0) then" +
+      //          "       return 0" +
+      //          "     else" +
+      //          "       return -1" +
+      //          "     fi" +
+      //          "     end"
+      //      )
+      //    }
+    }
     var ast = parsedResult.get
     ast.check(topST)
     println("Finished Testing Function\n")
@@ -47,7 +51,7 @@ object Playground {
   }
 
   def main(args: Array[String]): Unit = {
-    testFunction()
+    testProgram()
     /*
     enum that indicates the different types:
     int, bool, char, string, array, T
@@ -58,8 +62,7 @@ object Playground {
     symbolTable = [("x", 0), ]
     symbolTable = [("var_name":(UserType, ASTNode))]
 
-    */
-
+     */
 
 //    // Type matching
 //    var x: CharacterLiter = CharacterLiter('a')

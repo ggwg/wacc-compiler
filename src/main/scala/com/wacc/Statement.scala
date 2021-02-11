@@ -22,7 +22,7 @@ case class Assignment(
   override def toString: String =
     assignmentLeft.toString + " = " + assignmentRight.toString + "\n"
 
-  override def check(symbolTable: SymbolTable): Unit = {
+  override def check(symbolTable: SymbolTable): List[Error] = {
     println("GOT INSIDE ASSIGNMENT CHECK")
 
     /* Check that assignment-left type is same as return type of assignment-right */
@@ -45,7 +45,7 @@ case class Assignment(
 case class BeginEnd(statement: Statement) extends Statement {
   override def toString: String = "begin\n" + statement.toString + "end\n"
 
-  override def check(symbolTable: SymbolTable): Unit = {
+  override def check(symbolTable: SymbolTable): List[Error] = {
     println("GOT INSIDE BEGIN-END CHECK")
     // Create new scope for Symbol Table
     var newSymbolTable = new SymbolTable(symbolTable)
@@ -58,7 +58,7 @@ case class BeginEnd(statement: Statement) extends Statement {
 case class Exit(expression: Expression) extends Statement {
   override def toString: String = "exit " + expression.toString + "\n"
 
-  override def check(symbolTable: SymbolTable): Unit = {
+  override def check(symbolTable: SymbolTable): List[Error] = {
     println("GOT INSIDE EXIT CHECK")
     if (expression.getType(symbolTable).unifies(IntType())) {
       println("Success")
@@ -76,7 +76,7 @@ case class Exit(expression: Expression) extends Statement {
 case class Free(expression: Expression) extends Statement {
   override def toString: String = "free " + expression.toString + "\n"
 
-  override def check(symbolTable: SymbolTable): Unit = {
+  override def check(symbolTable: SymbolTable): List[Error] = {
     println("GOT INSIDE FREE CHECK")
     if (expression.getType(symbolTable).unifies(StringType())) {
       println("Success")
@@ -103,7 +103,7 @@ case class IdentifierDeclaration(
    * variable names or any keyword. Extract type of identType, then we check if this
    * is the same type as assignmentRight. If so, add it to symbol table. Else, error.
    */
-  override def check(symbolTable: SymbolTable): Unit = {
+  override def check(symbolTable: SymbolTable): List[Error] = {
     println("GOT INSIDE IDENTIFIER-DECLARATION CHECK")
     symbolTable.dictionary.updateWith(identifier.identifier)({
       case Some(x) => {
@@ -137,7 +137,7 @@ case class If(
   override def toString: String =
     "if " + condition + " then\n" + trueStatement.toString + "else\n" + falseStatement + "fi\n"
 
-  override def check(symbolTable: SymbolTable): Unit = {
+  override def check(symbolTable: SymbolTable): List[Error] = {
     println("GOT INSIDE IF CHECK")
     if (condition.getType(symbolTable).unifies(BooleanType())) {
       var trueSymbolTable = new SymbolTable(symbolTable)
@@ -157,7 +157,7 @@ case class If(
 case class Print(expression: Expression) extends Statement {
   override def toString: String = "print " + expression.toString + "\n"
 
-  override def check(symbolTable: SymbolTable): Unit = {
+  override def check(symbolTable: SymbolTable): List[Error] = {
     println("GOT INSIDE PRINT CHECK")
     if (expression.getType(symbolTable).unifies(StringType())) {
       expression.check(symbolTable)
@@ -174,7 +174,7 @@ case class Print(expression: Expression) extends Statement {
 case class Println(expression: Expression) extends Statement {
   override def toString: String = "println " + expression.toString + "\n"
 
-  override def check(symbolTable: SymbolTable): Unit = {
+  override def check(symbolTable: SymbolTable): List[Error] = {
     println("GOT INSIDE PRINTLN CHECK")
     if (expression.getType(symbolTable).unifies(StringType())) {
       expression.check(symbolTable)
@@ -191,7 +191,7 @@ case class Println(expression: Expression) extends Statement {
 case class Read(assignmentLeft: AssignmentLeft) extends Statement {
   override def toString: String = "read " + assignmentLeft.toString + "\n"
 
-  override def check(symbolTable: SymbolTable): Unit = {
+  override def check(symbolTable: SymbolTable): List[Error] = {
     println("GOT INSIDE READ CHECK")
     val assignmentLeftType = assignmentLeft.getType(symbolTable)
     if (
@@ -212,18 +212,19 @@ case class Read(assignmentLeft: AssignmentLeft) extends Statement {
 case class Return(expression: Expression) extends Statement {
   override def toString: String = "return " + expression.toString + "\n"
 
-  override def check(symbolTable: SymbolTable): Unit = {
+  override def check(symbolTable: SymbolTable): List[Error] = {
     println("GOT INSIDE RETURN CHECK")
     expression.check(symbolTable)
   }
 
-  override def getType(symbolTable: SymbolTable): Type = expression.getType(symbolTable)
+  override def getType(symbolTable: SymbolTable): Type =
+    expression.getType(symbolTable)
 }
 
 /* Check done */
 case class SkipStatement() extends Statement {
   override def toString: String = "skip\n"
-  override def check(symbolTable: SymbolTable): Unit = {
+  override def check(symbolTable: SymbolTable): List[Error] = {
     println("GOT INSIDE SKIP-STATEMENT CHECK")
   }
 }
@@ -236,7 +237,7 @@ case class StatementSequence(
   override def toString: String =
     statement1.toString.stripSuffix("\n") + ";\n" + statement2.toString
 
-  override def check(symbolTable: SymbolTable): Unit = {
+  override def check(symbolTable: SymbolTable): List[Error] = {
     println("GOT INSIDE STATEMENT-SEQUENCE CHECK")
     statement1.check(symbolTable)
     statement2.check(symbolTable)
@@ -249,7 +250,7 @@ case class While(condition: Expression, statement: Statement)
   override def toString: String =
     "while " + condition.toString + " do\n" + statement.toString + "done\n"
 
-  override def check(symbolTable: SymbolTable): Unit = {
+  override def check(symbolTable: SymbolTable): List[Error] = {
     println("GOT INSIDE WHILE CHECK")
     if (condition.getType(symbolTable).unifies(BooleanType())) {
       condition.check(symbolTable)

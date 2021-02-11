@@ -6,7 +6,7 @@ case class Program(functions: List[Function], body: Statement) extends ASTNodeVo
     .reduceOption((left, right) => left + right)
     .getOrElse("") + body.toString + "end"
 
-  override def check(symbolTable: SymbolTable): Unit = {
+  override def check(symbolTable: SymbolTable): List[Error] = {
     // TODO: check function name and return type, slide 31
 
     println("CHECKED INSIDE PROGRAM")
@@ -21,26 +21,21 @@ case class Program(functions: List[Function], body: Statement) extends ASTNodeVo
 
 /* Check done */
 /* Function declaration - see P31 of semantic analysis slides */
-case class Function(
-    functionType: Type,
-    functionName: Identifier,
-    parameters: Option[ParameterList],
-    body: Statement
-) extends ASTNodeVoid {
+case class Function(returnType: Type, name: Identifier, parameters: Option[ParameterList], body: Statement)
+    extends ASTNodeVoid {
   override def toString: String =
-    functionType.toString + " " + functionName.toString + "(" + parameters
-      .getOrElse("")
-      .toString + ") is\n" + body.toString + "end\n"
+    returnType.toString + " " + name.toString + "(" +
+      parameters.getOrElse("").toString + ") is\n" + body.toString + "end\n"
 
-  override def check(symbolTable: SymbolTable): Unit = {
+  override def check(symbolTable: SymbolTable): List[Error] = {
     println("CHECKED INSIDE FUNCTION")
     // Check function name and return type:
-    var F = symbolTable.lookup(functionName.identifier)
+    var F = symbolTable.lookup(name.identifier)
     if (!F.isEmpty) {
-      println("Error - already declared identifier " + functionName.identifier)
+      println("Error - already declared identifier " + name.identifier)
     } else {
       // Add to symbol table
-      symbolTable.add(functionName.identifier, functionType, this)
+      symbolTable.add(name.identifier, returnType, this)
       var functionSymbolTable = new SymbolTable(symbolTable)
       if (!parameters.isEmpty) {
         parameters.get.check(functionSymbolTable)
@@ -57,7 +52,7 @@ case class ParameterList(parameters: List[Parameter]) extends ASTNodeVoid {
       .getOrElse("")
 
   // TODO:
-  override def check(symbolTable: SymbolTable): Unit = {
+  override def check(symbolTable: SymbolTable): List[Error] = {
     println("GOT INSIDE PARAMETER-LIST CHECK")
     for (parameter <- parameters) {
       parameter.check(symbolTable)
@@ -65,13 +60,12 @@ case class ParameterList(parameters: List[Parameter]) extends ASTNodeVoid {
   }
 }
 
-case class Parameter(parameterType: Type, identifier: Identifier)
-    extends ASTNodeVoid {
+case class Parameter(parameterType: Type, identifier: Identifier) extends ASTNodeVoid {
   override def toString: String =
     parameterType.toString + " " + identifier.toString
 
   // TODO:
-  override def check(symbolTable: SymbolTable): Unit = {
+  override def check(symbolTable: SymbolTable): List[Error] = {
     println("GOT INSIDE PARAMETER CHECK")
     var parameterInfo = symbolTable.lookup(identifier.identifier)
     if (parameterInfo.isEmpty) {
@@ -92,8 +86,7 @@ object Function {
 }
 
 object ParameterList {
-  val build: (Parameter, List[Parameter]) => ParameterList = (p, ps) =>
-    ParameterList(p :: ps)
+  val build: (Parameter, List[Parameter]) => ParameterList = (p, ps) => ParameterList(p :: ps)
 }
 
 object Parameter {

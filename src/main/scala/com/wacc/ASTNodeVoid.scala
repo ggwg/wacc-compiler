@@ -2,7 +2,7 @@ package com.wacc
 
 trait ASTNode {
   // Each statement needs a check function for semantic analysis
-  def check(symbolTable: SymbolTable): Unit = ()
+  def check(symbolTable: SymbolTable): List[Error] = List.empty
   def getType(symbolTable: SymbolTable): Type
 }
 

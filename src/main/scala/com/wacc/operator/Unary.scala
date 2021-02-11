@@ -1,10 +1,11 @@
 package com.wacc.operator
 
+import com.wacc
 import com.wacc.{ASTNodeVoid, SymbolTable}
 
 sealed trait UnaryOperator extends ASTNodeVoid {
   // TODO: THIS MAY NEED TO BE DONE FOR EVERY UNARY OPERATOR (?)
-  override def check(symbolTable: SymbolTable): Unit = {
+  override def check(symbolTable: SymbolTable): List[wacc.Error] = {
     println("GOT INSIDE UNARY-OPERATOR CHECK")
   }
 }

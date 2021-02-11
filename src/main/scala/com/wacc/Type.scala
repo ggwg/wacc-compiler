@@ -13,10 +13,9 @@ case class VoidType() extends Type {
 }
 
 case class FunctionType(
-                   returnType: Type,
-                   parameters: Option[List[Type]]
-                   ) extends Type
-
+    returnType: Type,
+    parameters: Option[List[Type]]
+) extends Type
 
 case class IntType() extends BaseType {
   override def toString: String = "int"
@@ -55,14 +54,15 @@ case class PairType(
 ) extends PairElementType {
   override def toString: String =
     "pair(" + elementType1.toString + ", " + elementType2.toString + ")"
-  override def getType(symbolTable: SymbolTable): Type = PairType(elementType1, elementType2)
+  override def getType(symbolTable: SymbolTable): Type =
+    PairType(elementType1, elementType2)
 }
 
 case class ArrayType(arrayType: Type) extends Type with PairElementType {
   override def toString: String = "type[" + arrayType.toString + "]"
 
   // TODO?
-  override def check(symbolTable: SymbolTable): Unit = {
+  override def check(symbolTable: SymbolTable): List[Error] = {
     println("GOT INSIDE ARRAY-TYPE CHECK")
   }
 
