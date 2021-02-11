@@ -87,16 +87,41 @@ case class FunctionCall(name: Identifier, arguments: Option[ArgumentList])(posit
     val pos = (39, 15)
 
     if (func.isEmpty) {
-      List(DefaultError("Function " + name.identifier + " not defined in scope", pos))
-    } else if (!func.get._2.isInstanceOf[Function]) { // Pattern match
-      // Checking if statement is function
-      List(DefaultError(name.identifier + " is not a function", pos))
+      errors += DefaultError("Function " + name.identifier + " not defined in scope", pos)
     } else {
-      // TODO!
-//      val thisFunctionType = FunctionType(name.getType(symbolTable), arguments.map(_.expressions.map(_.getType(symbolTable))))
-//      if (!func.get._1.unifies(funcType)) List(DefaultError("Type mismatch in arguments of " + name.identifier, pos))
-      List.empty
+      func.get._2 match {
+          // func is a function type
+        case Function(returnType: Type, name: Identifier, parameters: Option[ParameterList], body: Statement) =>
+          var expectedParameters = {
+            parameters match {
+              case Some(parameterList: ParameterList) => Some(parameterList.parameters.map(parameter => parameter.parameterType))
+              case None => None
+            }
+          }
+          var expectedFunctionType = new FunctionType(returnType, expectedParameters)
+          var calledParameters = {
+            arguments match {
+              case Some(argumentList: ArgumentList) =>
+                Some(argumentList.expressions.map(expression => expression.getType(symbolTable)))
+              case None => None
+            }
+          }
+          var calledFunctionType = new FunctionType(returnType, calledParameters)
+          if (!expectedFunctionType.unifies(calledFunctionType)) {
+            errors += DefaultError("Type mismatch for Functions with function in symbol table (TODO)", pos)
+          }
+        case _ =>
+          errors +=
+            DefaultError("Function call " + name.identifier + " is not of type Function. Got of type " + func.get._1, pos)
+      }
     }
+//    } else if (!func.get._2.isInstanceOf[Function]) { // Pattern match
+//      // Checking if statement is function
+//      List(DefaultError(name.identifier + " is not a function", pos))
+//    } else {
+//      // Check that function types and parameter types all match
+//      var expectedFunctionType = new FunctionType(func.get)
+//    }
   }
 
   override def getPos(): (Int, Int) = position

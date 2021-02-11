@@ -13,7 +13,7 @@ object Playground {
     var parsedResult: Result[Program] = {
       programParser
         .runParser(
-          "begin\n\tint f() is\n\t\treturn 0 \n\tend \n  int f() is\n    return 1\n  end\n  int x = call f();\n  println x\nend"
+          "begin\n\tint f(int a, int b) is\n\t\treturn 0 \n\tend\n\tint x = call f(1,2,3);\n\tprintln x\nend"
         )
     }
     var ast = parsedResult.get
