@@ -6,139 +6,218 @@ sealed trait Expression extends AssignmentRight {}
 sealed trait AssignmentRight extends ASTNodeVoid {}
 sealed trait AssignmentLeft extends ASTNodeVoid {}
 
-/* Since array element may be empty, the type may either be ArrayType(SomeType()) or ArrayType(VoidType()) */
-case class ArrayElement(
-    identifier: Identifier,
-    expressions: List[Expression]
-) extends Expression
-    with AssignmentLeft {
-  override def toString: String =
-    identifier.toString + expressions.flatMap("[" + _.toString + "]")
+/* TODO:
+   - Check that expression is an int between 0-255
+   - Type checking for arrays (length) -> if (expression.getType(symbolTable).unifies(ArrayType()))
+   - Add support for retrieving position from the AST
+   - Remove unnecessary print statements
+ */
+case class UnaryOperatorApplication(unaryOperator: UnaryOperator, expression: Expression) extends Expression {
+  override def toString: String = unaryOperator.toString + expression.toString
 
-  override def check(symbolTable: SymbolTable): Unit = {
-    // If the list is non-empty, check that all the types of the elements of the array
-    // are the same.
-    if (!expressions.isEmpty) {
-      val arrayElementType = expressions.head.getType(symbolTable)
-      for (expression <- expressions) {
-        if (!expression.getType(symbolTable).unifies(arrayElementType)) {
-          println(
-            "Array type not equal to expected array type. Got: " + expression
-              .getType(symbolTable)
-              + ", Expected: " + arrayElementType
-          )
-        }
-      }
+  override def check(symbolTable: SymbolTable): List[Error] = {
+    println(">>> Checking unary operator application...")
+    val expressionType = expression.getType(symbolTable)
+    val pos = (39, 15)
+
+    unaryOperator match {
+      case Chr() =>
+        if (expressionType.unifies(IntType())) expression.check(symbolTable)
+        else List(UnaryOperatorError("chr", "int", expressionType.toString, pos))
+      case Length() =>
+        List.empty
+      case Negate() =>
+        if (expressionType.unifies(IntType())) expression.check(symbolTable)
+        else List(UnaryOperatorError("(-) (i.e. negate)", "int", expressionType.toString, pos))
+      case Not() =>
+        if (expressionType.unifies(BooleanType())) expression.check(symbolTable)
+        else List(UnaryOperatorError("not", "boolean", expressionType.toString, pos))
+      case Ord() =>
+        if (expressionType.unifies(CharacterType())) expression.check(symbolTable)
+        else List(UnaryOperatorError("ord", "char", expressionType.toString, pos))
     }
   }
-  override def getType(symbolTable: SymbolTable): Type = {
-    if (expressions.isEmpty) {
-      ArrayType(VoidType())
-    } else {
-      ArrayType(expressions.head.getType(symbolTable))
-    }
+
+  override def getType(symbolTable: SymbolTable): Type = unaryOperator match {
+    case Chr() => CharacterType()
+    case Not() => BooleanType()
+    case _     => IntType()
   }
-  // TODO: what type to return if ArrayElement is empty? (how to define getType function)
 }
 
-case class BinaryOperatorApplication(
-    expression1: Expression,
-    binaryOperator: BinaryOperator,
-    expression2: Expression
-) extends Expression {
-  override def toString: String =
-    expression1.toString + " " + binaryOperator.toString + " " + expression2.toString
+/* TODO:
+   - Find out what to do for the check (returns List.empty for now)
+ */
+case class PairLiter() extends Expression {
+  override def toString: String = "null"
 
-  // TODO:
-  override def check(symbolTable: SymbolTable): Unit = {
-    println("GOT INSIDE BINARY-OPERATOR-APPLICATION CHECK")
+  override def check(symbolTable: SymbolTable): List[Error] = {
+    println(">>> Checking pair literal...")
+    List.empty
+  }
+}
+
+/* TODO:
+  - Add support for position
+  - Try to print the expected function signature in the error message
+  - Error in check; the funcType will not return a class FunctionType
+ */
+case class FunctionCall(name: Identifier, arguments: Option[ArgumentList]) extends AssignmentRight {
+  override def toString: String =
+    "call " + name + "(" + (arguments match {
+      case Some(args) => args.toString
+      case None       => ""
+    }) + ")"
+
+  override def check(symbolTable: SymbolTable): List[Error] = {
+    println(">>> Checking function call...")
+    val func: Option[(Type, ASTNode)] = symbolTable.lookupAll(name.identifier)
+    val pos = (39, 15)
+
+    if (func.isEmpty)
+      List(DefaultError("Function " + name.identifier + " not defined in scope", pos))
+    else {
+      val funcType = FunctionType(name.getType(symbolTable), arguments.map(_.expressions.map(_.getType(symbolTable))))
+
+      if (!func.get._1.unifies(funcType)) List(DefaultError("Type mismatch in arguments of " + name.identifier, pos))
+      else List.empty
+    }
+  }
+
+  override def getType(symbolTable: SymbolTable): Type = {
+    val functionTable = symbolTable.lookupAll(name.identifier)
+    functionTable.get._1
+  }
+}
+
+/* TODO:
+   - Implement argument list checking
+   - Implement the getType for this
+ */
+case class ArgumentList(expressions: List[Expression]) extends ASTNodeVoid {
+  override def toString: String = expressions.map(_.toString).reduce((left, right) => left + ", " + right)
+
+  override def check(symbolTable: SymbolTable): List[Error] = {
+    println(">>> Checking argument list...")
+    expressions.flatMap(_.check(symbolTable))
+    List.empty
+  }
+}
+
+/* TODO:
+   - Implement the getType override
+   - Also try to provide more information about which index access attempt has the error
+ */
+case class ArrayElement(name: Identifier, expressions: List[Expression]) extends Expression with AssignmentLeft {
+  override def toString: String =
+    name.toString + expressions.flatMap("[" + _.toString + "]")
+
+  override def check(symbolTable: SymbolTable): List[Error] = {
+    val pos = (39, 15)
+
+    if (expressions.isEmpty)
+      List(DefaultError("No array index specified in attempt to access array " + name.identifier, pos))
+    else {
+      /* Go through each expression and check if it's of type int and recursively call check on each one */
+      var errors: List[Error] = List.empty
+
+      for (expression <- expressions) {
+        val expressionType = expression.getType(symbolTable)
+        if (!expressionType.unifies(IntType()))
+          errors ++= List(DefaultError("Array index expected type int, but found " + expressionType.toString, pos))
+        errors ++= expression.check(symbolTable)
+      }
+
+      errors
+    }
+  }
+}
+
+/* ✅ Check done */
+case class BinaryOperatorApplication(leftOperand: Expression, binaryOperator: BinaryOperator, rightOperand: Expression)
+    extends Expression {
+  override def toString: String = leftOperand.toString + " " + binaryOperator.toString + " " + rightOperand.toString
+
+  override def check(symbolTable: SymbolTable): List[Error] = {
+    println(">>> Checking binary operator application")
+    val leftType = leftOperand.getType(symbolTable)
+    val rightType = rightOperand.getType(symbolTable)
+    val op = binaryOperator.toString
+    val pos = (39, 15)
 
     binaryOperator match {
       case Add() | Divide() | Modulo() | Multiply() | Subtract() =>
-        if (!expression1.getType(symbolTable).unifies(IntType())) {
-          println("ERROR: INTEGER BIN-OP, expected type Int")
-        }
-        if (!expression2.getType(symbolTable).unifies(IntType())) {
-          println("ERROR: INTEGER BIN-OP, expected type Int")
-        }
-      case GreaterThan() | GreaterEqualThan() | SmallerThan() |
-          SmallerEqualThan() =>
-        val result1 = expression1.getType(symbolTable).unifies(IntType()) ||
-          expression1.getType(symbolTable).unifies(CharacterType())
-        val result2 = expression2.getType(symbolTable).unifies(IntType()) ||
-          expression2.getType(symbolTable).unifies(CharacterType())
-        if (!result1) {
-          println("ERROR: COMPARIONS/EQUALS BIN-OP, expected type Int/Char")
-        }
-        if (!result2) {
-          println("ERROR: COMPARIONS/EQUALS BIN-OP, expected type Int/Char")
-        }
+        if (!leftType.unifies(IntType()))
+          List(BinaryOperatorError(op, IntType.toString(), leftType.toString, pos, isLeft = true))
+        else if (!rightType.unifies(IntType()))
+          List(BinaryOperatorError(op, IntType.toString(), rightType.toString, pos, isLeft = false))
+        else
+          List(leftType.check(symbolTable), rightType.check(symbolTable)).flatten
+
+      case GreaterThan() | GreaterEqualThan() | SmallerThan() | SmallerEqualThan() =>
+        val expected = IntType.toString() + " or " + CharacterType.toString()
+
+        if (!(leftType.unifies(IntType()) || leftType.unifies(CharacterType())))
+          List(BinaryOperatorError(op, expected, leftType.toString, pos, isLeft = true))
+        else if (!(rightType.unifies(IntType()) || rightType.unifies(CharacterType())))
+          List(BinaryOperatorError(op, expected, rightType.toString, pos, isLeft = false))
+        else
+          List(leftType.check(symbolTable), rightType.check(symbolTable)).flatten
+
       case Equals() | NotEquals() =>
-        println("BIN-OP, nothing to do for equals")
+        if (!leftType.unifies(rightType))
+          List(DefaultError("Cannot compare " + leftType.toString + " and " + rightType.toString + " types!", pos))
+        else
+          List(leftType.check(symbolTable), rightType.check(symbolTable)).flatten
+
       case And() | Or() =>
-        if (!expression1.getType(symbolTable).unifies(BooleanType())) {
-          println("ERROR: AND/OR BIN-OP, expected type Bool")
-        }
-        if (!expression2.getType(symbolTable).unifies(BooleanType())) {
-          println("ERROR: AND/OR BIN-OP, expected type Bool")
-        }
+        if (!leftOperand.getType(symbolTable).unifies(BooleanType()))
+          List(BinaryOperatorError(op, BooleanType.toString(), leftType.toString, pos, isLeft = true))
+        else if (!rightOperand.getType(symbolTable).unifies(BooleanType()))
+          List(BinaryOperatorError(op, BooleanType.toString(), rightType.toString, pos, isLeft = false))
+        else
+          List(leftType.check(symbolTable), rightType.check(symbolTable)).flatten
     }
   }
 
-  override def getType(symbolTable: SymbolTable): Type = {
-    println("getType(): BINARY-OPERATOR-APPLICATION")
+  override def getType(symbolTable: SymbolTable): Type =
     binaryOperator match {
       case Add() | Divide() | Modulo() | Multiply() | Subtract() => IntType()
       case _                                                     => BooleanType()
     }
-  }
 }
 
+/* ✅ Check done */
 case class BooleanLiter(boolean: Boolean) extends Expression {
   override def toString: String = boolean.toString
-  override def check(symbolTable: SymbolTable): Unit = {
-    println("GOT INSIDE BOOLEAN-LITER CHECK")
-  }
+
   override def getType(symbolTable: SymbolTable): Type = BooleanType()
 }
 
+/* ✅ Check done */
 case class CharacterLiter(char: Char) extends Expression {
   override def toString: String = "'" + char + "'"
-  override def check(symbolTable: SymbolTable): Unit = {
-    println("GOT INSIDE CHARACTER-LITER CHECK")
-  }
 
   override def getType(symbolTable: SymbolTable): Type = CharacterType()
 }
 
-/*
-assignment:
-x = 5
-assignment.check()
-compare types
-x.getType() -> VoidType
-5.getTpye() -> IntType
-Different
-x.check()
- */
-case class Identifier(identifier: String)
-    extends Expression
-    with AssignmentLeft {
-  override def toString: String = identifier.toString
-  override def check(symbolTable: SymbolTable): Unit = {
-    println("GOT INSIDE IDENTIFIER CHECK")
-    if (getType(symbolTable).unifies(VoidType())) {
-      println("Error - undefined identifier")
-    }
+/* ✅ Check done */
+case class Identifier(identifier: String) extends Expression with AssignmentLeft {
+  override def toString: String = identifier
+
+  override def check(symbolTable: SymbolTable): List[Error] = {
+    println(">>> Checking identifier...")
+    val pos = (39, 15)
+    if (getType(symbolTable).unifies(VoidType())) List(DefaultError("Undefined identifier \"" + identifier + "\"", pos))
+    else List.empty
   }
-  override def getType(symbolTable: SymbolTable): Type = {
-    var lookupVal: Option[(Type, ASTNode)] = symbolTable.lookupAll(identifier)
-    return lookupVal.getOrElse((VoidType(), null))._1
-  }
+
+  override def getType(symbolTable: SymbolTable): Type =
+    symbolTable.lookupAll(identifier).getOrElse((VoidType(), null))._1
 }
 
-case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit])
-    extends Expression {
+/* ✅ Check done */
+case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit]) extends Expression {
   override def toString: String = (sign match {
     case None       => ""
     case Some(sign) => sign.toString
@@ -147,173 +226,55 @@ case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit])
   override def getType(symbolTable: SymbolTable): Type = IntType()
 }
 
-case class PairLiter() extends Expression {
-  override def toString: String = "null"
-
-  // TODO:
-  override def check(symbolTable: SymbolTable): Unit = {
-    println("GOT INSIDE PAIR-LITER CHECK")
-  }
-
-  // TODO: What should type of PairLiter be?
-}
-
+/* ✅ Check done */
 case class StringLiter(string: String) extends Expression {
   override def toString: String = "\"" + string + "\""
   override def getType(symbolTable: SymbolTable): Type = StringType()
 }
 
-case class UnaryOperatorApplication(
-    unaryOperator: UnaryOperator,
-    expression: Expression
-) extends Expression {
-  override def toString: String = unaryOperator.toString + expression.toString
-
-  override def check(symbolTable: SymbolTable): Unit = {
-    println("GOT INSIDE UNARY-OPERATOR-APPLICATION CHECK")
-    unaryOperator match {
-      case Chr() =>
-        if (expression.getType(symbolTable).unifies(IntType())) {
-          // TODO: check that expression is an int between 0-255
-          expression.check(symbolTable)
-        } else {
-          println("ERROR IN UNARY-OPERATOR APPLICATION: CHR")
-        }
-      case Length() =>
-      // TODO: Type checking for arrays
-      // if (expression.getType(symbolTable).unifies(ArrayType()))
-      case Negate() =>
-        if (expression.getType(symbolTable).unifies(IntType())) {
-          expression.check(symbolTable)
-        } else {
-          println("ERROR NEGATE")
-        }
-      case Not() =>
-        if (expression.getType(symbolTable).unifies(BooleanType())) {
-          expression.check(symbolTable)
-        } else {
-          println("ERROR NOT")
-        }
-      case Ord() =>
-        if (expression.getType(symbolTable).unifies(CharacterType())) {
-          println("ERROR ORD")
-          return ()
-        } else {
-          return IntType
-        }
-    }
-    // In case we add more unary operators
-    return ()
-  }
-  override def getType(symbolTable: SymbolTable): Type = {
-    println("getType(): BINARY-OPERATOR-APPLICATION")
-    unaryOperator match {
-      case Chr() => CharacterType()
-      case Not() => BooleanType()
-      case _     => IntType()
-    }
-  }
-}
-
+/* ✅ Check done */
 case class ArrayLiter(expressions: List[Expression]) extends AssignmentRight {
   override def toString: String = "[" + expressions
     .map(_.toString)
     .reduceOption((left, right) => left + ", " + right)
     .getOrElse("") + "]"
 
-  // TODO:
-  override def check(symbolTable: SymbolTable): Unit = {
-    for (expression <- expressions) {
-      expression.check(symbolTable)
-    }
+  override def check(symbolTable: SymbolTable): List[Error] = expressions.flatMap(_.check(symbolTable))
+
+  override def getType(symbolTable: SymbolTable): Type =
+    if (expressions.isEmpty) ArrayType(VoidType())
+    else ArrayType(expressions.head.getType(symbolTable))
+}
+
+/* ✅ Check done */
+case class NewPair(first: Expression, second: Expression) extends AssignmentRight {
+  override def toString: String = "newpair(" + first.toString + ", " + second.toString + ")"
+
+  override def check(symbolTable: SymbolTable): List[Error] = {
+    println(">>> Checking newpair...")
+    List(first.check(symbolTable), second.check(symbolTable)).flatten
   }
-  // If there are expressions then we will return ArrayType(VoidType) - this case needs to be
-  // caught in type checking
+
   override def getType(symbolTable: SymbolTable): Type = {
-    if (expressions.isEmpty) {
-      ArrayType(VoidType())
-    } else {
-      ArrayType(expressions.head.getType(symbolTable))
-    }
+    val fstType = first.getType(symbolTable)
+    val sndType = second.getType(symbolTable)
+
+    if (!fstType.isInstanceOf[PairElementType] || !sndType.isInstanceOf[PairElementType]) VoidType()
+    else PairType(fstType.asInstanceOf[PairElementType], sndType.asInstanceOf[PairElementType])
   }
 }
 
-case class FunctionCall(identifier: Identifier, arguments: Option[ArgumentList])
-    extends AssignmentRight {
-  override def toString: String =
-    "call " + identifier + "(" + (arguments match {
-      case Some(args) => args.toString
-      case None       => ""
-    }) + ")"
+/* ✅ Check done */
+case class PairElement(expression: Expression, isFirst: Boolean) extends AssignmentRight with AssignmentLeft {
+  override def toString: String = (if (isFirst) "fst " else "snd ") + expression.toString
 
-  // TODO:
-  override def check(symbolTable: SymbolTable): Unit = {
-    println("GOT INSIDE FUNCTION-CALL CHECK")
-    var func: Option[(Type, ASTNode)] = symbolTable.lookupAll(identifier.identifier)
-    if (func.isEmpty) {
-      print("Error - unknown function name " + identifier.identifier)
-    } else {
-      var newFuncType = new FunctionType(
-        identifier.getType(symbolTable),
-        arguments.map(params => params.expressions.map(param => param.getType(symbolTable)))
-      )
-      if (func.get._1.unifies(newFuncType)) {
-        // No error
-      } else {
-        println("Error - type mismatch in Function type (Function Call)")
-      }
-    }
+  override def check(symbolTable: SymbolTable): List[Error] = {
+    println(">>> Checking pair element...")
+    expression.check(symbolTable)
   }
-}
 
-/* Check done */
-case class NewPair(expression1: Expression, expression2: Expression)
-    extends AssignmentRight {
-  override def toString: String =
-    "newpair(" + expression1.toString + ", " + expression2.toString + ")"
-
-  // pair(int, char) x = newpair(10, 'c')
-  override def check(symbolTable: SymbolTable): Unit = {
-    println("GOT INSIDE NEW-PAIR CHECK")
-    expression1.check(symbolTable)
-    expression2.check(symbolTable)
-  }
   override def getType(symbolTable: SymbolTable): Type = {
-    // TODO:
-    // VoidType()
-    var type1 = expression1.getType(symbolTable)
-    var type2 = expression2.getType(symbolTable)
-    if (!type1.isInstanceOf[PairElementType] || !type2.isInstanceOf[PairElementType]) {
-      return VoidType()
-    } else {
-      return PairType(
-        type1.asInstanceOf[PairElementType],
-        type2.asInstanceOf[PairElementType]
-      )
-    }
-
-  }
-}
-
-case class PairElement(expression: Expression, isFirst: Boolean)
-    extends AssignmentRight
-    with AssignmentLeft {
-  override def toString: String =
-    (if (isFirst) "fst " else "snd ") + expression.toString
-
-  // TODO:
-  override def check(symbolTable: SymbolTable): Unit = {
-    println("GOT INSIDE PAIR-ELEMENT CHECK")
-  }
-}
-
-case class ArgumentList(expressions: List[Expression]) extends ASTNodeVoid {
-  override def toString: String =
-    expressions.map(_.toString).reduce((left, right) => left + ", " + right)
-
-  // TODO:
-  override def check(symbolTable: SymbolTable): Unit = {
-    println("GOT INSIDE ARGUMENT-LIST CHECK")
+    expression.getType(symbolTable)
   }
 }
 
@@ -324,59 +285,48 @@ object ArrayElement {
 }
 
 object ArrayLiter {
-  val build: (Option[(Expression, List[Expression])] => ArrayLiter) = {
-    case None => ArrayLiter(List())
-    case Some((e, es)) =>
-      ArrayLiter(e :: es)
+  val build: Option[(Expression, List[Expression])] => ArrayLiter = {
+    case None          => ArrayLiter(List())
+    case Some((e, es)) => ArrayLiter(e :: es)
   }
 }
 
 object BinaryOperatorApplication {
-  val build
-      : (Expression, BinaryOperator, Expression) => BinaryOperatorApplication =
-    (e1, op, e2) => BinaryOperatorApplication(e1, op, e2)
+  val build: (Expression, BinaryOperator, Expression) => BinaryOperatorApplication = (e1, op, e2) =>
+    BinaryOperatorApplication(e1, op, e2)
 }
 
 object BooleanLiter {
-  val build: (String => BooleanLiter) = bool =>
-    BooleanLiter(bool.equals("true"))
+  val build: String => BooleanLiter = bool => BooleanLiter(bool.equals("true"))
 }
 
 object CharacterLiter {
-  val build: (DefaultCharacter => CharacterLiter) = chr =>
-    CharacterLiter(chr.char)
+  val build: DefaultCharacter => CharacterLiter = chr => CharacterLiter(chr.char)
 }
 
 object Identifier {
-  val buildKeywordPrefix: (String, List[Char]) => Identifier =
-    (prefix, suffix) => Identifier(prefix + suffix.mkString)
-
-  val build: (Char, List[Char]) => Identifier = (letter, letters) =>
-    Identifier((letter :: letters).mkString)
+  val buildKeywordPrefix: (String, List[Char]) => Identifier = (prefix, suffix) => Identifier(prefix + suffix.mkString)
+  val build: (Char, List[Char]) => Identifier = (letter, letters) => Identifier((letter :: letters).mkString)
 }
 
 object IntegerLiter {
-  val build: (Option[IntegerSign], List[Digit]) => IntegerLiter =
-    IntegerLiter(_, _)
+  val build: (Option[IntegerSign], List[Digit]) => IntegerLiter = IntegerLiter(_, _)
 }
 
 object PairLiter {
-  val build: (String => PairLiter) = _ => PairLiter()
+  val build: String => PairLiter = _ => PairLiter()
 }
 
 object StringLiter {
-  val build: (List[DefaultCharacter] => StringLiter) = dcs =>
-    StringLiter(dcs.mkString)
+  val build: List[DefaultCharacter] => StringLiter = dcs => StringLiter(dcs.mkString)
 }
 
 object UnaryOperatorApplication {
-  val build: (UnaryOperator, Expression) => UnaryOperatorApplication =
-    UnaryOperatorApplication(_, _)
+  val build: (UnaryOperator, Expression) => UnaryOperatorApplication = UnaryOperatorApplication(_, _)
 }
 
 object FunctionCall {
-  val build: (Identifier, Option[ArgumentList]) => FunctionCall =
-    FunctionCall(_, _)
+  val build: (Identifier, Option[ArgumentList]) => FunctionCall = FunctionCall(_, _)
 }
 
 object NewPair {
@@ -388,6 +338,5 @@ object PairElement {
 }
 
 object ArgumentList {
-  val build: (Expression, List[Expression]) => ArgumentList = (e, es) =>
-    ArgumentList(e :: es)
+  val build: (Expression, List[Expression]) => ArgumentList = (e, es) => ArgumentList(e :: es)
 }
