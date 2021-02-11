@@ -23,7 +23,6 @@ case class Ord() extends UnaryOperator {
 }
 
 object UnaryOperator {
-  val build: String => UnaryOperator = UnaryOperator(_)
   val operators = List("!", "-", "len", "ord", "chr")
 
   def apply(operator: String): UnaryOperator = operator match {
