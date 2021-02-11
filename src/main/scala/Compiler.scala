@@ -16,8 +16,9 @@ object Compiler {
 
     val parseResult = WACCParser.programParser.runParser(input)
     if (parseResult.isFailure) {
-      println("Exit code 100 returned")
-      println(parseResult.asInstanceOf[Failure].msg)
+      println("#syntax_error#\nexit:\n100")
+//      sys.error("Exit code 100 returned\n" + parseResult.asInstanceOf[Failure].msg)
+      sys.exit(100)
     }
 
     // TODO: Semantic check
