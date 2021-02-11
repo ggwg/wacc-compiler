@@ -1,5 +1,8 @@
 package com.wacc
 
+import parsley.Parsley
+import parsley.implicits.{voidImplicitly => _, _}
+
 case class Program(functions: List[Function], body: Statement) extends ASTNodeVoid {
   override def toString: String = "begin\n" + functions
     .map(_.toString)
@@ -83,17 +86,32 @@ case class Parameter(parameterType: Type, identifier: Identifier) extends ASTNod
 
 object Program {
   val build: (List[Function], Statement) => Program = Program(_, _)
+
+  def apply(funs: Parsley[List[Function]], body: Parsley[Statement]): Parsley[Program] = (funs, body).map(Program(_, _))
 }
 
 object Function {
   val build: (Type, Identifier, Option[ParameterList], Statement) => Function =
     Function(_, _, _, _)
+
+  def apply(
+    returnType: Parsley[Type],
+    name: Parsley[Identifier],
+    params: Parsley[Option[ParameterList]],
+    body: Parsley[Statement]
+  ): Parsley[Function] = (returnType, name, params, body).map(Function(_, _, _, _))
 }
 
 object ParameterList {
   val build: (Parameter, List[Parameter]) => ParameterList = (p, ps) => ParameterList(p :: ps)
+
+  def apply(param: Parsley[Parameter], params: Parsley[List[Parameter]]): Parsley[ParameterList] =
+    (param, params).map((p, ps) => ParameterList(p :: ps))
 }
 
 object Parameter {
   val build: (Type, Identifier) => Parameter = Parameter(_, _)
+
+  def apply(paramType: Parsley[Type], name: Parsley[Identifier]): Parsley[Parameter] =
+    (paramType, name).map(Parameter(_, _))
 }

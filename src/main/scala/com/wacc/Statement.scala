@@ -1,5 +1,8 @@
 package com.wacc
 
+import parsley.Parsley
+import parsley.implicits.{voidImplicitly => _, _}
+
 sealed trait Statement extends ASTNodeVoid {
   def exitable(): Boolean = {
     this match {
@@ -15,10 +18,7 @@ sealed trait Statement extends ASTNodeVoid {
 }
 
 /* Check Done */
-case class Assignment(
-    assignmentLeft: AssignmentLeft,
-    assignmentRight: AssignmentRight
-) extends Statement {
+case class Assignment(assignmentLeft: AssignmentLeft, assignmentRight: AssignmentRight) extends Statement {
   override def toString: String =
     assignmentLeft.toString + " = " + assignmentRight.toString + "\n"
 
@@ -93,11 +93,8 @@ case class Free(expression: Expression) extends Statement {
 }
 
 /* Check done */
-case class IdentifierDeclaration(
-    identType: Type,
-    identifier: Identifier,
-    assignmentRight: AssignmentRight
-) extends Statement {
+case class IdentifierDeclaration(identType: Type, identifier: Identifier, assignmentRight: AssignmentRight)
+    extends Statement {
   override def toString: String =
     identType.toString + " " + identifier.toString + " = " + assignmentRight.toString + "\n"
   /* Check if identifier is already defined in the symbol table (current, not parent)
@@ -107,7 +104,7 @@ case class IdentifierDeclaration(
    */
   override def check(symbolTable: SymbolTable): List[Error] = {
     println("GOT INSIDE IDENTIFIER-DECLARATION CHECK")
-    symbolTable.dictionary.updateWith(identifier.identifier)({
+    symbolTable.dictionary.updatedWith(identifier.identifier)({
       case Some(x) => {
         println("Already in Dictionary - throw error")
         Some(x)
@@ -132,11 +129,7 @@ case class IdentifierDeclaration(
 
 /* Check done - Do we have to do the check for the true and false branches even if the
  * provided condition is not of the right type? */
-case class If(
-    condition: Expression,
-    trueStatement: Statement,
-    falseStatement: Statement
-) extends Statement {
+case class If(condition: Expression, trueStatement: Statement, falseStatement: Statement) extends Statement {
   override def toString: String =
     "if " + condition + " then\n" + trueStatement.toString + "else\n" + falseStatement + "fi\n"
 
@@ -239,10 +232,7 @@ case class SkipStatement() extends Statement {
 }
 
 /* Check done */
-case class StatementSequence(
-    statement1: Statement,
-    statement2: Statement
-) extends Statement {
+case class StatementSequence(statement1: Statement, statement2: Statement) extends Statement {
   override def toString: String =
     statement1.toString.stripSuffix("\n") + ";\n" + statement2.toString
 
@@ -255,8 +245,7 @@ case class StatementSequence(
 }
 
 /* Check done */
-case class While(condition: Expression, statement: Statement)
-    extends Statement {
+case class While(condition: Expression, statement: Statement) extends Statement {
   override def toString: String =
     "while " + condition.toString + " do\n" + statement.toString + "done\n"
 
@@ -284,58 +273,74 @@ object Statement {
     case ("print", e)   => Print(e)
     case ("println", e) => Println(e)
   }
+
+  def apply(action: Parsley[String], expr: Parsley[Expression]): Parsley[Statement] =
+    (action, expr).map {
+      case ("free", e)    => Free(e)
+      case ("return", e)  => Return(e)
+      case ("exit", e)    => Exit(e)
+      case ("print", e)   => Print(e)
+      case ("println", e) => Println(e)
+    }
 }
 
 object Assignment {
   val build: (AssignmentLeft, AssignmentRight) => Assignment = Assignment(_, _)
+
+  def apply(left: Parsley[AssignmentLeft], right: Parsley[AssignmentRight]): Parsley[Assignment] =
+    (left, right).map(Assignment(_, _))
 }
 
 object BeginEnd {
   val build: Statement => BeginEnd = BeginEnd(_)
-}
 
-object Exit {
-  val build: Expression => Exit = Exit(_)
-}
-
-object Free {
-  val build: Expression => Free = Free(_)
+  def apply(statement: Parsley[Statement]): Parsley[BeginEnd] =
+    statement.map(BeginEnd(_))
 }
 
 object IdentifierDeclaration {
   val build: (Type, Identifier, AssignmentRight) => IdentifierDeclaration =
     IdentifierDeclaration(_, _, _)
+
+  def apply(
+    identType: Parsley[Type],
+    name: Parsley[Identifier],
+    value: Parsley[AssignmentRight]
+  ): Parsley[IdentifierDeclaration] = (identType, name, value).map(IdentifierDeclaration(_, _, _))
 }
 
 object If {
   val build: (Expression, Statement, Statement) => If = If(_, _, _)
-}
 
-object Print {
-  val build: Expression => Print = Print(_)
-}
-
-object Println {
-  val build: Expression => Println = Println(_)
+  def apply(
+    cond: Parsley[Expression],
+    trueStatement: Parsley[Statement],
+    falseStatement: Parsley[Statement]
+  ): Parsley[If] = (cond, trueStatement, falseStatement).map(If(_, _, _))
 }
 
 object Read {
   val build: AssignmentLeft => Read = Read(_)
-}
 
-object Return {
-  val build: Expression => Return = Return(_)
+  def apply(left: Parsley[AssignmentLeft]): Parsley[Read] = left.map(Read(_))
 }
 
 object SkipStatement {
   val build: String => SkipStatement = _ => SkipStatement()
+
+  def apply(skip: Parsley[String]): Parsley[SkipStatement] = skip.map(_ => SkipStatement())
 }
 
 object StatementSequence {
   val build: (Statement, Statement) => StatementSequence =
     StatementSequence(_, _)
+
+  def apply(statementLeft: Parsley[Statement], statementRight: Parsley[Statement]): Parsley[StatementSequence] =
+    (statementLeft, statementRight).map(StatementSequence(_, _))
 }
 
 object While {
   val build: (Expression, Statement) => While = While(_, _)
+
+  def apply(cond: Parsley[Expression], body: Parsley[Statement]): Parsley[While] = (cond, body).map(While(_, _))
 }
