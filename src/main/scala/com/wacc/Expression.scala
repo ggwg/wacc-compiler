@@ -2,6 +2,9 @@ package com.wacc
 
 import com.wacc.operator._
 
+import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
+
 sealed trait Expression extends AssignmentRight {}
 sealed trait AssignmentRight extends ASTNodeVoid {}
 sealed trait AssignmentLeft extends ASTNodeVoid {}
@@ -15,7 +18,7 @@ sealed trait AssignmentLeft extends ASTNodeVoid {}
 case class UnaryOperatorApplication(unaryOperator: UnaryOperator, expression: Expression) extends Expression {
   override def toString: String = unaryOperator.toString + expression.toString
 
-  override def check(symbolTable: SymbolTable): List[Error] = {
+  override def check(symbolTable: SymbolTable)(implicit errors : mutable.ListBuffer[Error]): Unit = {
     println(">>> Checking unary operator application...")
     val expressionType = expression.getType(symbolTable)
     val pos = (39, 15)
@@ -51,7 +54,7 @@ case class UnaryOperatorApplication(unaryOperator: UnaryOperator, expression: Ex
 case class PairLiter() extends Expression {
   override def toString: String = "null"
 
-  override def check(symbolTable: SymbolTable): List[Error] = {
+  override def check(symbolTable: SymbolTable)(implicit errors : mutable.ListBuffer[Error]): Unit = {
     println(">>> Checking pair literal...")
     List.empty
   }
@@ -69,24 +72,25 @@ case class FunctionCall(name: Identifier, arguments: Option[ArgumentList]) exten
       case None       => ""
     }) + ")"
 
-  override def check(symbolTable: SymbolTable): List[Error] = {
+  override def check(symbolTable: SymbolTable)(implicit errors : mutable.ListBuffer[Error]): Unit = {
     println(">>> Checking function call...")
     val func: Option[(Type, ASTNode)] = symbolTable.lookupAll(name.identifier)
     val pos = (39, 15)
 
-    if (func.isEmpty)
+    if (func.isEmpty) {
       List(DefaultError("Function " + name.identifier + " not defined in scope", pos))
-    else {
-      val funcType = FunctionType(name.getType(symbolTable), arguments.map(_.expressions.map(_.getType(symbolTable))))
-
-      if (!func.get._1.unifies(funcType)) List(DefaultError("Type mismatch in arguments of " + name.identifier, pos))
-      else List.empty
+    } else if (!func.get._2.isInstanceOf[Function]) { // Pattern match
+      // Checking if statement is function
+      List(DefaultError(name.identifier + " is not a function", pos))
+    }else {
+//      val thisFunctionType = FunctionType(name.getType(symbolTable), arguments.map(_.expressions.map(_.getType(symbolTable))))
+//      if (!func.get._1.unifies(funcType)) List(DefaultError("Type mismatch in arguments of " + name.identifier, pos))
+      List.empty
     }
   }
 
   override def getType(symbolTable: SymbolTable): Type = {
-    val functionTable = symbolTable.lookupAll(name.identifier)
-    functionTable.get._1
+    symbolTable.lookupAll(name.identifier).getOrElse((VoidType(), null))._1
   }
 }
 
@@ -97,10 +101,11 @@ case class FunctionCall(name: Identifier, arguments: Option[ArgumentList]) exten
 case class ArgumentList(expressions: List[Expression]) extends ASTNodeVoid {
   override def toString: String = expressions.map(_.toString).reduce((left, right) => left + ", " + right)
 
-  override def check(symbolTable: SymbolTable): List[Error] = {
+  override def check(symbolTable: SymbolTable)(implicit errors : mutable.ListBuffer[Error]): Unit = {
     println(">>> Checking argument list...")
-    expressions.flatMap(_.check(symbolTable))
-    List.empty
+    for (expression <- expressions) {
+      expression.check(symbolTable)
+    }
   }
 }
 
@@ -112,20 +117,19 @@ case class ArrayElement(name: Identifier, expressions: List[Expression]) extends
   override def toString: String =
     name.toString + expressions.flatMap("[" + _.toString + "]")
 
-  override def check(symbolTable: SymbolTable): List[Error] = {
+  override def check(symbolTable: SymbolTable)(implicit errors : mutable.ListBuffer[Error]): Unit = {
     val pos = (39, 15)
 
-    if (expressions.isEmpty)
-      List(DefaultError("No array index specified in attempt to access array " + name.identifier, pos))
-    else {
-      /* Go through each expression and check if it's of type int and recursively call check on each one */
-      var errors: List[Error] = List.empty
+    if (expressions.isEmpty) {
+      errors += DefaultError("No array index specified in attempt to access array " + name.identifier, pos)
+    } else {
 
+      /* Go through each expression and check if it's of type int and recursively call check on each one */
       for (expression <- expressions) {
         val expressionType = expression.getType(symbolTable)
         if (!expressionType.unifies(IntType()))
-          errors ++= List(DefaultError("Array index expected type int, but found " + expressionType.toString, pos))
-        errors ++= expression.check(symbolTable)
+          errors += DefaultError("Array index expected type int, but found " + expressionType.toString, pos)
+        expression.check(symbolTable)
       }
 
       errors
@@ -138,7 +142,7 @@ case class BinaryOperatorApplication(leftOperand: Expression, binaryOperator: Bi
     extends Expression {
   override def toString: String = leftOperand.toString + " " + binaryOperator.toString + " " + rightOperand.toString
 
-  override def check(symbolTable: SymbolTable): List[Error] = {
+  override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     println(">>> Checking binary operator application")
     val leftType = leftOperand.getType(symbolTable)
     val rightType = rightOperand.getType(symbolTable)
@@ -148,35 +152,40 @@ case class BinaryOperatorApplication(leftOperand: Expression, binaryOperator: Bi
     binaryOperator match {
       case Add() | Divide() | Modulo() | Multiply() | Subtract() =>
         if (!leftType.unifies(IntType()))
-          List(BinaryOperatorError(op, IntType.toString(), leftType.toString, pos, isLeft = true))
+          errors += BinaryOperatorError(op, IntType.toString(), leftType.toString, pos, isLeft = true)
         else if (!rightType.unifies(IntType()))
-          List(BinaryOperatorError(op, IntType.toString(), rightType.toString, pos, isLeft = false))
+          errors += BinaryOperatorError(op, IntType.toString(), rightType.toString, pos, isLeft = false)
         else
-          List(leftType.check(symbolTable), rightType.check(symbolTable)).flatten
+          leftType.check(symbolTable)
+          rightType.check(symbolTable)
 
       case GreaterThan() | GreaterEqualThan() | SmallerThan() | SmallerEqualThan() =>
         val expected = IntType.toString() + " or " + CharacterType.toString()
 
         if (!(leftType.unifies(IntType()) || leftType.unifies(CharacterType())))
-          List(BinaryOperatorError(op, expected, leftType.toString, pos, isLeft = true))
+          errors += BinaryOperatorError(op, expected, leftType.toString, pos, isLeft = true)
         else if (!(rightType.unifies(IntType()) || rightType.unifies(CharacterType())))
-          List(BinaryOperatorError(op, expected, rightType.toString, pos, isLeft = false))
+          errors += BinaryOperatorError(op, expected, rightType.toString, pos, isLeft = false)
         else
-          List(leftType.check(symbolTable), rightType.check(symbolTable)).flatten
+          leftType.check(symbolTable)
+          rightType.check(symbolTable)
 
       case Equals() | NotEquals() =>
         if (!leftType.unifies(rightType))
-          List(DefaultError("Cannot compare " + leftType.toString + " and " + rightType.toString + " types!", pos))
+          errors += DefaultError("Cannot compare " + leftType.toString + " and " + rightType.toString + " types " +
+            " in " + this.toString, pos)
         else
-          List(leftType.check(symbolTable), rightType.check(symbolTable)).flatten
+          leftType.check(symbolTable)
+          rightType.check(symbolTable)
 
       case And() | Or() =>
         if (!leftOperand.getType(symbolTable).unifies(BooleanType()))
-          List(BinaryOperatorError(op, BooleanType.toString(), leftType.toString, pos, isLeft = true))
+          errors += BinaryOperatorError(op, BooleanType.toString(), leftType.toString, pos, isLeft = true)
         else if (!rightOperand.getType(symbolTable).unifies(BooleanType()))
-          List(BinaryOperatorError(op, BooleanType.toString(), rightType.toString, pos, isLeft = false))
+          errors += BinaryOperatorError(op, BooleanType.toString(), rightType.toString, pos, isLeft = false)
         else
-          List(leftType.check(symbolTable), rightType.check(symbolTable)).flatten
+          leftType.check(symbolTable)
+          check(symbolTable)
     }
   }
 
@@ -205,7 +214,7 @@ case class CharacterLiter(char: Char) extends Expression {
 case class Identifier(identifier: String) extends Expression with AssignmentLeft {
   override def toString: String = identifier
 
-  override def check(symbolTable: SymbolTable): List[Error] = {
+  override def check(symbolTable: SymbolTable)(implicit errors : mutable.ListBuffer[Error]): Unit = {
     println(">>> Checking identifier...")
     val pos = (39, 15)
     if (getType(symbolTable).unifies(VoidType())) List(DefaultError("Undefined identifier \"" + identifier + "\"", pos))
@@ -239,20 +248,29 @@ case class ArrayLiter(expressions: List[Expression]) extends AssignmentRight {
     .reduceOption((left, right) => left + ", " + right)
     .getOrElse("") + "]"
 
-  override def check(symbolTable: SymbolTable): List[Error] = expressions.flatMap(_.check(symbolTable))
+  override def check(symbolTable: SymbolTable)(implicit errors : mutable.ListBuffer[Error]): Unit =
+    for (expression <- expressions) {
+      expression.check(symbolTable)
+    }
 
-  override def getType(symbolTable: SymbolTable): Type =
-    if (expressions.isEmpty) ArrayType(VoidType())
-    else ArrayType(expressions.head.getType(symbolTable))
+  override def getType(symbolTable: SymbolTable): Type = {
+    if (expressions.isEmpty) {
+      ArrayType(VoidType())
+    }
+    else {
+      ArrayType(expressions.head.getType(symbolTable))
+    }
+  }
 }
 
 /* ✅ Check done */
 case class NewPair(first: Expression, second: Expression) extends AssignmentRight {
   override def toString: String = "newpair(" + first.toString + ", " + second.toString + ")"
 
-  override def check(symbolTable: SymbolTable): List[Error] = {
+  override def check(symbolTable: SymbolTable)(implicit errors : mutable.ListBuffer[Error]): Unit = {
     println(">>> Checking newpair...")
-    List(first.check(symbolTable), second.check(symbolTable)).flatten
+    first.check(symbolTable)
+    second.check(symbolTable)
   }
 
   override def getType(symbolTable: SymbolTable): Type = {
@@ -268,7 +286,7 @@ case class NewPair(first: Expression, second: Expression) extends AssignmentRigh
 case class PairElement(expression: Expression, isFirst: Boolean) extends AssignmentRight with AssignmentLeft {
   override def toString: String = (if (isFirst) "fst " else "snd ") + expression.toString
 
-  override def check(symbolTable: SymbolTable): List[Error] = {
+  override def check(symbolTable: SymbolTable)(implicit errors : mutable.ListBuffer[Error]): Unit = {
     println(">>> Checking pair element...")
     expression.check(symbolTable)
   }

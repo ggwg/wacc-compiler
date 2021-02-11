@@ -78,7 +78,7 @@ object WACCParser {
         ) <* skipWhitespace,
         expressionParser
       )
-      <\> If.build.lift(
+      <\> If(
         "if" *> skipWhitespace *> expressionParser,
         "then" *> skipWhitespace *> statementParser,
         "else" *> skipWhitespace *> statementParser <* "fi" <* skipWhitespace

@@ -17,6 +17,12 @@ case class FunctionType(
     parameters: Option[List[Type]]
 ) extends Type
 
+//// Change to case object - drop the brackets
+//case class IntType()(pos: (Int, Int)) extends BaseType {
+//  override def toString: String = "int"
+//  override def getType(symbolTable: SymbolTable): Type = IntType()
+//}
+// Change to case object - drop the brackets
 case class IntType() extends BaseType {
   override def toString: String = "int"
   override def getType(symbolTable: SymbolTable): Type = IntType()
