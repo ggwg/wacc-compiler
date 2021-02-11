@@ -1,6 +1,8 @@
-#!/usr/bin/ruby
+#!/bin/bash
 # Ruby front-end for your compiler.
 # You are free to change the language used for this script,
 # but do *not* change its name.
 
-system("java -jar target/scala-2.13/wacc_41-assembly-0.1.jar #{ARGV[0]}")
+java -jar "target/scala-2.13/wacc_41-assembly-0.1.jar" "$1"
+
+exit $?
