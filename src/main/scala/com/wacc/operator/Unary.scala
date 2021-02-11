@@ -2,6 +2,7 @@ package com.wacc.operator
 
 import com.wacc
 import com.wacc.{ASTNodeVoid, SymbolTable}
+import parsley.Parsley
 
 sealed trait UnaryOperator extends ASTNodeVoid
 
@@ -24,6 +25,7 @@ case class Ord() extends UnaryOperator {
 object UnaryOperator {
   val build: String => UnaryOperator = UnaryOperator(_)
   val operators = List("!", "-", "len", "ord", "chr")
+
   def apply(operator: String): UnaryOperator = operator match {
     case "!"   => Not()
     case "-"   => Negate()
@@ -31,4 +33,7 @@ object UnaryOperator {
     case "ord" => Ord()
     case "chr" => Chr()
   }
+
+  def apply(operator: Parsley[String]): Parsley[UnaryOperator] =
+    operator.map(UnaryOperator(_))
 }

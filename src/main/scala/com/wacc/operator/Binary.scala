@@ -2,6 +2,7 @@ package com.wacc.operator
 
 import com.wacc
 import com.wacc.{ASTNodeVoid, SymbolTable}
+import parsley.Parsley
 
 trait BinaryOperator extends ASTNodeVoid
 
@@ -64,4 +65,7 @@ object BinaryOperator {
     case "&&" => And()
     case "||" => Or()
   }
+
+  def apply(operator: Parsley[String]): Parsley[BinaryOperator] =
+    operator.map(BinaryOperator(_))
 }

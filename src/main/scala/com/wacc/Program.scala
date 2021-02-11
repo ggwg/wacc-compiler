@@ -1,6 +1,7 @@
 package com.wacc
 
-import scala.collection.mutable
+import parsley.Parsley
+import parsley.implicits.{voidImplicitly => _, _}
 
 case class Program(functions: List[Function], body: Statement) extends ASTNodeVoid {
   override def toString: String = "begin\n" + functions
@@ -8,14 +9,17 @@ case class Program(functions: List[Function], body: Statement) extends ASTNodeVo
     .reduceOption((left, right) => left + right)
     .getOrElse("") + body.toString + "end"
 
-  override def check(symbolTable: SymbolTable)(implicit errors : mutable.ListBuffer[Error]): Unit = {
+  override def check(symbolTable: SymbolTable): List[Error] = {
     // TODO: check function name and return type, slide 31
     println("CHECKED INSIDE PROGRAM")
+    var errors = List[Error]()
+
     val programSymbolTable = new SymbolTable(symbolTable)
     functions.foreach { func =>
-      func.check(programSymbolTable)
+      errors ++= func.check(programSymbolTable)
     }
-    body.check(programSymbolTable)
+    errors ++= body.check(programSymbolTable)
+    errors
   }
 }
 
@@ -27,13 +31,13 @@ case class Function(returnType: Type, name: Identifier, parameters: Option[Param
     returnType.toString + " " + name.toString + "(" +
       parameters.getOrElse("").toString + ") is\n" + body.toString + "end\n"
 
-  override def check(symbolTable: SymbolTable)(implicit errors : mutable.ListBuffer[Error]): Unit = {
+  override def check(symbolTable: SymbolTable): List[Error] = {
     println("CHECKED INSIDE FUNCTION")
-    val pos = (39, 15)
     // Check function name and return type:
     var F = symbolTable.lookup(name.identifier)
     if (!F.isEmpty) {
-      errors += DefaultError("Function name " + name.identifier + "already defined in scope.", pos)
+      println("Error - already declared identifier " + name.identifier)
+
     } else {
       // Add to symbol table
       symbolTable.add(name.identifier, returnType, this)
@@ -42,6 +46,7 @@ case class Function(returnType: Type, name: Identifier, parameters: Option[Param
         parameters.get.check(functionSymbolTable)
       }
     }
+    List.empty
   }
 }
 
@@ -53,11 +58,12 @@ case class ParameterList(parameters: List[Parameter]) extends ASTNodeVoid {
       .getOrElse("")
 
   // TODO:
-  override def check(symbolTable: SymbolTable)(implicit errors : mutable.ListBuffer[Error]): Unit = {
+  override def check(symbolTable: SymbolTable): List[Error] = {
     println("GOT INSIDE PARAMETER-LIST CHECK")
     for (parameter <- parameters) {
       parameter.check(symbolTable)
     }
+    List.empty
   }
 }
 
@@ -66,31 +72,46 @@ case class Parameter(parameterType: Type, identifier: Identifier) extends ASTNod
     parameterType.toString + " " + identifier.toString
 
   // TODO:
-  override def check(symbolTable: SymbolTable)(implicit errors : mutable.ListBuffer[Error]): Unit = {
+  override def check(symbolTable: SymbolTable): List[Error] = {
     println("GOT INSIDE PARAMETER CHECK")
     var parameterInfo = symbolTable.lookup(identifier.identifier)
     if (parameterInfo.isEmpty) {
       symbolTable.add(identifier.identifier, parameterType, this)
     } else {
-      var pos = (39,15)
-      errors += DefaultError("Error - parameter " + identifier.identifier + "already defined in scope.", pos)
+      println("Error - parameter already defined in scope.")
     }
+    List.empty
   }
 }
 
 object Program {
   val build: (List[Function], Statement) => Program = Program(_, _)
+
+  def apply(funs: Parsley[List[Function]], body: Parsley[Statement]): Parsley[Program] = (funs, body).map(Program(_, _))
 }
 
 object Function {
   val build: (Type, Identifier, Option[ParameterList], Statement) => Function =
     Function(_, _, _, _)
+
+  def apply(
+    returnType: Parsley[Type],
+    name: Parsley[Identifier],
+    params: Parsley[Option[ParameterList]],
+    body: Parsley[Statement]
+  ): Parsley[Function] = (returnType, name, params, body).map(Function(_, _, _, _))
 }
 
 object ParameterList {
   val build: (Parameter, List[Parameter]) => ParameterList = (p, ps) => ParameterList(p :: ps)
+
+  def apply(param: Parsley[Parameter], params: Parsley[List[Parameter]]): Parsley[ParameterList] =
+    (param, params).map((p, ps) => ParameterList(p :: ps))
 }
 
 object Parameter {
   val build: (Type, Identifier) => Parameter = Parameter(_, _)
+
+  def apply(paramType: Parsley[Type], name: Parsley[Identifier]): Parsley[Parameter] =
+    (paramType, name).map(Parameter(_, _))
 }

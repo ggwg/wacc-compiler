@@ -1,5 +1,8 @@
 package com.wacc
 
+import parsley.Parsley
+import parsley.implicits.{voidImplicitly => _, _}
+
 sealed trait Type extends ASTNodeVoid {
   def unifies(otherType: Type) = this == otherType
 }
@@ -12,10 +15,7 @@ case class VoidType() extends Type {
   override def unifies(otherType: Type): Boolean = false
 }
 
-case class FunctionType(
-    returnType: Type,
-    parameters: Option[List[Type]]
-) extends Type
+case class FunctionType(returnType: Type, parameters: Option[List[Type]]) extends Type
 
 //// Change to case object - drop the brackets
 //case class IntType()(pos: (Int, Int)) extends BaseType {
@@ -54,10 +54,7 @@ case class PairDefault() extends PairElementType {
   override def getType(symbolTable: SymbolTable): Type = PairDefault()
 }
 
-case class PairType(
-    elementType1: PairElementType,
-    elementType2: PairElementType
-) extends PairElementType {
+case class PairType(elementType1: PairElementType, elementType2: PairElementType) extends PairElementType {
   override def toString: String =
     "pair(" + elementType1.toString + ", " + elementType2.toString + ")"
   override def getType(symbolTable: SymbolTable): Type =
@@ -82,16 +79,30 @@ object BaseType {
       case "char"   => CharacterType()
       case "string" => StringType()
     }
+
+  def apply(typeString: Parsley[String]): Parsley[BaseType] = typeString.map {
+    case "int"    => IntType()
+    case "bool"   => BooleanType()
+    case "char"   => CharacterType()
+    case "string" => StringType()
+  }
 }
 
 object PairDefault {
   val build: String => PairDefault = _ => PairDefault()
+
+  def apply(string: Parsley[String]): Parsley[PairDefault] = string.map(_ => PairDefault())
 }
 
 object PairType {
   val build: (PairElementType, PairElementType) => PairType = PairType(_, _)
+
+  def apply(type1: Parsley[PairElementType], type2: Parsley[PairElementType]): Parsley[PairType] =
+    (type1, type2).map(PairType(_, _))
 }
 
 object ArrayType {
   val build: Type => ArrayType = ArrayType(_)
+
+  def apply(arrayType: Parsley[Type]): Parsley[ArrayType] = arrayType.map(ArrayType(_))
 }
