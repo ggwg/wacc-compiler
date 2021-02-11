@@ -44,7 +44,7 @@ object WACCParser {
                | ‘while’〈expr〉‘do’〈stat〉‘done’
                | ‘begin’〈stat〉‘end’
                | 〈stat〉‘;’〈stat〉*/
-  lazy val statementParser: Parsley[Statement] = (precedence[Statement](
+  lazy val statementParser: Parsley[Statement] = precedence[Statement](
     (SkipStatement("skip") <* skipWhitespace)
       <\> IdentifierDeclaration(typeParser, identifierParser, "=" *> skipWhitespace *> assignmentRightParser)
       <\> Assignment(assignmentLeftParser, '=' *> skipWhitespace *> assignmentRightParser)
@@ -60,8 +60,10 @@ object WACCParser {
         "do" *> skipWhitespace *> statementParser <* "done" <* skipWhitespace
       )
       <\> BeginEnd("begin" *> skipWhitespace *> statementParser <* "end" <* skipWhitespace),
-    Ops(InfixL)((";" <* skipWhitespace) #> ((st1: Statement, st2: Statement) => StatementSequence(st1, st2)))
-  ) <* skipWhitespace)
+    Ops(InfixL)(
+      (";" <* skipWhitespace) #> ((st1: Statement, st2: Statement) => StatementSequence(st1, st2)(st1.getPos()))
+    )
+  ) <* skipWhitespace
   /* 〈assign-lhs〉::=〈ident〉
                    | 〈array-elem〉
                    | 〈pair-elem〉*/
@@ -123,7 +125,7 @@ object WACCParser {
                        | ‘pair’
                        | 〈array-type〉 */
   lazy val pairElementTypeParser: Parsley[PairElementType] =
-    ((PairDefault("pair") <\> (arrayTypeParser) <\> baseTypeParser) <* skipWhitespace)
+    ((PairDefault("pair") <\> arrayTypeParser <\> baseTypeParser) <* skipWhitespace)
       .label("a pair element type")
   lazy val expressionParser: Parsley[Expression] = (precedence[Expression](
     attempt("(" *> skipWhitespace *> expressionParser <* skipWhitespace <* ")" <* skipWhitespace)

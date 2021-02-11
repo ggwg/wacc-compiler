@@ -1,7 +1,9 @@
 package com.wacc
 
 import parsley.Parsley
+import parsley.Parsley.pos
 import parsley.implicits.{voidImplicitly => _, _}
+
 import scala.collection.mutable
 
 sealed trait Statement extends ASTNodeVoid {
@@ -19,13 +21,14 @@ sealed trait Statement extends ASTNodeVoid {
 }
 
 /* Check Done */
-case class Assignment(assignmentLeft: AssignmentLeft, assignmentRight: AssignmentRight) extends Statement {
+case class Assignment(assignmentLeft: AssignmentLeft, assignmentRight: AssignmentRight)(position: (Int, Int))
+    extends Statement {
   override def toString: String =
     assignmentLeft.toString + " = " + assignmentRight.toString + "\n"
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     println("GOT INSIDE ASSIGNMENT CHECK")
-    var pos = (39, 15)
+    var pos = getPos()
     /* Check that assignment-left type is same as return type of assignment-right */
     if (
       assignmentLeft
@@ -38,10 +41,12 @@ case class Assignment(assignmentLeft: AssignmentLeft, assignmentRight: Assignmen
       errors += DefaultError("Type mismatch in Assigment for " + this.toString, pos)
     }
   }
+
+  override def getPos(): (Int, Int) = position
 }
 
 /* Check done */
-case class BeginEnd(statement: Statement) extends Statement {
+case class BeginEnd(statement: Statement)(position: (Int, Int)) extends Statement {
   override def toString: String = "begin\n" + statement.toString + "end\n"
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
@@ -51,19 +56,23 @@ case class BeginEnd(statement: Statement) extends Statement {
     // Recursively call check.
     statement.check(beginEndSymbolTable)
   }
+
+  override def getPos(): (Int, Int) = position
 }
 
 /* Check done */
-case class Exit(expression: Expression) extends Statement {
+case class Exit(expression: Expression)(position: (Int, Int)) extends Statement {
   override def toString: String = "exit " + expression.toString + "\n"
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     println("GOT INSIDE EXIT CHECK")
-    var pos = (39, 15)
+    var pos = getPos()
     if (!expression.getType(symbolTable).unifies(IntType())) {
       errors += DefaultError("Exit expression not type Int", pos)
     }
   }
+
+  override def getPos(): (Int, Int) = position
 }
 
 /*
@@ -76,19 +85,22 @@ If the reference is valid, then the memory for each element of the pair/array is
 element is not a reference to another pair or another array (i.e. free is not recursive). Then the memory
 that stores the pair/array itself is also freed.
  * */
-case class Free(expression: Expression) extends Statement {
+case class Free(expression: Expression)(position: (Int, Int)) extends Statement {
   override def toString: String = "free " + expression.toString + "\n"
 
   // TODO: this
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     println("GOT INSIDE FREE CHECK")
-    var pos = (0, 0)
+    var pos = getPos()
   }
+
+  override def getPos(): (Int, Int) = position
 }
 
 /* Check done */
-case class IdentifierDeclaration(identType: Type, identifier: Identifier, assignmentRight: AssignmentRight)
-    extends Statement {
+case class IdentifierDeclaration(identType: Type, identifier: Identifier, assignmentRight: AssignmentRight)(
+  position: (Int, Int)
+) extends Statement {
   override def toString: String =
     identType.toString + " " + identifier.toString + " = " + assignmentRight.toString + "\n"
   /* Check if identifier is already defined in the symbol table (current, not parent)
@@ -98,7 +110,7 @@ case class IdentifierDeclaration(identType: Type, identifier: Identifier, assign
    */
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     println("GOT INSIDE IDENTIFIER-DECLARATION CHECK")
-    var pos = (0, 0)
+    var pos = getPos()
     symbolTable.dictionary.updateWith(identifier.identifier)({
       case Some(x) => {
         errors +=
@@ -120,17 +132,20 @@ case class IdentifierDeclaration(identType: Type, identifier: Identifier, assign
       }
     })
   }
+
+  override def getPos(): (Int, Int) = position
 }
 
 /* Check done - Do we have to do the check for the true and false branches even if the
  * provided condition is not of the right type? */
-case class If(condition: Expression, trueStatement: Statement, falseStatement: Statement) extends Statement {
+case class If(condition: Expression, trueStatement: Statement, falseStatement: Statement)(position: (Int, Int))
+    extends Statement {
   override def toString: String =
     "if " + condition + " then\n" + trueStatement.toString + "else\n" + falseStatement + "fi\n"
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     println("GOT INSIDE IF CHECK")
-    var pos = (0, 0)
+    var pos = getPos()
     if (condition.getType(symbolTable).unifies(BooleanType())) {
       condition.check(symbolTable)
       var trueSymbolTable = new SymbolTable(symbolTable)
@@ -146,10 +161,12 @@ case class If(condition: Expression, trueStatement: Statement, falseStatement: S
     }
     List.empty
   }
+
+  override def getPos(): (Int, Int) = position
 }
 
 /* Check done */
-case class Print(expression: Expression) extends Statement {
+case class Print(expression: Expression)(position: (Int, Int)) extends Statement {
   override def toString: String = "print " + expression.toString + "\n"
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
@@ -164,10 +181,12 @@ case class Print(expression: Expression) extends Statement {
     }
     List.empty
   }
+
+  override def getPos(): (Int, Int) = position
 }
 
 /* Check done */
-case class Println(expression: Expression) extends Statement {
+case class Println(expression: Expression)(position: (Int, Int)) extends Statement {
   override def toString: String = "println " + expression.toString + "\n"
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
@@ -182,10 +201,12 @@ case class Println(expression: Expression) extends Statement {
     }
     List.empty
   }
+
+  override def getPos(): (Int, Int) = position
 }
 
 /* Check done */
-case class Read(assignmentLeft: AssignmentLeft) extends Statement {
+case class Read(assignmentLeft: AssignmentLeft)(position: (Int, Int)) extends Statement {
   override def toString: String = "read " + assignmentLeft.toString + "\n"
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
@@ -204,10 +225,12 @@ case class Read(assignmentLeft: AssignmentLeft) extends Statement {
     }
     List.empty
   }
+
+  override def getPos(): (Int, Int) = position
 }
 
 /* Check done */
-case class Return(expression: Expression) extends Statement {
+case class Return(expression: Expression)(position: (Int, Int)) extends Statement {
   override def toString: String = "return " + expression.toString + "\n"
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
@@ -215,17 +238,21 @@ case class Return(expression: Expression) extends Statement {
     expression.check(symbolTable)
   }
 
+  override def getPos(): (Int, Int) = position
+
   override def getType(symbolTable: SymbolTable): Type =
     expression.getType(symbolTable)
 }
 
 /* Check done */
-case class SkipStatement() extends Statement {
+case class SkipStatement()(position: (Int, Int)) extends Statement {
   override def toString: String = "skip\n"
+
+  override def getPos(): (Int, Int) = position
 }
 
 /* Check done */
-case class StatementSequence(statement1: Statement, statement2: Statement) extends Statement {
+case class StatementSequence(statement1: Statement, statement2: Statement)(position: (Int, Int)) extends Statement {
   override def toString: String =
     statement1.toString.stripSuffix("\n") + ";\n" + statement2.toString
 
@@ -235,10 +262,12 @@ case class StatementSequence(statement1: Statement, statement2: Statement) exten
     statement2.check(symbolTable)
     List.empty
   }
+
+  override def getPos(): (Int, Int) = position
 }
 
 /* Check done */
-case class While(condition: Expression, statement: Statement) extends Statement {
+case class While(condition: Expression, statement: Statement)(position: (Int, Int)) extends Statement {
   override def toString: String =
     "while " + condition.toString + " do\n" + statement.toString + "done\n"
 
@@ -255,19 +284,13 @@ case class While(condition: Expression, statement: Statement) extends Statement 
       )
     }
   }
+
+  override def getPos(): (Int, Int) = position
 }
 
 object Statement {
-  val buildActionExpression: (String, Expression) => Statement = {
-    case ("free", e)    => Free(e)
-    case ("return", e)  => Return(e)
-    case ("exit", e)    => Exit(e)
-    case ("print", e)   => Print(e)
-    case ("println", e) => Println(e)
-  }
-
   def apply(action: Parsley[String], expr: Parsley[Expression]): Parsley[Statement] =
-    (action, expr).map {
+    pos <**> (action, expr).map {
       case ("free", e)    => Free(e)
       case ("return", e)  => Return(e)
       case ("exit", e)    => Exit(e)
@@ -278,12 +301,12 @@ object Statement {
 
 object Assignment {
   def apply(left: Parsley[AssignmentLeft], right: Parsley[AssignmentRight]): Parsley[Assignment] =
-    (left, right).map(Assignment(_, _))
+    pos <**> (left, right).map(Assignment(_, _))
 }
 
 object BeginEnd {
   def apply(statement: Parsley[Statement]): Parsley[BeginEnd] =
-    statement.map(BeginEnd(_))
+    pos <**> statement.map(BeginEnd(_))
 }
 
 object IdentifierDeclaration {
@@ -291,7 +314,7 @@ object IdentifierDeclaration {
     identType: Parsley[Type],
     name: Parsley[Identifier],
     value: Parsley[AssignmentRight]
-  ): Parsley[IdentifierDeclaration] = (identType, name, value).map(IdentifierDeclaration(_, _, _))
+  ): Parsley[IdentifierDeclaration] = pos <**> (identType, name, value).map(IdentifierDeclaration(_, _, _))
 }
 
 object If {
@@ -299,22 +322,23 @@ object If {
     cond: Parsley[Expression],
     trueStatement: Parsley[Statement],
     falseStatement: Parsley[Statement]
-  ): Parsley[If] = (cond, trueStatement, falseStatement).map(If(_, _, _))
+  ): Parsley[If] = pos <**> (cond, trueStatement, falseStatement).map(If(_, _, _))
 }
 
 object Read {
-  def apply(left: Parsley[AssignmentLeft]): Parsley[Read] = left.map(Read(_))
+  def apply(left: Parsley[AssignmentLeft]): Parsley[Read] = pos <**> left.map(Read(_))
 }
 
 object SkipStatement {
-  def apply(skip: Parsley[String]): Parsley[SkipStatement] = skip.map(_ => SkipStatement())
+  def apply(skip: Parsley[String]): Parsley[SkipStatement] = pos <**> skip.map(_ => SkipStatement())
 }
 
 object StatementSequence {
   def apply(statementLeft: Parsley[Statement], statementRight: Parsley[Statement]): Parsley[StatementSequence] =
-    (statementLeft, statementRight).map(StatementSequence(_, _))
+    pos <**> (statementLeft, statementRight).map(StatementSequence(_, _))
 }
 
 object While {
-  def apply(cond: Parsley[Expression], body: Parsley[Statement]): Parsley[While] = (cond, body).map(While(_, _))
+  def apply(cond: Parsley[Expression], body: Parsley[Statement]): Parsley[While] =
+    pos <**> (cond, body).map(While(_, _))
 }
