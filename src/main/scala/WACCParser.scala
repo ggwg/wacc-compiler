@@ -177,10 +177,11 @@ object WACCParser {
             | 〈expr〉 〈binary-oper〉 〈expr〉
             | ‘(’〈expr〉‘)’ */
   lazy val unaryFunctionGenerator: String => Expression => UnaryOperatorApplication =
-    (operator: String) => (expr: Expression) => UnaryOperatorApplication(UnaryOperator(operator), expr)
+    (operator: String) => (expr: Expression) => UnaryOperatorApplication(UnaryOperator(operator), expr)(expr.getPos())
   lazy val binaryFunctionGenerator: String => (Expression, Expression) => BinaryOperatorApplication =
     (operator: String) =>
-      (expr1: Expression, expr2: Expression) => BinaryOperatorApplication(expr1, BinaryOperator(operator), expr2)
+      (expr1: Expression, expr2: Expression) =>
+        BinaryOperatorApplication(expr1, BinaryOperator(operator), expr2)(expr1.getPos())
   /* 〈unary-oper〉::= ‘!’
                     | ‘-’
                     | ‘len’
