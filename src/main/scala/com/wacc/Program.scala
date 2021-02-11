@@ -39,7 +39,6 @@ case class Function(returnType: Type, name: Identifier, parameters: Option[Param
     } else {
       // Add to symbol table
       symbolTable.add(name.identifier, returnType, this)
-      println("ADDED 2 SYMBOL TABLE, FUNCTION " + name.identifier)
       var functionSymbolTable = new SymbolTable(symbolTable)
       if (!parameters.isEmpty) {
         parameters.get.check(functionSymbolTable)

@@ -17,7 +17,8 @@ class SymbolTable(parentSymbolTable: SymbolTable, isFunctionSymbolTable: Boolean
 
   /* Add a variable, along with it's type and corresponding AST node, to the symbol table */
   def add(varName: String, varType: Type, varObj: ASTNode): Unit = {
-    dictionary.updated(varName, (varType, varObj))
+    dictionary += (varName -> (varType, varObj))
+    // dictionary.updated(varName, (varType, varObj))
   }
 
   // TODO: Refactor null to use Option[]
