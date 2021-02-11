@@ -4,33 +4,34 @@ import parsley._
 
 object Playground {
   def testProgram(): Unit = {
+    println("Testing Program...\n")
     // Initialize top level Symbol Table
     var topST: SymbolTable = new SymbolTable()
     topST.add("int", IntType(), null)
 
-    var parsedResult: Result[Expression] = {
-      expressionParser.runParser("chr 'a'")
-      //      programParser
-      //      .runParser(
-      //        "begin" +
-      //          "     int pred(int x) is return (x-1) end" +
-      //          "     int succ(int x) is return (x+1) end" +
-      //          "     int a = 0;" +
-      //          "     chr 'a';" +
-      //          "     a = call succ(a);" +
-      //          "     a = call pred(a);" +
-      //          "     if (a == 0) then" +
-      //          "       return 0" +
-      //          "     else" +
-      //          "       return -1" +
-      //          "     fi" +
-      //          "     end"
-      //      )
-      //    }
+    var parsedResult: Result[Program] = {
+      programParser
+        .runParser(
+          "begin" +
+            "     int pred(int x) is return (x-1) end" +
+            "     int succ(int x) is return (x+1) end" +
+            "     int a = 0;" +
+            "     a = call succ(a);" +
+            "     a = call pred(a);" +
+            "     if (a == 0) then" +
+            "       return 0" +
+            "     else" +
+            "       return -1" +
+            "     fi" +
+            "     end"
+        )
     }
     var ast = parsedResult.get
-    ast.check(topST)
-    println("Finished Testing Function\n")
+    var errors = ast.check(topST)
+    for (error <- errors) {
+      error.throwError()
+    }
+    println("Finished Testing Program\n")
   }
 
   def testFunction(): Unit = {

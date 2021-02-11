@@ -8,15 +8,15 @@ case class Program(functions: List[Function], body: Statement) extends ASTNodeVo
 
   override def check(symbolTable: SymbolTable): List[Error] = {
     // TODO: check function name and return type, slide 31
-
     println("CHECKED INSIDE PROGRAM")
+    var errors = List[Error]()
 
-    val newSymbolTable = new SymbolTable(symbolTable)
-
+    val programSymbolTable = new SymbolTable(symbolTable)
     functions.foreach { func =>
-      func.check(newSymbolTable)
+      errors ++= func.check(programSymbolTable)
     }
-    List.empty
+    errors ++= body.check(programSymbolTable)
+    errors
   }
 }
 
