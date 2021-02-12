@@ -19,6 +19,7 @@ case class Program(functions: List[Function], body: Statement)(position: (Int, I
         errors +=
           Error("Function " + func.name.identifier + " conflicts with another variable in the current scope.", getPos())
       }
+
       symbolTable.add(func.name.identifier, func.returnType, func)
     }
     functions.foreach { func =>

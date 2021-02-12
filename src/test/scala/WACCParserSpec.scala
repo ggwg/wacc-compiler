@@ -5,24 +5,96 @@ import com.wacc._
 import org.scalatest.matchers.should.Matchers.{a, an, convertToAnyShouldWrapper}
 import parsley.{Failure, Success}
 
+import java.io.File
+import scala.collection.mutable.ListBuffer
+import scala.io.Source
+
 class WACCParserSpec extends AnyFlatSpec {
-  "A program parser" should "parse any program" in {
-    programParser
-      .runParser(
-        "begin" +
-          "     int pred(int x) is return (x-1) end" +
-          "     int succ(int x) is return (x+1) end" +
-          "     int a = 0;" +
-          "     a = call succ(a);" +
-          "     a = call pred(a);" +
-          "     if (a == 0) then" +
-          "       return 0" +
-          "     else" +
-          "       return -1" +
-          "     fi" +
-          "     end"
-      )
-      .get shouldBe a[Program]
+
+  def testAllFiles(dir: File, semanticCheck: Boolean, shouldSucceed: Boolean): List[String] = {
+    var files: List[String] = List.empty
+    for (file <- dir.listFiles()) {
+      if (file.isDirectory) {
+        files = files ++ testAllFiles(file, semanticCheck, shouldSucceed)
+      } else {
+        val fileName = file.getAbsolutePath
+        var input = ""
+        for (line <- Source.fromFile(fileName).getLines()) {
+          input += line + '\n'
+        }
+        val ASTResult = (skipWhitespace *> programParser).runParser(input)
+        if (!semanticCheck) {
+          if (ASTResult.isSuccess != shouldSucceed) {
+            files = fileName :: files
+          }
+        } else {
+          if (ASTResult.isFailure) {
+            files = fileName :: files
+          } else {
+            val AST = ASTResult.get
+            val errors = new ListBuffer[Error]
+            AST.check(new SymbolTable())(errors)
+            if (errors.isEmpty != shouldSucceed) {
+              files = fileName :: files
+            }
+          }
+        }
+      }
+    }
+    files
+  }
+
+  "A program parser" should "syntactically parse any valid program" in {
+    val dir = new File("src/main/resources/valid_examples")
+    val failedParses = testAllFiles(dir, semanticCheck = false, shouldSucceed = true)
+    if (failedParses.length == 0) {
+      println("All syntactic parsing was successful! ✅")
+    } else {
+      println("Files that did not parse syntactically properly:\n")
+      for (fileName <- failedParses) {
+        println(fileName)
+      }
+      assert(false, "Some files were not parsed. Check console for details.\n")
+    }
+  }
+  "A program parser" should "semantically parse any valid program" in {
+    val dir = new File("src/main/resources/valid_examples")
+    val failedParses = testAllFiles(dir, semanticCheck = true, shouldSucceed = true)
+    if (failedParses.length == 0) {
+      println("All semantic parsing was successful! ✅")
+    } else {
+      println("Files that did not parse semantically properly:\n")
+      for (fileName <- failedParses) {
+        println(fileName)
+      }
+      assert(false, "Some files were not parsed. Check console for details.\n")
+    }
+  }
+  it should "lexically identify any incorrect program" in {
+    val dir = new File("src/main/resources/invalid_examples/syntaxErr")
+    val failedParses = testAllFiles(dir, semanticCheck = false, shouldSucceed = false)
+    if (failedParses.length == 0) {
+      println("All syntactic parsing of wrong programs was successful! ✅")
+    } else {
+      println("Files that were parsed syntactically but they should not have been:\n")
+      for (fileName <- failedParses) {
+        println(fileName)
+      }
+      assert(false, "Some files were parsed but they should not have. Check console for details.\n")
+    }
+  }
+  it should "semanticly identify any incorrect program" in {
+    val dir = new File("src/main/resources/invalid_examples/semanticErr")
+    val failedParses = testAllFiles(dir, semanticCheck = true, shouldSucceed = false)
+    if (failedParses.length == 0) {
+      println("All syntactic parsing or wrong was successful! ✅")
+    } else {
+      println("Files that were parsed semantically but they should not have been:\n")
+      for (fileName <- failedParses) {
+        println(fileName)
+      }
+      assert(false, "Some files were parsed but they should not have. Check console for details.\n")
+    }
   }
 
   "A function parser" should "parse any valid function declaration" in {
@@ -63,9 +135,7 @@ class WACCParserSpec extends AnyFlatSpec {
       .runParser("int x = 10")
       .get shouldBe a[IdentifierDeclaration]
     statementParser
-      .runParser(
-        "pair(int, int) myPair = newpair(10, 10)"
-      )
+      .runParser("pair(int, int) myPair = newpair(10, 10)")
       .get shouldBe a[IdentifierDeclaration]
   }
   it should "parse the assignment statement" in {
