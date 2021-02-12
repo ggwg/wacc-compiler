@@ -34,15 +34,14 @@ case class IdentifierDeclaration(identType: Type, identifier: Identifier, assign
    */
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     symbolTable.dictionary.updateWith(identifier.identifier)({
-      case Some(x) => {
+      case Some(x) =>
         errors += Error(
           "Variable declaration " + identifier.identifier +
             " already defined in current scope.",
           getPos()
         )
         Some(x)
-      }
-      case None => {
+      case None =>
         // If left type == right type, then we can add it to dictionary.
         if (identType.sameTypes(assignmentRight, symbolTable)) {
           assignmentRight.check(symbolTable)
@@ -55,7 +54,6 @@ case class IdentifierDeclaration(identType: Type, identifier: Identifier, assign
           )
           None
         }
-      }
     })
   }
 
@@ -86,6 +84,8 @@ case class Assignment(assignmentLeft: AssignmentLeft, assignmentRight: Assignmen
       )
       return
     }
+    assignmentLeft.check(symbolTable)
+    assignmentRight.check(symbolTable)
   }
   override def getPos(): (Int, Int) = position
 }
@@ -114,6 +114,7 @@ case class Exit(expression: Expression)(position: (Int, Int)) extends Statement 
     if (!expression.getType(symbolTable).unifies(IntType())) {
       errors += Error("Exit expression not type Int", pos)
     }
+    expression.check(symbolTable)
   }
 
   override def getPos(): (Int, Int) = position
