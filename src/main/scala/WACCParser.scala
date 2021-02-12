@@ -12,8 +12,8 @@ object WACCParser {
   /* 〈program〉::=  ‘begin’〈func〉*〈stat〉‘end’ */
   lazy val programParser: Parsley[Program] =
     Program(
-      skipWhitespace *> "begin" *> skipWhitespace *> combinator.many(attempt(functionParser)),
-      statementParser <* "end" <* skipWhitespace <* eof
+      skipWhitespace *> parseKeyword("begin") *> skipWhitespace *> combinator.many(attempt(functionParser)),
+      statementParser <* parseKeyword("end") <* skipWhitespace <* eof
     )
       .label("a program")
   /* 〈func〉::=〈type〉 〈ident〉‘(’〈param-list〉?  ‘)’ ‘is’〈stat〉‘end’ */
@@ -21,7 +21,7 @@ object WACCParser {
     typeParser,
     identifierParser,
     '(' *> skipWhitespace *> option(parameterListParser) <* ')' <* skipWhitespace,
-    "is" *> skipWhitespace *> statementParser <* "end" <* skipWhitespace
+    parseKeyword("is") *> skipWhitespace *> statementParser <* parseKeyword("end") <* skipWhitespace
   )
     .label("a function definition")
   /* 〈param-list〉::=〈param〉( ‘,’〈param〉)* */
@@ -45,21 +45,30 @@ object WACCParser {
                | ‘begin’〈stat〉‘end’
                | 〈stat〉‘;’〈stat〉*/
   lazy val statementParser: Parsley[Statement] = precedence[Statement](
-    (SkipStatement("skip") <* skipWhitespace)
+    (SkipStatement(parseKeyword("skip")) <* skipWhitespace)
       <\> IdentifierDeclaration(typeParser, identifierParser, "=" *> skipWhitespace *> assignmentRightParser)
       <\> Assignment(assignmentLeftParser, '=' *> skipWhitespace *> assignmentRightParser)
-      <\> Read("read" *> skipWhitespace *> assignmentLeftParser)
-      <\> Statement(attemptChoice("free", "return", "exit", "println", "print") <* skipWhitespace, expressionParser)
+      <\> Read(parseKeyword("read") *> skipWhitespace *> assignmentLeftParser)
+      <\> Statement(
+        attemptChoice(
+          parseKeyword("free"),
+          parseKeyword("return"),
+          parseKeyword("exit"),
+          parseKeyword("println"),
+          parseKeyword("print")
+        ) <* skipWhitespace,
+        expressionParser
+      )
       <\> If(
-        "if" *> skipWhitespace *> expressionParser,
-        "then" *> skipWhitespace *> statementParser,
-        "else" *> skipWhitespace *> statementParser <* "fi" <* skipWhitespace
+        parseKeyword("if") *> skipWhitespace *> expressionParser,
+        parseKeyword("then") *> skipWhitespace *> statementParser,
+        parseKeyword("else") *> skipWhitespace *> statementParser <* parseKeyword("fi") <* skipWhitespace
       )
       <\> While(
-        "while" *> skipWhitespace *> expressionParser,
-        "do" *> skipWhitespace *> statementParser <* "done" <* skipWhitespace
+        parseKeyword("while") *> skipWhitespace *> expressionParser,
+        parseKeyword("do") *> skipWhitespace *> statementParser <* parseKeyword("done") <* skipWhitespace
       )
-      <\> BeginEnd("begin" *> skipWhitespace *> statementParser <* "end" <* skipWhitespace),
+      <\> BeginEnd(parseKeyword("begin") *> skipWhitespace *> statementParser <* parseKeyword("end") <* skipWhitespace),
     Ops(InfixL)(
       (";" <* skipWhitespace) #> ((st1: Statement, st2: Statement) => StatementSequence(st1, st2)(st1.getPos()))
     )
@@ -79,13 +88,13 @@ object WACCParser {
     (newpairParser <\> functionCallParser <\> pairElementParser <\> expressionParser <\> arrayLiterParser) <* skipWhitespace
   lazy val newpairParser: Parsley[NewPair] =
     NewPair(
-      "newpair" *> skipWhitespace *> "(" *> skipWhitespace *> expressionParser,
+      parseKeyword("newpair") *> skipWhitespace *> "(" *> skipWhitespace *> expressionParser,
       ',' *> skipWhitespace *> expressionParser <* ')' <* skipWhitespace
     )
       .label("a newpair initialization")
   lazy val functionCallParser: Parsley[FunctionCall] =
     FunctionCall(
-      "call" *> skipWhitespace *> identifierParser,
+      parseKeyword("call") *> skipWhitespace *> identifierParser,
       '(' *> skipWhitespace *> option(argumentListParser) <* ')'
     )
       .label("a function call")
@@ -96,8 +105,8 @@ object WACCParser {
   /* 〈pair-elem〉::= ‘fst’〈expr〉
                     |‘snd’〈expr〉 */
   lazy val pairElementParser: Parsley[PairElement] =
-    (PairElement("fst" *> skipWhitespace *> expressionParser, isFirst = true) <\>
-      PairElement("snd" *> skipWhitespace *> expressionParser, isFirst = false)).label("a pair element")
+    (PairElement(parseKeyword("fst") *> skipWhitespace *> expressionParser, isFirst = true) <\>
+      PairElement(parseKeyword("snd") *> skipWhitespace *> expressionParser, isFirst = false)).label("a pair element")
   /* 〈type〉::=〈base-type〉
              | 〈array-type〉
              | 〈pair-type〉 */
@@ -118,14 +127,14 @@ object WACCParser {
   /*〈pair-type〉::=  ‘pair’ ‘(’〈pair-elem-type〉‘,’〈pair-elem-type〉‘)’ */
   lazy val pairTypeParser: Parsley[PairType] =
     (PairType(
-      "pair" *> skipWhitespace *> "(" *> skipWhitespace *> pairElementTypeParser,
+      parseKeyword("pair") *> skipWhitespace *> "(" *> skipWhitespace *> pairElementTypeParser,
       "," *> skipWhitespace *> pairElementTypeParser <* ")"
     ) <* skipWhitespace).label("a pair type")
   /* 〈pair-elem-type〉::=〈base-type〉
                        | ‘pair’
                        | 〈array-type〉 */
   lazy val pairElementTypeParser: Parsley[PairElementType] =
-    ((PairDefault("pair") <\> arrayTypeParser <\> baseTypeParser) <* skipWhitespace)
+    ((PairDefault(parseKeyword("pair")) <\> arrayTypeParser <\> baseTypeParser) <* skipWhitespace)
       .label("a pair element type")
   lazy val expressionParser: Parsley[Expression] = (precedence[Expression](
     attempt("(" *> skipWhitespace *> expressionParser <* skipWhitespace <* ")" <* skipWhitespace)
@@ -139,9 +148,9 @@ object WACCParser {
     Ops(Prefix)(
       attempt(("!".label("an unary operator") <* skipWhitespace) #> unaryFunctionGenerator("!")),
       attempt(("-".label("an unary operator") <* skipWhitespace) #> unaryFunctionGenerator("-")),
-      attempt(("len".label("an unary operator") <* skipWhitespace) #> unaryFunctionGenerator("len")),
-      attempt(("ord".label("an unary operator") <* skipWhitespace) #> unaryFunctionGenerator("ord")),
-      attempt(("chr".label("an unary operator") <* skipWhitespace) #> unaryFunctionGenerator("chr"))
+      attempt((parseKeyword("len").label("an unary operator") <* skipWhitespace) #> unaryFunctionGenerator("len")),
+      attempt((parseKeyword("ord").label("an unary operator") <* skipWhitespace) #> unaryFunctionGenerator("ord")),
+      attempt((parseKeyword("chr").label("an unary operator") <* skipWhitespace) #> unaryFunctionGenerator("chr"))
     ),
     Ops(InfixL)(
       ("*".label("a binary operator") <* skipWhitespace) #> binaryFunctionGenerator("*"),
@@ -234,7 +243,7 @@ object WACCParser {
     IntegerSign('+' <\> '-')
   /*〈bool-liter〉::=  ‘true’|‘false’ */
   lazy val booleanLiterParser: Parsley[BooleanLiter] =
-    BooleanLiter(("true" <\> "false") <* skipWhitespace)
+    BooleanLiter((parseKeyword("true") <\> parseKeyword("false")) <* skipWhitespace)
       .label("a boolean")
   /*〈char-liter〉::=  ‘'’〈character〉‘'’ */
   lazy val characterLiterParser: Parsley[CharacterLiter] =
@@ -271,12 +280,17 @@ object WACCParser {
     .label("an array literal")
   /*〈pair-liter〉::=  ‘null’ */
   lazy val pairLiterParser: Parsley[PairLiter] =
-    PairLiter("null" <* skipWhitespace).label("null")
+    PairLiter(parseKeyword("null") <* skipWhitespace).label("null")
   /* 〈comment〉::=  ‘#’ (any-character-except-EOL)*〈EOL〉 */
   lazy val commentParser: Parsley[Comment] =
     Comment('#' *> combinator.manyUntil(anyChar, "\n")).hide
   lazy val skipWhitespace: Parsley[Unit] =
     combinator.skipMany(whitespace.hide <\> commentParser).hide
+  lazy val parseKeyword: String => Parsley[String] = keyword =>
+    attempt(keyword) <* lookAhead(eof <|> satisfy(chr => !isAlphaNum(chr)))
+
+  def isAlphaNum(chr: Char): Boolean = chr == '_' || (chr >= 'a' && chr <= 'z') || (chr >= 'A' && chr <= 'Z')
+
   val keywords = List(
     "begin",
     "end",
