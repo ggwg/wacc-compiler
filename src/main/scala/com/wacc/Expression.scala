@@ -319,19 +319,14 @@ case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit])(position
 
     /* Check that the number does not exceed the bounds */
     for (i <- intDigits) {
-      value = (value * 10) + i
-      if (value > Integer.MAX_VALUE && signValue == 1)
-        errors += Error(
-          "Maximum value bound of type " + Error.formatYellow(IntType.toString()) + " exceeded!",
-          getPos(),
-          100
-        )
-      else if (-value < Integer.MIN_VALUE && signValue == -1)
-        errors += Error(
-          "Minimum value bound of type " + Error.formatYellow(IntType.toString()) + " exceeded!",
-          getPos(),
-          100
-        )
+      value = (value * 10) + signValue * i
+      if (value > Integer.MAX_VALUE) {
+        errors += Error("Maximum value bound of type " + Error.formatYellow("int") + " exceeded!", getPos(), 100)
+        return
+      } else if (value < Integer.MIN_VALUE) {
+        errors += Error("Minimum value bound of type " + Error.formatYellow("int") + " exceeded!", getPos(), 100)
+        return
+      }
     }
   }
 }

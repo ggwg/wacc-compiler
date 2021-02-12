@@ -4,8 +4,8 @@ case class Error(message: String, position: (Int, Int), code: Int = 200) {
   def throwError(): Unit = {
     Console.out.println(
       Error.formatRed(
-        "(Error Code" + code + ") "
-      ) + "Semantic error on line " + position._1 + ", column " + position._2 + ":\n\t- " + message
+        "(Error Code " + code + ")"
+      ) + " Semantic error on line " + position._1 + ", column " + position._2 + ":\n\t- " + message
     )
   }
 }
