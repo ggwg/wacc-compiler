@@ -34,14 +34,13 @@ case class IdentifierDeclaration(identType: Type, identifier: Identifier, assign
    */
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     println("GOT INSIDE IDENTIFIER-DECLARATION CHECK")
-    var pos = getPos()
     println(symbolTable)
     symbolTable.dictionary.updateWith(identifier.identifier)({
       case Some(x) => {
         errors += DefaultError(
           "Variable declaration " + identifier.identifier +
             " already defined in current scope.",
-          pos
+          getPos()
         )
         Some(x)
       }
@@ -54,7 +53,7 @@ case class IdentifierDeclaration(identType: Type, identifier: Identifier, assign
           errors += DefaultError(
             "Invalid types in identifier assignment. Got: " +
               assignmentRight.getType(symbolTable) + ", Expected: " + identType,
-            pos
+            getPos()
           )
           None
         }
@@ -75,99 +74,14 @@ case class Assignment(assignmentLeft: AssignmentLeft, assignmentRight: Assignmen
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     println("GOT INSIDE ASSIGNMENT CHECK")
     /* Check that assignment-left type is same as return type of assignment-right */
-    assignmentRight match {
-      case ArrayLiter(expressions) =>
-        // TODO
-        println("GOT INSIDE ARRAY ASSIGNMENT CHECK")
-        assignmentLeft.getType(symbolTable) match {
-          case ArrayType(arrayType) =>
-            // Only need to compare types of arrays if the array to be assigned is not empty.
-            if (expressions.nonEmpty) {
-              for (expression <- expressions) {
-                if (!expression.getType(symbolTable).unifies(arrayType)) {
-                  errors += DefaultError(
-                    "Array assignment type mismatch: Got type " + expression.getType(symbolTable) +
-                      ", Expected " + arrayType,
-                    position
-                  )
-                  return
-                }
-              }
-            }
-            assignmentLeft.check(symbolTable)
-            assignmentRight.check(symbolTable)
-          case _ =>
-            errors += DefaultError("Array type mismatch", position)
-        }
-      case NewPair(first, second) =>
-        assignmentLeft.getType(symbolTable) match {
-          case PairType(elementType1, elementType2) =>
-            // Check if type of Pair assignment matches
-            if (first.getType(symbolTable) != elementType1) {
-              errors += DefaultError(
-                "Pair assignment type mismatch for 1st element: " +
-                  first.getType(symbolTable) + ", " + elementType1,
-                position
-              )
-            } else if (second.getType(symbolTable) != elementType2) {
-              errors += DefaultError(
-                "Pair assignment type mismatch for 2nd element: " +
-                  second.getType(symbolTable) + ", " + elementType2,
-                position
-              )
-            } else {
-              assignmentLeft.check(symbolTable)
-              assignmentRight.check(symbolTable)
-            }
-            return
-          case otherType =>
-            errors += DefaultError("Invalid assignment - Got LHS: " + otherType + ", RHS: " + assignmentRight, position)
-            return
-        }
-      case PairElement(expression, isFirst) =>
-        expression.getType(symbolTable) match {
-          case PairType(elementType1, elementType2) =>
-            if (isFirst) {
-              if (assignmentLeft.getType(symbolTable) != elementType1) {
-                errors += DefaultError("Pair type mismatch for first element of pair", position)
-                return
-              }
-            } else {
-              if (assignmentLeft.getType(symbolTable) != elementType2) {
-                errors += DefaultError("Pair type mismatch for second element of pair", position)
-                return
-              }
-            }
-            assignmentLeft.check(symbolTable)
-            assignmentRight.check(symbolTable)
-          case _ =>
-            errors += DefaultError("Pair Element must be of type 'pair' and must not be 'null' pair literal.", position)
-        }
-      case expression: Expression =>
-        val leftExpressionType = assignmentLeft.getType(symbolTable)
-        val rightAssignmentType = expression.getType(symbolTable)
-        // Check if left and right side of assignment have equal type
-        if (leftExpressionType.unifies(rightAssignmentType)) {
-          assignmentLeft.check(symbolTable)
-          expression.check(symbolTable)
-        } else {
-          errors += DefaultError(
-            "Invalid assignment - Got LHS: " + leftExpressionType +
-              ", RHS: " + rightAssignmentType,
-            position
-          )
-        }
-      case FunctionCall(name, arguments) =>
+    if (!assignmentLeft.getType(symbolTable).unifies(assignmentRight.getType(symbolTable))) {
+      errors += DefaultError(
+        "Type missmatch for assignment. Got: " + assignmentRight.getType(symbolTable) + ", Expected: " + assignmentLeft
+          .getType(symbolTable),
+        getPos()
+      )
+      return
     }
-
-    //  case expression: Expression => {
-    //    if (expression.getType(symbolTable).unifies(assignmentRight.getType(symbolTable))) {
-    //    assignmentLeft.check(symbolTable)
-    //    assignmentRight.check(symbolTable)
-    //  } else {
-    //    errors += DefaultError("Type mismatch in Assigment for " + this.toString, position)
-    //  }
-    //  }
   }
   override def getPos(): (Int, Int) = position
 }
@@ -180,6 +94,7 @@ case class BeginEnd(statement: Statement)(position: (Int, Int)) extends Statemen
     println("GOT INSIDE BEGIN-END CHECK")
     // Create new scope for Symbol Table
     var beginEndSymbolTable = new SymbolTable(symbolTable)
+
     // Recursively call check.
     statement.check(beginEndSymbolTable)
   }
@@ -237,19 +152,19 @@ case class If(condition: Expression, trueStatement: Statement, falseStatement: S
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     println("GOT INSIDE IF CHECK")
-    var pos = getPos()
     if (condition.getType(symbolTable).unifies(BooleanType())) {
       condition.check(symbolTable)
-      condition.check(symbolTable)
+
       val trueSymbolTable = new SymbolTable(symbolTable)
       trueStatement.check(trueSymbolTable)
+
       val falseSymbolTable = new SymbolTable(symbolTable)
       falseStatement.check(falseSymbolTable)
     } else {
       errors += DefaultError(
         "If condition does not evaluate to Boolean. Got " + condition.getType(symbolTable) +
           " in " + condition.toString,
-        pos
+        getPos()
       )
     }
   }
@@ -303,7 +218,7 @@ case class Read(assignmentLeft: AssignmentLeft)(position: (Int, Int)) extends St
     ) {
       assignmentLeft.check(symbolTable)
     } else {
-      errors += DefaultError("Read statement can only target ", (0, 0))
+      errors += DefaultError("Read statement can only target ", getPos())
     }
   }
 
@@ -317,17 +232,22 @@ case class Return(expression: Expression)(position: (Int, Int)) extends Statemen
   /* Ensure that Return call is inside a function and not global */
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     println("GOT INSIDE RETURN CHECK")
-    var pos = (0, 0)
-    if (!symbolTable.isFunction) {
-      errors += DefaultError("Return called in global scope - must be called within a function", pos)
+    if (!symbolTable.isInsideFunctionSymbolTable()) {
+      errors += DefaultError("Return called in global scope - must be called within a function", getPos())
+      return
+    }
+    val expectedReturnType = symbolTable.getReturnType()
+    val actualReturnType = expression.getType(symbolTable)
+    if (!expectedReturnType.unifies(actualReturnType)) {
+      errors += DefaultError(
+        "Return type missmatch. Expected: " + expectedReturnType + ", Actual: " + actualReturnType,
+        getPos()
+      )
     }
     expression.check(symbolTable)
   }
 
   override def getPos(): (Int, Int) = position
-
-  override def getType(symbolTable: SymbolTable): Type =
-    expression.getType(symbolTable)
 }
 
 /* Check done */

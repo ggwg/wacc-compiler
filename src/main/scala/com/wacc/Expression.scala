@@ -25,20 +25,25 @@ case class UnaryOperatorApplication(operator: UnaryOperator, operand: Expression
     /* Error generation process */
     operator match {
       case Chr() =>
-        if (!operandType.unifies(IntType())) errors += UnaryOperatorError("chr", "int", operandType.toString, position)
-        return
+        if (!operandType.unifies(IntType())) {
+          errors += UnaryOperatorError("chr", "int", operandType.toString, position)
+          return
+        }
       case Negate() =>
-        if (!operandType.unifies(IntType()))
+        if (!operandType.unifies(IntType())) {
           errors += UnaryOperatorError("(-) (i.e. negate)", "int", operandType.toString, position)
-        return
+          return
+        }
       case Not() =>
-        if (!operandType.unifies(BooleanType()))
+        if (!operandType.unifies(BooleanType())) {
           errors += UnaryOperatorError("not", "boolean", operandType.toString, position)
-        return
+          return
+        }
       case Ord() =>
-        if (!operandType.unifies(CharacterType()))
+        if (!operandType.unifies(CharacterType())) {
           errors += UnaryOperatorError("ord", "char", operandType.toString, position)
-        return
+          return
+        }
       case Length() =>
         operandType match {
           case ArrayType(_) | EmptyType() => ()
@@ -290,7 +295,7 @@ case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit])(position
       value = (value * 10) + i
       if (value > Integer.MAX_VALUE && signValue == 1)
         errors += DefaultError("Max bound of int exceeded...", getPos())
-      else if (signValue * value < Integer.MIN_VALUE && signValue == -1)
+      else if (-value < Integer.MIN_VALUE && signValue == -1)
         errors += DefaultError("Min bound of int exceeded...", getPos())
     }
   }

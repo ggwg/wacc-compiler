@@ -2,13 +2,15 @@ package com.wacc
 
 import scala.collection.mutable
 
-class SymbolTable(parentSymbolTable: SymbolTable, isFunctionSymbolTable: Boolean) {
+class SymbolTable(parentSymbolTable: SymbolTable, isFunctionSymbolTable: Boolean, functionReturnType: Type) {
   // default parameter to null
-  def this() = this(null, false)
+  def this() = this(null, false, VoidType())
 
-  def this(parentSymbolTable: SymbolTable) = this(parentSymbolTable, false)
+  def this(parentSymbolTable: SymbolTable) = this(parentSymbolTable, false, VoidType())
 
-  var isFunction = isFunctionSymbolTable
+  val isFunction: Boolean = isFunctionSymbolTable
+
+  val returnType: Type = functionReturnType
 
   var parent: Option[SymbolTable] = Option(parentSymbolTable)
   /* The symbol table contains a mapping from the name of the variable to a tuple
@@ -45,8 +47,19 @@ class SymbolTable(parentSymbolTable: SymbolTable, isFunctionSymbolTable: Boolean
     while (current.isDefined) {
       if (current.get.isFunction)
         return true
+      current = current.get.parent
     }
     false
+  }
+
+  def getReturnType(): Type = {
+    var current = Option(this)
+    while (current.isDefined) {
+      if (current.get.isFunction)
+        return current.get.returnType
+      current = current.get.parent
+    }
+    return VoidType()
   }
 
   override def toString: String = dictionary.toString()

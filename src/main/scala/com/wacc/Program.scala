@@ -1,54 +1,70 @@
 package com.wacc
 
 import parsley.Parsley
+import parsley.Parsley.pos
 import parsley.implicits.{voidImplicitly => _, _}
 
 import scala.collection.mutable
 
-case class Program(functions: List[Function], body: Statement) extends ASTNodeVoid {
+case class Program(functions: List[Function], body: Statement)(position: (Int, Int)) extends ASTNodeVoid {
   override def toString: String = "begin\n" + functions
     .map(_.toString)
     .reduceOption((left, right) => left + right)
     .getOrElse("") + body.toString + "end"
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
-    // TODO: check function name and return type, slide 31
     println("CHECKED INSIDE PROGRAM")
-    functions.foreach { func => func.check(symbolTable) }
+    functions.foreach { func =>
+      val F = symbolTable.lookup(func.name.identifier)
+      if (F.isDefined) {
+        errors +=
+          DefaultError(
+            "Function " + func.name.identifier + " conflicts with another variable in the current scope.",
+            getPos()
+          )
+      }
+      symbolTable.add(func.name.identifier, func.returnType, func)
+    }
+    functions.foreach { func =>
+      func.check(symbolTable)
+    }
     body.check(symbolTable)
   }
+
+  override def getPos(): (Int, Int) = position
 }
 
 /* Check done */
 /* Function declaration - see P31 of semantic analysis slides */
-case class Function(returnType: Type, name: Identifier, parameters: Option[ParameterList], body: Statement)
-    extends ASTNodeVoid {
+case class Function(returnType: Type, name: Identifier, parameters: Option[ParameterList], body: Statement)(
+  position: (Int, Int)
+) extends ASTNodeVoid {
   override def toString: String =
     returnType.toString + " " + name.toString + "(" +
       parameters.getOrElse("").toString + ") is\n" + body.toString + "end\n"
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     println("CHECKED INSIDE FUNCTION")
-    val pos = (0, 0)
-    // Check function name and return type:
-    val F = symbolTable.lookup(name.identifier)
-    if (F.isDefined) {
-      errors +=
-        DefaultError("Function " + name.identifier + " conflicts with another variable in the current scope.", pos)
-      println("DIDNT ADD TO SYMBOL TABLE")
-    } else {
-      // Add to symbol table
-      symbolTable.add(name.identifier, returnType, this)
-      val functionSymbolTable = new SymbolTable(symbolTable, true)
-      if (parameters.isDefined) {
-        parameters.get.check(functionSymbolTable)
-      }
-      body.check(functionSymbolTable)
+
+    // Check that the function returns:
+    if (!body.exitable()) {
+      errors += DefaultError("Function " + name.identifier + " may terminate without return", getPos())
     }
+
+    val functionSymbolTable = new SymbolTable(symbolTable, true, returnType)
+
+    if (parameters.isDefined) {
+      parameters.get.check(functionSymbolTable)
+    }
+
+    body.check(functionSymbolTable)
+
   }
+
+  override def getPos(): (Int, Int) = position
 }
 
-case class ParameterList(parameters: List[Parameter]) extends ASTNodeVoid {
+case class ParameterList(parameters: List[Parameter])(position: (Int, Int)) extends ASTNodeVoid {
   override def toString: String =
     parameters
       .map(_.toString)
@@ -61,27 +77,34 @@ case class ParameterList(parameters: List[Parameter]) extends ASTNodeVoid {
       parameter.check(symbolTable)
     }
   }
+
+  override def getPos(): (Int, Int) = position
 }
 
-case class Parameter(parameterType: Type, identifier: Identifier) extends ASTNodeVoid {
+case class Parameter(parameterType: Type, identifier: Identifier)(position: (Int, Int)) extends ASTNodeVoid {
   override def toString: String =
     parameterType.toString + " " + identifier.toString
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     println("GOT INSIDE PARAMETER CHECK")
-    var pos = (0, 0)
-    var parameterInfo = symbolTable.lookup(identifier.identifier)
-    if (parameterInfo.isEmpty) {
-      symbolTable.add(identifier.identifier, parameterType, this)
-    } else {
-      errors +=
-        DefaultError("Function parameter " + identifier.identifier + " conflicts with another parameter in scope.", pos)
-    }
+    symbolTable.dictionary.updateWith(identifier.identifier)({
+      case Some(x) =>
+        errors +=
+          DefaultError(
+            "Function parameter " + identifier.identifier + " conflicts with another parameter in scope.",
+            getPos()
+          )
+        Some(x)
+      case None => Some(parameterType, this)
+    })
   }
+
+  override def getPos(): (Int, Int) = position
 }
 
 object Program {
-  def apply(funs: Parsley[List[Function]], body: Parsley[Statement]): Parsley[Program] = (funs, body).map(Program(_, _))
+  def apply(funs: Parsley[List[Function]], body: Parsley[Statement]): Parsley[Program] =
+    pos <**> (funs, body).map(Program(_, _))
 }
 
 object Function {
@@ -90,15 +113,15 @@ object Function {
     name: Parsley[Identifier],
     params: Parsley[Option[ParameterList]],
     body: Parsley[Statement]
-  ): Parsley[Function] = (returnType, name, params, body).map(Function(_, _, _, _))
+  ): Parsley[Function] = pos <**> (returnType, name, params, body).map(Function(_, _, _, _))
 }
 
 object ParameterList {
   def apply(param: Parsley[Parameter], params: Parsley[List[Parameter]]): Parsley[ParameterList] =
-    (param, params).map((p, ps) => ParameterList(p :: ps))
+    pos <**> (param, params).map((p, ps) => ParameterList(p :: ps))
 }
 
 object Parameter {
   def apply(paramType: Parsley[Type], name: Parsley[Identifier]): Parsley[Parameter] =
-    (paramType, name).map(Parameter(_, _))
+    pos <**> (paramType, name).map(Parameter(_, _))
 }
