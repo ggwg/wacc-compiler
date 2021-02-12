@@ -70,6 +70,14 @@ case class Assignment(assignmentLeft: AssignmentLeft, assignmentRight: Assignmen
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     /* Check that assignment-left type is same as return type of assignment-right */
+    assignmentLeft match {
+      case Identifier(identifier) =>
+        if (symbolTable.identifierIsFunction(identifier)) {
+          errors += Error("Function identifier " + identifier + " cannot be assigned", getPos())
+          return
+        }
+      case _ => ()
+    }
     if (!assignmentLeft.getType(symbolTable).unifies(assignmentRight.getType(symbolTable))) {
       errors += Error(
         "Type missmatch for assignment. Got: " + assignmentRight.getType(symbolTable) + ", Expected: " + assignmentLeft

@@ -286,7 +286,7 @@ case class Identifier(identifier: String)(position: (Int, Int)) extends Expressi
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
 
-    if (getType(symbolTable).unifies(VoidType())) {
+    if (getType(symbolTable) == VoidType()) {
       /* Identifier was a void type - indicating that it hasn't been defined yet */
       errors += IdentifierError.undefined(identifier, getPos())
     }

@@ -62,5 +62,16 @@ class SymbolTable(parentSymbolTable: SymbolTable, isFunctionSymbolTable: Boolean
     return VoidType()
   }
 
+  def identifierIsFunction(identifier: String): Boolean = {
+    val option = lookupAll(identifier)
+    if (option.isEmpty) {
+      return false
+    }
+    option.get._2 match {
+      case Function(_, _, _, _) => true
+      case _                    => false
+    }
+  }
+
   override def toString: String = dictionary.toString()
 }
