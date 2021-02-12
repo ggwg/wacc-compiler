@@ -20,7 +20,6 @@ sealed trait Statement extends ASTNodeVoid {
   }
 }
 
-
 /* Check done */
 case class IdentifierDeclaration(identType: Type, identifier: Identifier, assignmentRight: AssignmentRight)(
   position: (Int, Int)
@@ -39,8 +38,11 @@ case class IdentifierDeclaration(identType: Type, identifier: Identifier, assign
     println(symbolTable)
     symbolTable.dictionary.updateWith(identifier.identifier)({
       case Some(x) => {
-        errors += DefaultError("Variable declaration " + identifier.identifier +
-          " already defined in current scope.", pos)
+        errors += DefaultError(
+          "Variable declaration " + identifier.identifier +
+            " already defined in current scope.",
+          pos
+        )
         Some(x)
       }
       case None => {
@@ -51,7 +53,9 @@ case class IdentifierDeclaration(identType: Type, identifier: Identifier, assign
         } else {
           errors += DefaultError(
             "Invalid types in identifier assignment. Got: " +
-              assignmentRight.getType(symbolTable) + ", Expected: " + identType, pos)
+              assignmentRight.getType(symbolTable) + ", Expected: " + identType,
+            pos
+          )
           None
         }
       }
@@ -78,11 +82,14 @@ case class Assignment(assignmentLeft: AssignmentLeft, assignmentRight: Assignmen
         assignmentLeft.getType(symbolTable) match {
           case ArrayType(arrayType) =>
             // Only need to compare types of arrays if the array to be assigned is not empty.
-            if (!expressions.isEmpty) {
+            if (expressions.nonEmpty) {
               for (expression <- expressions) {
                 if (!expression.getType(symbolTable).unifies(arrayType)) {
-                  errors += DefaultError("Array assignment type mismatch: Got type " + expression.getType(symbolTable) +
-                    ", Expected " + arrayType, position)
+                  errors += DefaultError(
+                    "Array assignment type mismatch: Got type " + expression.getType(symbolTable) +
+                      ", Expected " + arrayType,
+                    position
+                  )
                   return
                 }
               }
@@ -96,12 +103,18 @@ case class Assignment(assignmentLeft: AssignmentLeft, assignmentRight: Assignmen
         assignmentLeft.getType(symbolTable) match {
           case PairType(elementType1, elementType2) =>
             // Check if type of Pair assignment matches
-            if (first.getType(symbolTable).asPairElemType() != elementType1) {
-              errors += DefaultError("Pair assignment type mismatch for 1st element: " +
-                first.getType(symbolTable).asPairElemType() + ", " + elementType1, position)
-            } else if (second.getType(symbolTable).asPairElemType() != elementType2) {
-              errors += DefaultError("Pair assignment type mismatch for 2nd element: " +
-                second.getType(symbolTable).asPairElemType() + ", " + elementType2, position)
+            if (first.getType(symbolTable) != elementType1) {
+              errors += DefaultError(
+                "Pair assignment type mismatch for 1st element: " +
+                  first.getType(symbolTable) + ", " + elementType1,
+                position
+              )
+            } else if (second.getType(symbolTable) != elementType2) {
+              errors += DefaultError(
+                "Pair assignment type mismatch for 2nd element: " +
+                  second.getType(symbolTable) + ", " + elementType2,
+                position
+              )
             } else {
               assignmentLeft.check(symbolTable)
               assignmentRight.check(symbolTable)
@@ -115,12 +128,12 @@ case class Assignment(assignmentLeft: AssignmentLeft, assignmentRight: Assignmen
         expression.getType(symbolTable) match {
           case PairType(elementType1, elementType2) =>
             if (isFirst) {
-              if (assignmentLeft.getType(symbolTable).asPairElemType() != elementType1) {
+              if (assignmentLeft.getType(symbolTable) != elementType1) {
                 errors += DefaultError("Pair type mismatch for first element of pair", position)
                 return
               }
             } else {
-              if (assignmentLeft.getType(symbolTable).asPairElemType() != elementType2) {
+              if (assignmentLeft.getType(symbolTable) != elementType2) {
                 errors += DefaultError("Pair type mismatch for second element of pair", position)
                 return
               }
@@ -138,8 +151,11 @@ case class Assignment(assignmentLeft: AssignmentLeft, assignmentRight: Assignmen
           assignmentLeft.check(symbolTable)
           expression.check(symbolTable)
         } else {
-          errors += DefaultError("Invalid assignment - Got LHS: " + leftExpressionType +
-            ", RHS: " + rightAssignmentType, position)
+          errors += DefaultError(
+            "Invalid assignment - Got LHS: " + leftExpressionType +
+              ", RHS: " + rightAssignmentType,
+            position
+          )
         }
       case FunctionCall(name, arguments) =>
     }
@@ -202,7 +218,7 @@ case class Free(expression: Expression)(position: (Int, Int)) extends Statement 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     println("GOT INSIDE FREE CHECK")
     expression.getType(symbolTable) match {
-      case PairType(_, _) | ArrayType(_)  =>
+      case PairType(_, _) | ArrayType(_) =>
         expression.check(symbolTable)
       case _ =>
         errors += DefaultError("Attempted to free non pair or array type.", position)
@@ -266,26 +282,28 @@ case class Println(expression: Expression)(position: (Int, Int)) extends Stateme
 }
 
 /* TODO: Check
-*   Read Statements:
+ *   Read Statements:
 A read statement ‘read’ is a special assignment statement that takes its value
 from the standard input and writes it to its argument. Just like a general assignment statement, a
 read statement can target a program variable, an array element or a pair element. However, the read
 statement can only handle character or integer input.
-* The read statement determines how it will interpret the value from the standard input based on the
+ * The read statement determines how it will interpret the value from the standard input based on the
 type of the target. For example, if the target is a variable of type ‘int’ then it will convert the input
 string into an integer.
-* */
+ * */
 case class Read(assignmentLeft: AssignmentLeft)(position: (Int, Int)) extends Statement {
   override def toString: String = "read " + assignmentLeft.toString + "\n"
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     println("GOT INSIDE READ CHECK")
     val assignmentLeftType = assignmentLeft.getType(symbolTable)
-    if (assignmentLeftType.unifies(CharacterType()) ||
-      assignmentLeftType.unifies(IntType())) {
+    if (
+      assignmentLeftType.unifies(CharacterType()) ||
+      assignmentLeftType.unifies(IntType())
+    ) {
       assignmentLeft.check(symbolTable)
     } else {
-      errors += DefaultError("Read statement can only target ", (0,0))
+      errors += DefaultError("Read statement can only target ", (0, 0))
     }
   }
 
@@ -299,7 +317,7 @@ case class Return(expression: Expression)(position: (Int, Int)) extends Statemen
   /* Ensure that Return call is inside a function and not global */
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     println("GOT INSIDE RETURN CHECK")
-    var pos = (0,0)
+    var pos = (0, 0)
     if (!symbolTable.isFunction) {
       errors += DefaultError("Return called in global scope - must be called within a function", pos)
     }
@@ -346,8 +364,11 @@ case class While(condition: Expression, statement: Statement)(position: (Int, In
       val whileSymbolTable = new SymbolTable(symbolTable)
       statement.check(whileSymbolTable)
     } else {
-      errors += DefaultError("While condition does not evaluate to boolean. Got type: " + conditionType.toString +
-      ", in expression: " + condition.toString, position)
+      errors += DefaultError(
+        "While condition does not evaluate to boolean. Got type: " + conditionType.toString +
+          ", in expression: " + condition.toString,
+        position
+      )
     }
   }
 

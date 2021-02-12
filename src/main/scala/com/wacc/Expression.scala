@@ -51,20 +51,6 @@ case class UnaryOperatorApplication(operator: UnaryOperator, operand: Expression
   }
 }
 
-/* TODO:
-   - Find out what to do for the check (returns List.empty for now)
- */
-case class PairLiter()(position: (Int, Int)) extends Expression {
-  override def toString: String = "null"
-
-  override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
-    println(">>> Checking pair literal...")
-    errors += DefaultError("Pair Literal Check undefined...", position)
-  }
-
-  override def getPos(): (Int, Int) = position
-}
-
 /* TODO
    - Fix error messages
  */
@@ -317,6 +303,10 @@ case class ArrayLiter(expressions: List[Expression])(position: (Int, Int)) exten
   }
 }
 
+case class PairLiter()(position: (Int, Int)) extends Expression {
+  override def toString: String = "null"
+}
+
 /* ✅ Check done */
 case class NewPair(first: Expression, second: Expression)(position: (Int, Int)) extends AssignmentRight {
   override def toString: String = "newpair(" + first.toString + ", " + second.toString + ")"
@@ -330,8 +320,8 @@ case class NewPair(first: Expression, second: Expression)(position: (Int, Int)) 
   override def getPos(): (Int, Int) = position
 
   override def getType(symbolTable: SymbolTable): Type = {
-    val fstType: PairElementType = asPairElementType(first.getType(symbolTable))
-    val sndType: PairElementType = asPairElementType(second.getType(symbolTable))
+    val fstType: Type = first.getType(symbolTable)
+    val sndType: Type = second.getType(symbolTable)
 
     fstType match {
       case VoidType() => return VoidType()
@@ -341,16 +331,17 @@ case class NewPair(first: Expression, second: Expression)(position: (Int, Int)) 
       case VoidType() => return VoidType()
       case _          => ()
     }
-    PairType(fstType, sndType)
+
+    PairType(asPairElementType(fstType), asPairElementType(sndType))
   }
 
   private def asPairElementType(typ: Type): PairElementType = {
     typ match {
-      case baseType: BaseType                   => baseType
-      case PairType(elementType1, elementType2) => PairDefault()
-      case ArrayType(arrayType)                 => ArrayType(arrayType)
-      case VoidType()                           => VoidType()
-      case FunctionType(returnType, parameters) => VoidType()
+      case baseType: BaseType          => baseType
+      case PairType(_, _) | NullType() => PairDefault()
+      case ArrayType(arrayType)        => ArrayType(arrayType)
+      case EmptyType()                 => EmptyType()
+      case _                           => VoidType()
     }
   }
 }
@@ -384,11 +375,13 @@ case class PairElement(expression: Expression, isFirst: Boolean)(position: (Int,
 
 /*  -----------------------------  Class objects  -----------------------------  */
 
+/* ✅ Done */
 object ArrayElement {
   def apply(identifier: Parsley[Identifier], expressions: Parsley[List[Expression]]): Parsley[ArrayElement] =
     pos <**> (identifier, expressions).map(ArrayElement(_, _))
 }
 
+/* ✅ Done */
 object ArrayLiter {
   def apply(maybeExpressions: Parsley[Option[(Expression, List[Expression])]]): Parsley[ArrayLiter] =
     pos <**> maybeExpressions.map {
@@ -397,6 +390,7 @@ object ArrayLiter {
     }
 }
 
+/* ✅ Done */
 object BinaryOperatorApplication {
   def apply(
     leftOperand: Parsley[Expression],
@@ -406,54 +400,65 @@ object BinaryOperatorApplication {
     pos <**> (leftOperand, operator, rightOperand).map(BinaryOperatorApplication(_, _, _))
 }
 
+/* ✅ Done */
 object BooleanLiter {
   def apply(bool: Parsley[String]): Parsley[BooleanLiter] = pos <**> bool.map(bool => BooleanLiter(bool.equals("true")))
 }
 
+/* ✅ Done */
 object CharacterLiter {
   def apply(character: Parsley[DefaultCharacter]): Parsley[CharacterLiter] =
     pos <**> character.map(character => CharacterLiter(character.char))
 }
 
+/* ✅ Done */
 object Identifier {
   def apply(prefix: Parsley[String], suffix: Parsley[List[Char]]): Parsley[Identifier] =
     pos <**> (prefix, suffix).map((prefix, suffix) => Identifier(prefix + suffix.mkString))
 }
 
+/* ✅ Done */
 object IntegerLiter {
   def apply(sign: Parsley[Option[IntegerSign]], digits: Parsley[List[Digit]]): Parsley[IntegerLiter] =
     pos <**> (sign, digits).map(IntegerLiter(_, _))
 }
 
+/* ✅ Done */
 object PairLiter {
   def apply(string: Parsley[String]): Parsley[PairLiter] = pos <**> string.map(_ => PairLiter())
 }
 
+/* ✅ Done */
 object StringLiter {
   def apply(characters: Parsley[List[DefaultCharacter]]): Parsley[StringLiter] =
     pos <**> characters.map(character => StringLiter(character.mkString))
 }
 
+/* ✅ Done */
 object UnaryOperatorApplication {
   def apply(operator: Parsley[UnaryOperator], operand: Parsley[Expression]): Parsley[UnaryOperatorApplication] =
     pos <**> (operator, operand).map(UnaryOperatorApplication(_, _))
 }
 
+/* ✅ Done */
 object FunctionCall {
   def apply(name: Parsley[Identifier], arguments: Parsley[Option[ArgumentList]]): Parsley[FunctionCall] =
     pos <**> (name, arguments).map(FunctionCall(_, _))
 }
 
+/* ✅ Done */
 object NewPair {
   def apply(first: Parsley[Expression], second: Parsley[Expression]): Parsley[NewPair] =
     pos <**> (first, second).map(NewPair(_, _))
 }
 
+/* ✅ Done */
 object PairElement {
   def apply(expression: Parsley[Expression], isFirst: Boolean): Parsley[PairElement] =
     pos <**> expression.map(PairElement(_, isFirst))
 }
 
+/* ✅ Done */
 object ArgumentList {
   def apply(expression: Parsley[Expression], expressions: Parsley[List[Expression]]): Parsley[ArgumentList] =
     pos <**> (expression, expressions).map((e, es) => ArgumentList(e :: es))

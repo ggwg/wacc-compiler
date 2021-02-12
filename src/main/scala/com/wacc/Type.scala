@@ -4,76 +4,96 @@ import parsley.Parsley
 import parsley.implicits.{voidImplicitly => _, _}
 
 sealed trait Type extends ASTNodeVoid {
-  def unifies(otherType: Type): Boolean = this == otherType
-  def asPairElemType(): PairElementType
+  def unifies(otherType: Type): Boolean
+  override def getType(symbolTable: SymbolTable): Type = this
 }
 
-sealed trait PairElementType extends ASTNodeVoid
-sealed trait BaseType extends Type with PairElementType
+sealed trait PairElementType extends Type
+sealed trait BaseType extends PairElementType {
+  override def unifies(otherType: Type): Boolean = this == otherType
+}
 
-/* TODO
-   - A pair is used in the nested case. It's type should be the type of another pair... */
+/* ✅ Done */
 case class PairDefault() extends PairElementType {
   override def toString: String = "pair"
-  // override def getType(symbolTable: SymbolTable): Type = VoidType()
+  override def unifies(otherType: Type): Boolean = otherType match {
+    case PairType(_, _) | PairDefault() | NullType() => true
+    case _                                           => false
+  }
 }
 
 /* ✅ Done */
 case class PairType(fstType: PairElementType, sndType: PairElementType) extends Type {
   override def toString: String = "pair(" + fstType.toString + ", " + sndType.toString + ")"
-  override def getType(symbolTable: SymbolTable): Type = PairType(fstType, sndType)
-  override def asPairElemType(): PairElementType = PairDefault()
+  override def unifies(otherType: Type): Boolean = otherType match {
+    case PairType(fst, snd)         => fstType.unifies(fst) && sndType.unifies(snd)
+    case PairDefault() | NullType() => true
+    case _                          => false
+  }
+}
+
+/* ✅ Done */
+case class NullType() extends Type {
+  override def toString: String = "null"
+  override def unifies(otherType: Type): Boolean = otherType match {
+    case PairType(_, _) | NullType() | PairDefault() => true
+    case _                                           => false
+  }
+}
+
+/* ✅ Done */
+case class EmptyType() extends PairElementType {
+  override def toString: String = "[]"
+  override def unifies(otherType: Type): Boolean = otherType match {
+    case EmptyType() | ArrayType(_) => true
+    case _                          => false
+  }
 }
 
 /* ✅ Done */
 case class ArrayType(arrayType: Type) extends Type with PairElementType {
   override def toString: String = arrayType.toString + "[]"
-  override def getType(symbolTable: SymbolTable): Type = ArrayType(arrayType)
-  override def asPairElemType(): PairElementType = ArrayType(arrayType)
+  override def unifies(otherType: Type): Boolean = otherType match {
+    case EmptyType()      => true
+    case ArrayType(other) => arrayType.unifies(other)
+    case _                => false
+  }
 }
 
 /* ✅ Done - New type for categorising statements in semantic analysis */
-case class VoidType() extends Type with PairElementType {
+case class VoidType() extends PairElementType {
+  override def toString: String = "void"
   override def unifies(otherType: Type): Boolean = false
-  override def asPairElemType(): PairElementType = VoidType()
 }
 
 /* ✅ Done */
 case class FunctionType(returnType: Type, parameters: Option[List[Type]]) extends Type {
-  override def asPairElemType(): PairElementType = VoidType()
   override def toString: String = "(" +
     (parameters match {
       case Some(list: List[Type]) => list.map(_.toString).mkString(", ")
       case None                   => ""
     }) + ") => " + returnType
+  override def unifies(otherType: Type): Boolean = this == otherType
 }
 
 /* ✅ Done */
 case class IntType() extends BaseType {
   override def toString: String = "int"
-  override def getType(symbolTable: SymbolTable): Type = IntType()
-  override def asPairElemType(): PairElementType = IntType()
 }
 
 /* ✅ Done */
 case class BooleanType() extends BaseType {
   override def toString: String = "bool"
-  override def getType(symbolTable: SymbolTable): Type = BooleanType()
-  override def asPairElemType(): PairElementType = BooleanType()
 }
 
 /* ✅ Done */
 case class CharacterType() extends BaseType {
   override def toString: String = "char"
-  override def getType(symbolTable: SymbolTable): Type = CharacterType()
-  override def asPairElemType(): PairElementType = CharacterType()
 }
 
 /* ✅ Done */
 case class StringType() extends BaseType {
   override def toString: String = "string"
-  override def getType(symbolTable: SymbolTable): Type = StringType()
-  override def asPairElemType(): PairElementType = StringType()
 }
 
 /* ✅ Done */
