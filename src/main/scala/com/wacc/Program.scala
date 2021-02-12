@@ -13,15 +13,11 @@ case class Program(functions: List[Function], body: Statement)(position: (Int, I
     .getOrElse("") + body.toString + "end"
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
-    println("CHECKED INSIDE PROGRAM")
     functions.foreach { func =>
       val F = symbolTable.lookup(func.name.identifier)
       if (F.isDefined) {
         errors +=
-          DefaultError(
-            "Function " + func.name.identifier + " conflicts with another variable in the current scope.",
-            getPos()
-          )
+          Error("Function " + func.name.identifier + " conflicts with another variable in the current scope.", getPos())
       }
       symbolTable.add(func.name.identifier, func.returnType, func)
     }
@@ -44,11 +40,10 @@ case class Function(returnType: Type, name: Identifier, parameters: Option[Param
       parameters.getOrElse("").toString + ") is\n" + body.toString + "end\n"
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
-    println("CHECKED INSIDE FUNCTION")
 
     // Check that the function returns:
     if (!body.exitable()) {
-      errors += DefaultError("Function " + name.identifier + " may terminate without return", getPos())
+      errors += Error("Function " + name.identifier + " may terminate without return", getPos(), 100)
     }
 
     val functionSymbolTable = new SymbolTable(symbolTable, true, returnType)
@@ -72,7 +67,6 @@ case class ParameterList(parameters: List[Parameter])(position: (Int, Int)) exte
       .getOrElse("")
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
-    println("GOT INSIDE PARAMETER-LIST CHECK")
     for (parameter <- parameters) {
       parameter.check(symbolTable)
     }
@@ -86,14 +80,10 @@ case class Parameter(parameterType: Type, identifier: Identifier)(position: (Int
     parameterType.toString + " " + identifier.toString
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
-    println("GOT INSIDE PARAMETER CHECK")
     symbolTable.dictionary.updateWith(identifier.identifier)({
       case Some(x) =>
         errors +=
-          DefaultError(
-            "Function parameter " + identifier.identifier + " conflicts with another parameter in scope.",
-            getPos()
-          )
+          Error("Function parameter " + identifier.identifier + " conflicts with another parameter in scope.", getPos())
         Some(x)
       case None => Some(parameterType, this)
     })
