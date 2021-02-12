@@ -5,15 +5,15 @@ import parsley.Parsley
 import parsley.Parsley.pos
 import parsley.implicits.{voidImplicitly => _, _}
 
+import scala.Char
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 
 sealed trait Expression extends AssignmentRight {}
 sealed trait AssignmentRight extends ASTNodeVoid {}
 sealed trait AssignmentLeft extends ASTNodeVoid {}
 
-/* TODO:
-   - Type checking for arrays (length) -> if (expression.getType(symbolTable).unifies(ArrayType()))
- */
+/* ✅ Check done */
 case class UnaryOperatorApplication(operator: UnaryOperator, operand: Expression)(position: (Int, Int))
     extends Expression {
   override def toString: String = operator.toString + " " + operand.toString
@@ -25,20 +25,28 @@ case class UnaryOperatorApplication(operator: UnaryOperator, operand: Expression
     /* Error generation process */
     operator match {
       case Chr() =>
-        if (operandType.unifies(IntType())) operand.check(symbolTable)
-        else errors += UnaryOperatorError("chr", "int", operandType.toString, position)
+        if (!operandType.unifies(IntType())) errors += UnaryOperatorError("chr", "int", operandType.toString, position)
+        return
       case Negate() =>
-        if (operandType.unifies(IntType())) operand.check(symbolTable)
-        else errors += UnaryOperatorError("(-) (i.e. negate)", "int", operandType.toString, position)
+        if (!operandType.unifies(IntType()))
+          errors += UnaryOperatorError("(-) (i.e. negate)", "int", operandType.toString, position)
+        return
       case Not() =>
-        if (operandType.unifies(BooleanType())) operand.check(symbolTable)
-        else errors += UnaryOperatorError("not", "boolean", operandType.toString, position)
+        if (!operandType.unifies(BooleanType()))
+          errors += UnaryOperatorError("not", "boolean", operandType.toString, position)
+        return
       case Ord() =>
-        if (operandType.unifies(CharacterType())) operand.check(symbolTable)
-        else errors += UnaryOperatorError("ord", "char", operandType.toString, position)
-      case Length() => /* Implement this */
+        if (!operandType.unifies(CharacterType()))
+          errors += UnaryOperatorError("ord", "char", operandType.toString, position)
+        return
+      case Length() =>
+        operandType match {
+          case ArrayType(_) | EmptyType() => ()
+          case _ =>
+            errors += UnaryOperatorError("length", "array", operandType.toString, position)
+            return
+        }
     }
-
     operand.check(symbolTable)
   }
 
@@ -51,9 +59,7 @@ case class UnaryOperatorApplication(operator: UnaryOperator, operand: Expression
   }
 }
 
-/* TODO
-   - Fix error messages
- */
+/* ✅ Check done */
 case class FunctionCall(name: Identifier, arguments: Option[ArgumentList])(position: (Int, Int))
     extends AssignmentRight {
   override def toString: String =
@@ -69,14 +75,12 @@ case class FunctionCall(name: Identifier, arguments: Option[ArgumentList])(posit
 
     if (func.isEmpty) {
       /* Invalid call to a function that's undefined */
-      errors += DefaultError("Function " + name.identifier + " not defined in scope", position)
+      errors += DefaultError("Function " + name.identifier + " not defined in scope", getPos())
       return
     }
 
-    /* TODO
-       - Perform check on each argument of the function call */
     func.get._2 match {
-      case Function(returnType: Type, name: Identifier, params: Option[ParameterList], _: Statement) =>
+      case Function(returnType: Type, _: Identifier, params: Option[ParameterList], _: Statement) =>
         val expectedParams = {
           params match {
             case Some(list: ParameterList) => Some(list.parameters.map(parameter => parameter.parameterType))
@@ -95,7 +99,7 @@ case class FunctionCall(name: Identifier, arguments: Option[ArgumentList])(posit
 
         if (!expectedSignature.unifies(calledSignature)) {
           /* The signatures of the functions don't match - type mismatch in the caller arguments or return type */
-          errors += DefaultError("Type mismatch for Functions with function in symbol table (TODO)", position)
+          errors += DefaultError("Type mismatch for Functions with function in symbol table (TODO)", getPos())
           return
         }
 
@@ -105,7 +109,7 @@ case class FunctionCall(name: Identifier, arguments: Option[ArgumentList])(posit
         errors +=
           DefaultError(
             "Function call " + name.identifier + " is not of type Function. Got of type " + func.get._1,
-            position
+            getPos()
           )
     }
   }
@@ -117,50 +121,52 @@ case class FunctionCall(name: Identifier, arguments: Option[ArgumentList])(posit
   }
 }
 
-/* TODO:
-   - Implement argument list checking
-   - Implement the getType for this
- */
-case class ArgumentList(expressions: List[Expression])(position: (Int, Int)) extends ASTNodeVoid {
+/* ✅ Check done */
+case class ArgumentList(expressions: List[Expression]) extends ASTNodeVoid {
   override def toString: String = expressions.map(_.toString).reduce((left, right) => left + ", " + right)
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     println(">>> Checking argument list...")
-    for (expression <- expressions) {
-      expression.check(symbolTable)
-    }
+    expressions.foreach(_.check(symbolTable))
   }
-
-  override def getPos(): (Int, Int) = position
 }
 
-/* TODO:
-   - Implement the getType override
-   - Also try to provide more information about which index access attempt has the error
- */
+/* ✅ Check done */
 case class ArrayElement(name: Identifier, expressions: List[Expression])(position: (Int, Int))
     extends Expression
     with AssignmentLeft {
-  override def toString: String =
-    name.toString + expressions.flatMap("[" + _.toString + "]")
+  override def toString: String = name.toString + expressions.flatMap("[" + _.toString + "]")
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
-    val pos = (39, 15)
-
     if (expressions.isEmpty) {
-      errors += DefaultError("No array index specified in attempt to access array " + name.identifier, pos)
+      errors += DefaultError("No array index specified in attempt to access array " + name.identifier, getPos())
     } else {
-      /* Go through each expression and check if it's of type int and recursively call check on each one */
-      for (expression <- expressions) {
+      /* Go through each expression and check if it's of type int */
+      expressions.foreach(expression => {
         val expressionType = expression.getType(symbolTable)
         if (!expressionType.unifies(IntType()))
-          errors += DefaultError("Array index expected type int, but found " + expressionType.toString, pos)
-        expression.check(symbolTable)
-      }
+          errors += DefaultError(
+            "Array index expected type int, but found " + expressionType.getType(symbolTable).toString,
+            getPos()
+          )
+      })
+
+      expressions.foreach(_.check(symbolTable))
     }
   }
 
   override def getPos(): (Int, Int) = position
+
+  override def getType(symbolTable: SymbolTable): Type = {
+    var identType = name.getType(symbolTable)
+    var flag = false
+    while (!flag)
+      identType match {
+        case ArrayType(arrayType) => identType = arrayType
+        case _                    => flag = true
+      }
+    identType
+  }
 }
 
 /* ✅ Check done */
@@ -264,7 +270,6 @@ case class Identifier(identifier: String)(position: (Int, Int)) extends Expressi
 }
 
 /* ✅ Check done */
-// TODO: Does BigInt check need to go here?
 case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit])(position: (Int, Int)) extends Expression {
   override def toString: String = (sign match {
     case None       => ""
@@ -273,6 +278,22 @@ case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit])(position
 
   override def getPos(): (Int, Int) = position
   override def getType(symbolTable: SymbolTable): Type = IntType()
+  override def check(symbolTable: SymbolTable)(implicit errors: ListBuffer[Error]): Unit = {
+    val intDigits = digits.map(_.digit - '0')
+    var value: Long = 0
+
+    /* Extract sign value of the number */
+    var signValue = 1
+    if (sign.nonEmpty && sign.get.sign == '-') signValue = -1
+
+    for (i <- intDigits) {
+      value = (value * 10) + i
+      if (value > Integer.MAX_VALUE && signValue == 1)
+        errors += DefaultError("Max bound of int exceeded...", getPos())
+      else if (signValue * value < Integer.MIN_VALUE && signValue == -1)
+        errors += DefaultError("Min bound of int exceeded...", getPos())
+    }
+  }
 }
 
 /* ✅ Check done */
@@ -283,28 +304,44 @@ case class StringLiter(string: String)(position: (Int, Int)) extends Expression 
 }
 
 /* ✅ Check done */
-/* TODO: Possible error with returning Void type for the case where expression is []
-   - int[] x = [] would cause a problem because the type of the right side is a void type? */
 case class ArrayLiter(expressions: List[Expression])(position: (Int, Int)) extends AssignmentRight {
   override def toString: String = "[" + expressions
     .map(_.toString)
     .reduceOption((left, right) => left + ", " + right)
     .getOrElse("") + "]"
 
-  override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit =
-    expressions.foreach(_.check(symbolTable))
+  override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
+    if (expressions.nonEmpty) {
+      val arrayElementType = expressions.head.getType(symbolTable)
+      for (expression <- expressions.tail) {
+        if (!expression.getType(symbolTable).unifies(arrayElementType)) {
+          errors += DefaultError(
+            "Array assignment type mismatch: Got type " + expression.getType(
+              symbolTable
+            ) + ", Expected " + arrayElementType,
+            expression.getPos()
+          )
+          return
+        }
+      }
+      expressions.foreach(_.check(symbolTable))
+    }
+  }
 
   override def getPos(): (Int, Int) = position
 
   override def getType(symbolTable: SymbolTable): Type = {
     /* Void type if there are no expression in the array literal */
-    if (expressions.isEmpty) ArrayType(VoidType())
+    if (expressions.isEmpty) EmptyType()
     else ArrayType(expressions.head.getType(symbolTable))
   }
 }
 
+/* ✅ Check done */
 case class PairLiter()(position: (Int, Int)) extends Expression {
   override def toString: String = "null"
+  override def getPos(): (Int, Int) = position
+  override def getType(symbolTable: SymbolTable): Type = NullType()
 }
 
 /* ✅ Check done */
@@ -354,6 +391,10 @@ case class PairElement(expression: Expression, isFirst: Boolean)(position: (Int,
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     println(">>> Checking pair element...")
+    expression.getType(symbolTable) match {
+      case PairType(_, _) => ()
+      case _              => errors += DefaultError("expression is not a pair", expression.getPos())
+    }
     expression.check(symbolTable)
   }
 
@@ -361,15 +402,11 @@ case class PairElement(expression: Expression, isFirst: Boolean)(position: (Int,
 
   override def getType(symbolTable: SymbolTable): Type = {
     expression.getType(symbolTable) match {
-      case PairType(elementType1, elementType2) =>
-        if (isFirst) {
-          elementType1.getType(symbolTable)
-        } else {
-          elementType2.getType(symbolTable)
-        }
+      case PairType(fstType, sndType) =>
+        if (isFirst) fstType.getType(symbolTable)
+        else sndType.getType(symbolTable)
       case _ => VoidType()
     }
-    // expression.getType(symbolTable)
   }
 }
 
@@ -461,5 +498,5 @@ object PairElement {
 /* ✅ Done */
 object ArgumentList {
   def apply(expression: Parsley[Expression], expressions: Parsley[List[Expression]]): Parsley[ArgumentList] =
-    pos <**> (expression, expressions).map((e, es) => ArgumentList(e :: es))
+    (expression, expressions).map((e, es) => ArgumentList(e :: es))
 }

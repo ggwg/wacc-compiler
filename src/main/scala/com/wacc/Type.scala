@@ -73,7 +73,10 @@ case class FunctionType(returnType: Type, parameters: Option[List[Type]]) extend
       case Some(list: List[Type]) => list.map(_.toString).mkString(", ")
       case None                   => ""
     }) + ") => " + returnType
-  override def unifies(otherType: Type): Boolean = this == otherType
+  override def unifies(otherType: Type): Boolean = otherType match {
+    case FunctionType(ret, params) => returnType.unifies(ret) && Type.unifiesParameters(params, parameters)
+    case _                         => false
+  }
 }
 
 /* ✅ Done */
@@ -104,6 +107,18 @@ object BaseType {
     case "bool"   => BooleanType()
     case "char"   => CharacterType()
     case "string" => StringType()
+  }
+}
+
+/* ✅ Done */
+object Type {
+  def unifiesParameters(mList1: Option[List[Type]], mList2: Option[List[Type]]): Boolean = {
+    val list1 = mList1.getOrElse(List.empty)
+    val list2 = mList2.getOrElse(List.empty)
+
+    if (list1.size != list2.size) return false
+    val list: List[(Type, Type)] = list1.zip(list2)
+    list.forall { case (t1, t2) => t1.unifies(t2) }
   }
 }
 

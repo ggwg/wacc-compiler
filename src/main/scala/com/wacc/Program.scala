@@ -32,7 +32,7 @@ case class Function(returnType: Type, name: Identifier, parameters: Option[Param
     val pos = (0, 0)
     // Check function name and return type:
     val F = symbolTable.lookup(name.identifier)
-    if (!F.isEmpty) {
+    if (F.isDefined) {
       errors +=
         DefaultError("Function " + name.identifier + " conflicts with another variable in the current scope.", pos)
       println("DIDNT ADD TO SYMBOL TABLE")
@@ -40,7 +40,7 @@ case class Function(returnType: Type, name: Identifier, parameters: Option[Param
       // Add to symbol table
       symbolTable.add(name.identifier, returnType, this)
       val functionSymbolTable = new SymbolTable(symbolTable, true)
-      if (!parameters.isEmpty) {
+      if (parameters.isDefined) {
         parameters.get.check(functionSymbolTable)
       }
       body.check(functionSymbolTable)

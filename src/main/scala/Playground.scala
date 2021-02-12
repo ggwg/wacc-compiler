@@ -13,7 +13,7 @@ object Playground {
     var parsedResult: Result[Program] = {
       programParser
         .runParser(
-          "begin\n  int x = 5;\n  println x; int[] arr = [1,2,'c']; arr = [1,2,'c']; \n  free arr ; \n  println x\nend"
+          "begin\n  int x = 5;\n  println x; int[] arr = [1,2,'c']; arr = []; \n  free arr ; \n  println x\nend"
         )
     }
     var ast = parsedResult.get
