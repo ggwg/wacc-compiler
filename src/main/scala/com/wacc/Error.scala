@@ -1,34 +1,67 @@
 package com.wacc
 
-trait Error {
-  def getError(): Error
-  def throwError(): Unit = ()
-}
-
-case class DefaultError(message: String, pos: (Int, Int)) extends Error {
-  override def throwError(): Unit = {
+case class Error(message: String, position: (Int, Int), code: Int = 200) {
+  def throwError(): Unit = {
     Console.out.println(
-      Console.RED + "(Error Code 200) " +
-        Console.RESET + "Semantic error on line " + pos._1 + ", column " + pos._2 + ":\n\t- " + message
+      Error.formatRed(
+        "(Error Code" + code + ") "
+      ) + "Semantic error on line " + position._1 + ", column " + position._2 + ":\n\t- " + message
     )
   }
-  override def getError(): Error = this
 }
 
-case class UnaryOperatorError(op: String, expected: String, actual: String, pos: (Int, Int)) extends Error {
-  override def getError(): Error =
-    DefaultError("Pre-defined function " + op + " expected " + expected + ", but found " + actual, pos)
-
-  override def throwError(): Unit = getError().throwError()
+case object UnaryOperatorError {
+  def expectation(operator: String, expected: String, actual: String, position: (Int, Int), code: Int = 200): Error = {
+    val message = "Pre-defined function " + operator + " expected " + Error.formatYellow(expected) +
+      ", but found " + Error.formatYellow(actual)
+    Error(message, position, code)
+  }
 }
 
-case class BinaryOperatorError(op: String, expected: String, actual: String, pos: (Int, Int), isLeft: Boolean)
-    extends Error {
-  override def getError(): Error = {
-    val side = if (isLeft) "left" else "right"
-    DefaultError(
-      "Pre-defined function " + op + " expected " + expected + " for " + side + " operand, but found " + actual, pos)
+case object BinaryOperatorError {
+  def expectation(
+    operator: String,
+    expected: String,
+    actual: String,
+    position: (Int, Int),
+    side: String,
+    code: Int = 200
+  ): Error = {
+    val message = "Pre-defined function " + operator + " expected " + Error.formatYellow(expected) + " for " + side +
+      " operand, but found " + Error.formatYellow(actual)
+    Error(message, position, code)
   }
 
-  override def throwError(): Unit = getError().throwError()
+  def comparison(operator: String, leftType: String, rightType: String, position: (Int, Int), code: Int = 200): Error =
+    Error(
+      "Cannot compare " + Error.formatYellow(leftType) + " and " + Error.formatYellow(rightType) +
+        " using pre-defined function " + operator,
+      position,
+      code
+    )
+}
+
+case object FunctionCallError {
+  def expectation(name: String, expected: String, actual: String, position: (Int, Int), code: Int = 200): Error = {
+    val message = "Type mismatch in function call for user-defined function \"" + name +
+      "\":\n\t  Function expected call type " + Error.formatYellow(expected) + ", but found " +
+      Error.formatYellow(actual)
+    Error(message, position, code)
+  }
+
+  def undefined(name: String, position: (Int, Int), code: Int = 200): Error = {
+    val message = "Invalid function call to undefined function " + Error.formatYellow(name)
+    Error(message, position, code)
+  }
+
+  def invalid(name: String, actual: String, position: (Int, Int), code: Int = 200): Error = {
+    val message = "Invalid function call to alleged user-defined function \"" + name +
+      "\":\n\t  Actual type of " + name + " is " + Error.formatYellow(actual)
+    Error(message, position, code)
+  }
+}
+
+object Error {
+  def formatYellow(message: String): String = Console.YELLOW + message + Console.RESET
+  def formatRed(message: String): String = Console.RED + message + Console.RESET
 }
