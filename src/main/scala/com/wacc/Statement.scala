@@ -33,11 +33,9 @@ case class IdentifierDeclaration(identType: Type, identifier: Identifier, assign
    * is the same type as assignmentRight. If so, add it to symbol table. Else, error.
    */
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
-    println("GOT INSIDE IDENTIFIER-DECLARATION CHECK")
-    println(symbolTable)
     symbolTable.dictionary.updateWith(identifier.identifier)({
       case Some(x) => {
-        errors += DefaultError(
+        errors += Error(
           "Variable declaration " + identifier.identifier +
             " already defined in current scope.",
           getPos()
@@ -50,7 +48,7 @@ case class IdentifierDeclaration(identType: Type, identifier: Identifier, assign
           assignmentRight.check(symbolTable)
           Some((identType, assignmentRight))
         } else {
-          errors += DefaultError(
+          errors += Error(
             "Invalid types in identifier assignment. Got: " +
               assignmentRight.getType(symbolTable) + ", Expected: " + identType,
             getPos()
@@ -59,7 +57,6 @@ case class IdentifierDeclaration(identType: Type, identifier: Identifier, assign
         }
       }
     })
-    println(symbolTable)
   }
 
   override def getPos(): (Int, Int) = position
@@ -72,10 +69,9 @@ case class Assignment(assignmentLeft: AssignmentLeft, assignmentRight: Assignmen
     assignmentLeft.toString + " = " + assignmentRight.toString + "\n"
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
-    println("GOT INSIDE ASSIGNMENT CHECK")
     /* Check that assignment-left type is same as return type of assignment-right */
     if (!assignmentLeft.getType(symbolTable).unifies(assignmentRight.getType(symbolTable))) {
-      errors += DefaultError(
+      errors += Error(
         "Type missmatch for assignment. Got: " + assignmentRight.getType(symbolTable) + ", Expected: " + assignmentLeft
           .getType(symbolTable),
         getPos()
@@ -91,9 +87,8 @@ case class BeginEnd(statement: Statement)(position: (Int, Int)) extends Statemen
   override def toString: String = "begin\n" + statement.toString + "end\n"
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
-    println("GOT INSIDE BEGIN-END CHECK")
     // Create new scope for Symbol Table
-    var beginEndSymbolTable = new SymbolTable(symbolTable)
+    val beginEndSymbolTable = new SymbolTable(symbolTable)
 
     // Recursively call check.
     statement.check(beginEndSymbolTable)
@@ -107,10 +102,9 @@ case class Exit(expression: Expression)(position: (Int, Int)) extends Statement 
   override def toString: String = "exit " + expression.toString + "\n"
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
-    println("GOT INSIDE EXIT CHECK")
     val pos = getPos()
     if (!expression.getType(symbolTable).unifies(IntType())) {
-      errors += DefaultError("Exit expression not type Int", pos)
+      errors += Error("Exit expression not type Int", pos)
     }
   }
 
@@ -131,12 +125,11 @@ case class Free(expression: Expression)(position: (Int, Int)) extends Statement 
   override def toString: String = "free " + expression.toString + "\n"
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
-    println("GOT INSIDE FREE CHECK")
     expression.getType(symbolTable) match {
       case PairType(_, _) | ArrayType(_) =>
         expression.check(symbolTable)
       case _ =>
-        errors += DefaultError("Attempted to free non pair or array type.", position)
+        errors += Error("Attempted to free non pair or array type.", position)
     }
   }
 
@@ -151,7 +144,6 @@ case class If(condition: Expression, trueStatement: Statement, falseStatement: S
     "if " + condition + " then\n" + trueStatement.toString + "else\n" + falseStatement + "fi\n"
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
-    println("GOT INSIDE IF CHECK")
     if (condition.getType(symbolTable).unifies(BooleanType())) {
       condition.check(symbolTable)
 
@@ -161,7 +153,7 @@ case class If(condition: Expression, trueStatement: Statement, falseStatement: S
       val falseSymbolTable = new SymbolTable(symbolTable)
       falseStatement.check(falseSymbolTable)
     } else {
-      errors += DefaultError(
+      errors += Error(
         "If condition does not evaluate to Boolean. Got " + condition.getType(symbolTable) +
           " in " + condition.toString,
         getPos()
@@ -177,7 +169,6 @@ case class Print(expression: Expression)(position: (Int, Int)) extends Statement
   override def toString: String = "print " + expression.toString + "\n"
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
-    println("GOT INSIDE PRINT CHECK")
     expression.check(symbolTable)
   }
 
@@ -189,15 +180,13 @@ case class Println(expression: Expression)(position: (Int, Int)) extends Stateme
   override def toString: String = "println " + expression.toString + "\n"
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
-    println("GOT INSIDE PRINTLN CHECK")
     expression.check(symbolTable)
   }
 
   override def getPos(): (Int, Int) = position
 }
 
-/* TODO: Check
- *   Read Statements:
+/*
 A read statement ‘read’ is a special assignment statement that takes its value
 from the standard input and writes it to its argument. Just like a general assignment statement, a
 read statement can target a program variable, an array element or a pair element. However, the read
@@ -210,7 +199,6 @@ case class Read(assignmentLeft: AssignmentLeft)(position: (Int, Int)) extends St
   override def toString: String = "read " + assignmentLeft.toString + "\n"
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
-    println("GOT INSIDE READ CHECK")
     val assignmentLeftType = assignmentLeft.getType(symbolTable)
     if (
       assignmentLeftType.unifies(CharacterType()) ||
@@ -218,7 +206,7 @@ case class Read(assignmentLeft: AssignmentLeft)(position: (Int, Int)) extends St
     ) {
       assignmentLeft.check(symbolTable)
     } else {
-      errors += DefaultError("Read statement can only target ", getPos())
+      errors += Error("Read statement can only target characters and integers", getPos())
     }
   }
 
@@ -231,16 +219,15 @@ case class Return(expression: Expression)(position: (Int, Int)) extends Statemen
 
   /* Ensure that Return call is inside a function and not global */
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
-    println("GOT INSIDE RETURN CHECK")
     if (!symbolTable.isInsideFunctionSymbolTable()) {
-      errors += DefaultError("Return called in global scope - must be called within a function", getPos())
+      errors += Error("Return called in global scope - must be called within a function", getPos())
       return
     }
     val expectedReturnType = symbolTable.getReturnType()
     val actualReturnType = expression.getType(symbolTable)
     if (!expectedReturnType.unifies(actualReturnType)) {
-      errors += DefaultError(
-        "Return type missmatch. Expected: " + expectedReturnType + ", Actual: " + actualReturnType,
+      errors += Error(
+        "Return type mismatch. Expected: " + expectedReturnType + ", Actual: " + actualReturnType,
         getPos()
       )
     }
@@ -263,7 +250,6 @@ case class StatementSequence(statement1: Statement, statement2: Statement)(posit
     statement1.toString.stripSuffix("\n") + ";\n" + statement2.toString
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
-    println("GOT INSIDE STATEMENT-SEQUENCE CHECK")
     statement1.check(symbolTable)
     statement2.check(symbolTable)
   }
@@ -277,14 +263,13 @@ case class While(condition: Expression, statement: Statement)(position: (Int, In
     "while " + condition.toString + " do\n" + statement.toString + "done\n"
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
-    println("GOT INSIDE WHILE CHECK")
     val conditionType = condition.getType(symbolTable)
     if (conditionType.unifies(BooleanType())) {
       condition.check(symbolTable)
       val whileSymbolTable = new SymbolTable(symbolTable)
       statement.check(whileSymbolTable)
     } else {
-      errors += DefaultError(
+      errors += Error(
         "While condition does not evaluate to boolean. Got type: " + conditionType.toString +
           ", in expression: " + condition.toString,
         position
