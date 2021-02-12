@@ -6,7 +6,6 @@ import parsley.Parsley.{get, pos}
 import parsley.implicits.{voidImplicitly => _, _}
 
 import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
 
 sealed trait Expression extends AssignmentRight {}
 sealed trait AssignmentRight extends ASTNodeVoid {}
@@ -308,7 +307,7 @@ case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit])(position
 
   override def getPos(): (Int, Int) = position
   override def getType(symbolTable: SymbolTable): Type = IntType()
-  override def check(symbolTable: SymbolTable)(implicit errors: ListBuffer[Error]): Unit = {
+  /* override def check(symbolTable: SymbolTable)(implicit errors: ListBuffer[Error]): Unit = {
     /* Map the characters to digits */
     val intDigits = digits.map(_.digit - '0')
     var value: Long = 0
@@ -328,7 +327,7 @@ case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit])(position
         return
       }
     }
-  }
+  } */
 }
 
 /* Represents a string (e.g. "Hello, World!") */

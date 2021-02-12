@@ -25,7 +25,8 @@ case class Program(functions: List[Function], body: Statement)(position: (Int, I
     functions.foreach { func =>
       func.check(symbolTable)
     }
-    body.check(symbolTable)
+    val bodySymbolTable = new SymbolTable(symbolTable)
+    body.check(bodySymbolTable)
   }
 
   override def getPos(): (Int, Int) = position

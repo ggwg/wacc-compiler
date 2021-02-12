@@ -21,11 +21,11 @@ sealed trait Statement extends ASTNodeVoid {
 }
 
 /* Check done */
-case class IdentifierDeclaration(identType: Type, identifier: Identifier, assignmentRight: AssignmentRight)(
+case class IdentifierDeclaration(identType: Type, name: Identifier, assignmentRight: AssignmentRight)(
   position: (Int, Int)
 ) extends Statement {
   override def toString: String =
-    identType.toString + " " + identifier.toString + " = " + assignmentRight.toString + "\n"
+    identType.toString + " " + name.toString + " = " + assignmentRight.toString + "\n"
 
   /* Check if identifier is already defined in the symbol table (current, not parent)
    * If so, then record error because variable names must not class with existing
@@ -33,10 +33,10 @@ case class IdentifierDeclaration(identType: Type, identifier: Identifier, assign
    * is the same type as assignmentRight. If so, add it to symbol table. Else, error.
    */
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
-    symbolTable.dictionary.updateWith(identifier.identifier)({
+    symbolTable.dictionary.updateWith(name.identifier)({
       case Some(x) =>
         errors += Error(
-          "Variable declaration " + identifier.identifier +
+          "Variable declaration " + name.identifier +
             " already defined in current scope.",
           getPos()
         )
