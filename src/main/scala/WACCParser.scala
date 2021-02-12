@@ -122,7 +122,8 @@ object WACCParser {
     (BaseType(attemptChoice(BaseType.types.map(parseKeyword(_)): _*)) <* skipWhitespace).label("a base type")
   /*〈array-type〉::=〈type〉‘[’ ‘]’ */
   lazy val arrayTypeParser: Parsley[ArrayType] =
-    (ArrayType(lookAhead(attemptChoice(baseTypeParser, pairTypeParser) *> "[") *> typeParser) <* skipWhitespace)
+    (lookAhead(attemptChoice(baseTypeParser, pairTypeParser) *> "[") *> typeParser)
+      .map(_.asInstanceOf[ArrayType]) <* skipWhitespace
       .label("an array type")
   /*〈pair-type〉::=  ‘pair’ ‘(’〈pair-elem-type〉‘,’〈pair-elem-type〉‘)’ */
   lazy val pairTypeParser: Parsley[PairType] =
