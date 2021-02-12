@@ -11,11 +11,11 @@ import scala.io.Source
 
 class WACCParserSpec extends AnyFlatSpec {
 
-  def testAllFiles(dir: File, semanticCheck: Boolean, shouldSucceed: Boolean): List[String] = {
+  def testAllFiles(dir: File, shouldSucceed: Boolean): List[String] = {
     var files: List[String] = List.empty
     for (file <- dir.listFiles()) {
       if (file.isDirectory) {
-        files = files ++ testAllFiles(file, semanticCheck, shouldSucceed)
+        files = files ++ testAllFiles(file, shouldSucceed)
       } else {
         val fileName = file.getAbsolutePath
         var input = ""
@@ -23,20 +23,16 @@ class WACCParserSpec extends AnyFlatSpec {
           input += line + '\n'
         }
         val ASTResult = (skipWhitespace *> programParser).runParser(input)
-        if (!semanticCheck) {
-          if (ASTResult.isSuccess != shouldSucceed) {
+        if (ASTResult.isFailure) {
+          if (shouldSucceed) {
             files = fileName :: files
           }
         } else {
-          if (ASTResult.isFailure) {
+          val AST = ASTResult.get
+          val errors = new ListBuffer[Error]
+          AST.check(new SymbolTable())(errors)
+          if (errors.isEmpty != shouldSucceed) {
             files = fileName :: files
-          } else {
-            val AST = ASTResult.get
-            val errors = new ListBuffer[Error]
-            AST.check(new SymbolTable())(errors)
-            if (errors.isEmpty != shouldSucceed) {
-              files = fileName :: files
-            }
           }
         }
       }
@@ -44,52 +40,26 @@ class WACCParserSpec extends AnyFlatSpec {
     files
   }
 
-  "A program parser" should "syntactically parse any valid program" in {
+  "A program parser" should "parse any valid program" in {
     val dir = new File("src/main/resources/valid_examples")
-    val failedParses = testAllFiles(dir, semanticCheck = false, shouldSucceed = true)
+    val failedParses = testAllFiles(dir, shouldSucceed = true)
     if (failedParses.length == 0) {
-      println("All syntactic parsing was successful! ✅")
+      println("All parsing was successful! ✅")
     } else {
-      println("Files that did not parse syntactically properly:\n")
+      println("Files that did not parse properly:\n")
       for (fileName <- failedParses) {
         println(fileName)
       }
       assert(false, "Some files were not parsed. Check console for details.\n")
     }
   }
-  "A program parser" should "semantically parse any valid program" in {
-    val dir = new File("src/main/resources/valid_examples")
-    val failedParses = testAllFiles(dir, semanticCheck = true, shouldSucceed = true)
+  it should "identify any incorrect program" in {
+    val dir = new File("src/main/resources/invalid_examples")
+    val failedParses = testAllFiles(dir, shouldSucceed = false)
     if (failedParses.length == 0) {
-      println("All semantic parsing was successful! ✅")
+      println("All wrong programs were found successfully! ✅")
     } else {
-      println("Files that did not parse semantically properly:\n")
-      for (fileName <- failedParses) {
-        println(fileName)
-      }
-      assert(false, "Some files were not parsed. Check console for details.\n")
-    }
-  }
-  it should "lexically identify any incorrect program" in {
-    val dir = new File("src/main/resources/invalid_examples/syntaxErr")
-    val failedParses = testAllFiles(dir, semanticCheck = false, shouldSucceed = false)
-    if (failedParses.length == 0) {
-      println("All syntactic parsing of wrong programs was successful! ✅")
-    } else {
-      println("Files that were parsed syntactically but they should not have been:\n")
-      for (fileName <- failedParses) {
-        println(fileName)
-      }
-      assert(false, "Some files were parsed but they should not have. Check console for details.\n")
-    }
-  }
-  it should "semanticly identify any incorrect program" in {
-    val dir = new File("src/main/resources/invalid_examples/semanticErr")
-    val failedParses = testAllFiles(dir, semanticCheck = true, shouldSucceed = false)
-    if (failedParses.length == 0) {
-      println("All syntactic parsing or wrong was successful! ✅")
-    } else {
-      println("Files that were parsed semantically but they should not have been:\n")
+      println("Files that were parsed but they should not have been:\n")
       for (fileName <- failedParses) {
         println(fileName)
       }
