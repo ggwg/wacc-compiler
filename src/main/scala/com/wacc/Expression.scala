@@ -178,41 +178,37 @@ case class ArrayElement(name: Identifier, expressions: List[Expression])(positio
 }
 
 /* ✅ Check done */
-case class BinaryOperatorApplication(leftOperand: Expression, binaryOperator: BinaryOperator, rightOperand: Expression)(
+case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOperator, rightOperand: Expression)(
   position: (Int, Int)
 ) extends Expression {
-  override def toString: String = leftOperand.toString + " " + binaryOperator.toString + " " + rightOperand.toString
+  override def toString: String = leftOperand.toString + " " + operator.toString + " " + rightOperand.toString
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     println(">>> Checking binary operator application")
     val leftType = leftOperand.getType(symbolTable)
     val rightType = rightOperand.getType(symbolTable)
-    val op = binaryOperator.toString
-    val pos = (39, 15)
+    val op = operator.toString
 
-    binaryOperator match {
+    /* Error generation process */
+    operator match {
       case Add() | Divide() | Modulo() | Multiply() | Subtract() =>
-        println(leftType)
-        println(rightType)
         if (!leftType.unifies(IntType())) {
-          errors += BinaryOperatorError(op, IntType.toString(), leftType.toString, pos, isLeft = true)
+          errors += BinaryOperatorError(op, IntType.toString(), leftType.toString, position, isLeft = true)
+          return
         } else if (!rightType.unifies(IntType())) {
-          errors += BinaryOperatorError(op, IntType.toString(), rightType.toString, pos, isLeft = false)
-        } else {
-          leftOperand.check(symbolTable)
-          rightOperand.check(symbolTable)
+          errors += BinaryOperatorError(op, IntType.toString(), rightType.toString, position, isLeft = false)
+          return
         }
 
       case GreaterThan() | GreaterEqualThan() | SmallerThan() | SmallerEqualThan() =>
         val expected = IntType.toString() + " or " + CharacterType.toString()
 
         if (!(leftType.unifies(IntType()) || leftType.unifies(CharacterType()))) {
-          errors += BinaryOperatorError(op, expected, leftType.toString, pos, isLeft = true)
+          errors += BinaryOperatorError(op, expected, leftType.toString, position, isLeft = true)
+          return
         } else if (!(rightType.unifies(IntType()) || rightType.unifies(CharacterType()))) {
-          errors += BinaryOperatorError(op, expected, rightType.toString, pos, isLeft = false)
-        } else {
-          leftOperand.check(symbolTable)
-          rightOperand.check(symbolTable)
+          errors += BinaryOperatorError(op, expected, rightType.toString, position, isLeft = false)
+          return
         }
 
       case Equals() | NotEquals() =>
@@ -220,35 +216,29 @@ case class BinaryOperatorApplication(leftOperand: Expression, binaryOperator: Bi
           errors += DefaultError(
             "Cannot compare " + leftType.toString + " and " + rightType.toString + " types " +
               " in " + this.toString,
-            pos
+            position
           )
-        } else {
-          leftOperand.check(symbolTable)
-          rightOperand.check(symbolTable)
+          return
         }
 
       case And() | Or() =>
-        println("GOT INSIDE AND OR")
-        println(leftOperand.getType(symbolTable))
-        println(rightOperand.getType(symbolTable))
         if (!leftType.unifies(BooleanType())) {
-          println("GOT HERE 1")
-          errors += BinaryOperatorError(op, BooleanType.toString(), leftType.toString, pos, isLeft = true)
+          errors += BinaryOperatorError(op, BooleanType.toString(), leftType.toString, position, isLeft = true)
+          return
         } else if (!rightType.unifies(BooleanType())) {
-          println("GOT HERE 2")
-          errors += BinaryOperatorError(op, BooleanType.toString(), rightType.toString, pos, isLeft = false)
-        } else {
-          println("GOT HERE 3")
-          leftOperand.check(symbolTable)
-          rightOperand.check(symbolTable)
+          errors += BinaryOperatorError(op, BooleanType.toString(), rightType.toString, position, isLeft = false)
+          return
         }
     }
+
+    leftOperand.check(symbolTable)
+    rightOperand.check(symbolTable)
   }
 
   override def getPos(): (Int, Int) = position
 
   override def getType(symbolTable: SymbolTable): Type =
-    binaryOperator match {
+    operator match {
       case Add() | Divide() | Modulo() | Multiply() | Subtract() => IntType()
       case _                                                     => BooleanType()
     }
@@ -257,18 +247,14 @@ case class BinaryOperatorApplication(leftOperand: Expression, binaryOperator: Bi
 /* ✅ Check done */
 case class BooleanLiter(boolean: Boolean)(position: (Int, Int)) extends Expression {
   override def toString: String = boolean.toString
-
   override def getPos(): (Int, Int) = position
-
   override def getType(symbolTable: SymbolTable): Type = BooleanType()
 }
 
 /* ✅ Check done */
 case class CharacterLiter(char: Char)(position: (Int, Int)) extends Expression {
   override def toString: String = "'" + char + "'"
-
   override def getPos(): (Int, Int) = position
-
   override def getType(symbolTable: SymbolTable): Type = CharacterType()
 }
 
@@ -278,18 +264,21 @@ case class Identifier(identifier: String)(position: (Int, Int)) extends Expressi
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     println(">>> Checking identifier...")
-    val pos = (39, 15)
-    if (getType(symbolTable).unifies(VoidType())) List(DefaultError("Undefined identifier \"" + identifier + "\"", pos))
-    else List.empty
+    if (getType(symbolTable).unifies(VoidType())) {
+      /* Identifier was a void type - indicating that it hasn't been defined yet */
+      errors += DefaultError("Undefined identifier \"" + identifier + "\"", position)
+    }
   }
 
-  override def getPos(): (Int, Int) = position
-
   override def getType(symbolTable: SymbolTable): Type =
+    /* Look up the symbol table hierarchy for the type of the identifier using it's name */
     symbolTable.lookupAll(identifier).getOrElse((VoidType(), null))._1
+
+  override def getPos(): (Int, Int) = position
 }
 
 /* ✅ Check done */
+// TODO: Does BigInt check need to go here?
 case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit])(position: (Int, Int)) extends Expression {
   override def toString: String = (sign match {
     case None       => ""
@@ -297,22 +286,19 @@ case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit])(position
   }) + digits.mkString
 
   override def getPos(): (Int, Int) = position
-
-  // TODO: Does BigInt check need to go here?
-
   override def getType(symbolTable: SymbolTable): Type = IntType()
 }
 
 /* ✅ Check done */
 case class StringLiter(string: String)(position: (Int, Int)) extends Expression {
   override def toString: String = "\"" + string + "\""
-
   override def getPos(): (Int, Int) = position
-
   override def getType(symbolTable: SymbolTable): Type = StringType()
 }
 
 /* ✅ Check done */
+/* TODO: Possible error with returning Void type for the case where expression is []
+   - int[] x = [] would cause a problem because the type of the right side is a void type? */
 case class ArrayLiter(expressions: List[Expression])(position: (Int, Int)) extends AssignmentRight {
   override def toString: String = "[" + expressions
     .map(_.toString)
@@ -320,18 +306,14 @@ case class ArrayLiter(expressions: List[Expression])(position: (Int, Int)) exten
     .getOrElse("") + "]"
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit =
-    for (expression <- expressions) {
-      expression.check(symbolTable)
-    }
+    expressions.foreach(_.check(symbolTable))
 
   override def getPos(): (Int, Int) = position
 
   override def getType(symbolTable: SymbolTable): Type = {
-    if (expressions.isEmpty) {
-      ArrayType(VoidType())
-    } else {
-      ArrayType(expressions.head.getType(symbolTable))
-    }
+    /* Void type if there are no expression in the array literal */
+    if (expressions.isEmpty) ArrayType(VoidType())
+    else ArrayType(expressions.head.getType(symbolTable))
   }
 }
 
@@ -403,43 +385,44 @@ case class PairElement(expression: Expression, isFirst: Boolean)(position: (Int,
 /*  -----------------------------  Class objects  -----------------------------  */
 
 object ArrayElement {
-  def apply(ident: Parsley[Identifier], exprs: Parsley[List[Expression]]): Parsley[ArrayElement] =
-    pos <**> (ident, exprs).map(ArrayElement(_, _))
+  def apply(identifier: Parsley[Identifier], expressions: Parsley[List[Expression]]): Parsley[ArrayElement] =
+    pos <**> (identifier, expressions).map(ArrayElement(_, _))
 }
 
 object ArrayLiter {
-  def apply(option: Parsley[Option[(Expression, List[Expression])]]): Parsley[ArrayLiter] =
-    pos <**> option.map {
-      case None          => ArrayLiter(List())
-      case Some((e, es)) => ArrayLiter(e :: es)
+  def apply(maybeExpressions: Parsley[Option[(Expression, List[Expression])]]): Parsley[ArrayLiter] =
+    pos <**> maybeExpressions.map {
+      case Some((expression, expressions)) => ArrayLiter(expression :: expressions)
+      case None                            => ArrayLiter(List())
     }
 }
 
 object BinaryOperatorApplication {
   def apply(
-    expr1: Parsley[Expression],
+    leftOperand: Parsley[Expression],
     operator: Parsley[BinaryOperator],
-    expr2: Parsley[Expression]
+    rightOperand: Parsley[Expression]
   ): Parsley[BinaryOperatorApplication] =
-    pos <**> (expr1, operator, expr2).map(BinaryOperatorApplication(_, _, _))
+    pos <**> (leftOperand, operator, rightOperand).map(BinaryOperatorApplication(_, _, _))
 }
 
 object BooleanLiter {
-  def apply(bool: Parsley[String]): Parsley[BooleanLiter] = pos <**> bool.map(b => BooleanLiter(b.equals("true")))
+  def apply(bool: Parsley[String]): Parsley[BooleanLiter] = pos <**> bool.map(bool => BooleanLiter(bool.equals("true")))
 }
 
 object CharacterLiter {
-  def apply(chr: Parsley[DefaultCharacter]): Parsley[CharacterLiter] = pos <**> chr.map(c => CharacterLiter(c.char))
+  def apply(character: Parsley[DefaultCharacter]): Parsley[CharacterLiter] =
+    pos <**> character.map(character => CharacterLiter(character.char))
 }
 
 object Identifier {
   def apply(prefix: Parsley[String], suffix: Parsley[List[Char]]): Parsley[Identifier] =
-    pos <**> (prefix, suffix).map((p, s) => Identifier(p + s.mkString))
+    pos <**> (prefix, suffix).map((prefix, suffix) => Identifier(prefix + suffix.mkString))
 }
 
 object IntegerLiter {
-  def apply(option: Parsley[Option[IntegerSign]], digits: Parsley[List[Digit]]): Parsley[IntegerLiter] =
-    pos <**> (option, digits).map(IntegerLiter(_, _))
+  def apply(sign: Parsley[Option[IntegerSign]], digits: Parsley[List[Digit]]): Parsley[IntegerLiter] =
+    pos <**> (sign, digits).map(IntegerLiter(_, _))
 }
 
 object PairLiter {
@@ -447,23 +430,23 @@ object PairLiter {
 }
 
 object StringLiter {
-  def apply(chars: Parsley[List[DefaultCharacter]]): Parsley[StringLiter] =
-    pos <**> chars.map(dcs => StringLiter(dcs.mkString))
+  def apply(characters: Parsley[List[DefaultCharacter]]): Parsley[StringLiter] =
+    pos <**> characters.map(character => StringLiter(character.mkString))
 }
 
 object UnaryOperatorApplication {
-  def apply(operator: Parsley[UnaryOperator], expression: Parsley[Expression]): Parsley[UnaryOperatorApplication] =
-    pos <**> (operator, expression).map(UnaryOperatorApplication(_, _))
+  def apply(operator: Parsley[UnaryOperator], operand: Parsley[Expression]): Parsley[UnaryOperatorApplication] =
+    pos <**> (operator, operand).map(UnaryOperatorApplication(_, _))
 }
 
 object FunctionCall {
-  def apply(identifier: Parsley[Identifier], option: Parsley[Option[ArgumentList]]): Parsley[FunctionCall] =
-    pos <**> (identifier, option).map(FunctionCall(_, _))
+  def apply(name: Parsley[Identifier], arguments: Parsley[Option[ArgumentList]]): Parsley[FunctionCall] =
+    pos <**> (name, arguments).map(FunctionCall(_, _))
 }
 
 object NewPair {
-  def apply(expr1: Parsley[Expression], expr2: Parsley[Expression]): Parsley[NewPair] =
-    pos <**> (expr1, expr2).map(NewPair(_, _))
+  def apply(first: Parsley[Expression], second: Parsley[Expression]): Parsley[NewPair] =
+    pos <**> (first, second).map(NewPair(_, _))
 }
 
 object PairElement {
@@ -472,6 +455,6 @@ object PairElement {
 }
 
 object ArgumentList {
-  def apply(expr: Parsley[Expression], exprs: Parsley[List[Expression]]): Parsley[ArgumentList] =
-    pos <**> (expr, exprs).map((e, es) => ArgumentList(e :: es))
+  def apply(expression: Parsley[Expression], expressions: Parsley[List[Expression]]): Parsley[ArgumentList] =
+    pos <**> (expression, expressions).map((e, es) => ArgumentList(e :: es))
 }
