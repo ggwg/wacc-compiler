@@ -12,9 +12,7 @@ object Playground {
 
     var parsedResult: Result[Program] = {
       programParser
-        .runParser(
-          "begin\n  int x = 5;\n  println x; int[] arr = [1,2,'c']; arr = []; \n  free arr ; \n  println x\nend"
-        )
+        .runParser("begin\n  int x = -2147483648 ;\n  println x ;\n  x = -x; #err here?\n  println x \nend")
     }
     var ast = parsedResult.get
     implicit val errors: mutable.ListBuffer[Error] = mutable.ListBuffer.empty
