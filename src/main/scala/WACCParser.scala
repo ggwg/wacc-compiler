@@ -119,7 +119,7 @@ object WACCParser {
                    | ‘char’
                    | ‘string’ */
   lazy val baseTypeParser: Parsley[BaseType] =
-    (BaseType(attemptChoice(BaseType.types.map(attempt(_)): _*)) <* skipWhitespace).label("a base type")
+    (BaseType(attemptChoice(BaseType.types.map(parseKeyword(_)): _*)) <* skipWhitespace).label("a base type")
   /*〈array-type〉::=〈type〉‘[’ ‘]’ */
   lazy val arrayTypeParser: Parsley[ArrayType] =
     (ArrayType(lookAhead(attemptChoice(baseTypeParser, pairTypeParser) *> "[") *> typeParser) <* skipWhitespace)
