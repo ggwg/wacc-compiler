@@ -6,49 +6,45 @@ import parsley.Parsley.pos
 import parsley.implicits.{voidImplicitly => _, _}
 
 import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
 
 sealed trait Expression extends AssignmentRight {}
 sealed trait AssignmentRight extends ASTNodeVoid {}
 sealed trait AssignmentLeft extends ASTNodeVoid {}
 
 /* TODO:
-   - Check that expression is an int between 0-255
    - Type checking for arrays (length) -> if (expression.getType(symbolTable).unifies(ArrayType()))
-   - Add support for retrieving position from the AST
-   - Remove unnecessary print statements
  */
-case class UnaryOperatorApplication(unaryOperator: UnaryOperator, expression: Expression)(position: (Int, Int))
+case class UnaryOperatorApplication(operator: UnaryOperator, operand: Expression)(position: (Int, Int))
     extends Expression {
-  override def toString: String = unaryOperator.toString + expression.toString
+  override def toString: String = operator.toString + " " + operand.toString
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     println(">>> Checking unary operator application...")
-    val expressionType = expression.getType(symbolTable)
-    val pos = (39, 15)
+    val operandType = operand.getType(symbolTable)
 
-    unaryOperator match {
+    /* Error generation process */
+    operator match {
       case Chr() =>
-        if (expressionType.unifies(IntType())) expression.check(symbolTable)
-        else errors += UnaryOperatorError("chr", "int", expressionType.toString, pos)
-      case Length() =>
-        // TODO:
-        println("TODO: Unary Operator Length()")
+        if (operandType.unifies(IntType())) operand.check(symbolTable)
+        else errors += UnaryOperatorError("chr", "int", operandType.toString, position)
       case Negate() =>
-        if (expressionType.unifies(IntType())) expression.check(symbolTable)
-        else errors += UnaryOperatorError("(-) (i.e. negate)", "int", expressionType.toString, pos)
+        if (operandType.unifies(IntType())) operand.check(symbolTable)
+        else errors += UnaryOperatorError("(-) (i.e. negate)", "int", operandType.toString, position)
       case Not() =>
-        if (expressionType.unifies(BooleanType())) expression.check(symbolTable)
-        else errors += UnaryOperatorError("not", "boolean", expressionType.toString, pos)
+        if (operandType.unifies(BooleanType())) operand.check(symbolTable)
+        else errors += UnaryOperatorError("not", "boolean", operandType.toString, position)
       case Ord() =>
-        if (expressionType.unifies(CharacterType())) expression.check(symbolTable)
-        else errors += UnaryOperatorError("ord", "char", expressionType.toString, pos)
+        if (operandType.unifies(CharacterType())) operand.check(symbolTable)
+        else errors += UnaryOperatorError("ord", "char", operandType.toString, position)
+      case Length() => /* Implement this */
     }
+
+    operand.check(symbolTable)
   }
 
   override def getPos(): (Int, Int) = position
 
-  override def getType(symbolTable: SymbolTable): Type = unaryOperator match {
+  override def getType(symbolTable: SymbolTable): Type = operator match {
     case Chr() => CharacterType()
     case Not() => BooleanType()
     case _     => IntType()
@@ -63,15 +59,14 @@ case class PairLiter()(position: (Int, Int)) extends Expression {
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     println(">>> Checking pair literal...")
+    errors += DefaultError("Pair Literal Check undefined...", position)
   }
 
   override def getPos(): (Int, Int) = position
 }
 
-/* TODO:
-  - Add support for position
-  - Try to print the expected function signature in the error message
-  - Error in check; the funcType will not return a class FunctionType
+/* TODO
+   - Fix error messages
  */
 case class FunctionCall(name: Identifier, arguments: Option[ArgumentList])(position: (Int, Int))
     extends AssignmentRight {
@@ -83,37 +78,49 @@ case class FunctionCall(name: Identifier, arguments: Option[ArgumentList])(posit
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     println(">>> Checking function call...")
+    /* Lookup the function's type using it's name across the entire symbol table hierarchy */
     val func: Option[(Type, ASTNode)] = symbolTable.lookupAll(name.identifier)
-    val pos = (39, 15)
 
     if (func.isEmpty) {
-      errors += DefaultError("Function " + name.identifier + " not defined in scope", pos)
-    } else {
-      func.get._2 match {
-        // func is a function type
-        case Function(returnType: Type, name: Identifier, parameters: Option[ParameterList], body: Statement) =>
-          val expectedParameters = {
-            parameters match {
-              case Some(parameterList: ParameterList) => Some(parameterList.parameters.map(parameter => parameter.parameterType))
-              case None => None
-            }
+      /* Invalid call to a function that's undefined */
+      errors += DefaultError("Function " + name.identifier + " not defined in scope", position)
+      return
+    }
+
+    /* TODO
+       - Perform check on each argument of the function call */
+    func.get._2 match {
+      case Function(returnType: Type, name: Identifier, params: Option[ParameterList], _: Statement) =>
+        val expectedParams = {
+          params match {
+            case Some(list: ParameterList) => Some(list.parameters.map(parameter => parameter.parameterType))
+            case None                      => None
           }
-          val expectedFunctionType = new FunctionType(returnType, expectedParameters)
-          val calledParameters = {
-            arguments match {
-              case Some(argumentList: ArgumentList) =>
-                Some(argumentList.expressions.map(expression => expression.getType(symbolTable)))
-              case None => None
-            }
+        }
+        val expectedSignature = FunctionType(returnType, expectedParams)
+
+        val calledParams = {
+          arguments match {
+            case Some(list: ArgumentList) => Some(list.expressions.map(expression => expression.getType(symbolTable)))
+            case None                     => None
           }
-          val calledFunctionType = new FunctionType(returnType, calledParameters)
-          if (!expectedFunctionType.unifies(calledFunctionType)) {
-            errors += DefaultError("Type mismatch for Functions with function in symbol table (TODO)", pos)
-          }
-        case _ =>
-          errors +=
-            DefaultError("Function call " + name.identifier + " is not of type Function. Got of type " + func.get._1, pos)
-      }
+        }
+        val calledSignature = FunctionType(returnType, calledParams)
+
+        if (!expectedSignature.unifies(calledSignature)) {
+          /* The signatures of the functions don't match - type mismatch in the caller arguments or return type */
+          errors += DefaultError("Type mismatch for Functions with function in symbol table (TODO)", position)
+          return
+        }
+
+        arguments.foreach(_.check(symbolTable))
+      case _ =>
+        /* Invalid function call with a type that's not a function */
+        errors +=
+          DefaultError(
+            "Function call " + name.identifier + " is not of type Function. Got of type " + func.get._1,
+            position
+          )
     }
   }
 
@@ -210,13 +217,15 @@ case class BinaryOperatorApplication(leftOperand: Expression, binaryOperator: Bi
 
       case Equals() | NotEquals() =>
         if (!leftType.unifies(rightType)) {
-          errors += DefaultError("Cannot compare " + leftType.toString + " and " + rightType.toString + " types " +
-              " in " + this.toString, pos)
+          errors += DefaultError(
+            "Cannot compare " + leftType.toString + " and " + rightType.toString + " types " +
+              " in " + this.toString,
+            pos
+          )
         } else {
           leftOperand.check(symbolTable)
           rightOperand.check(symbolTable)
         }
-
 
       case And() | Or() =>
         println("GOT INSIDE AND OR")
@@ -344,11 +353,11 @@ case class NewPair(first: Expression, second: Expression)(position: (Int, Int)) 
 
     fstType match {
       case VoidType() => return VoidType()
-      case _ => ()
+      case _          => ()
     }
     sndType match {
       case VoidType() => return VoidType()
-      case _ => ()
+      case _          => ()
     }
     PairType(fstType, sndType)
   }
