@@ -20,6 +20,48 @@ sealed trait Statement extends ASTNodeVoid {
   }
 }
 
+
+/* Check done */
+case class IdentifierDeclaration(identType: Type, identifier: Identifier, assignmentRight: AssignmentRight)(
+  position: (Int, Int)
+) extends Statement {
+  override def toString: String =
+    identType.toString + " " + identifier.toString + " = " + assignmentRight.toString + "\n"
+
+  /* Check if identifier is already defined in the symbol table (current, not parent)
+   * If so, then record error because variable names must not class with existing
+   * variable names or any keyword. Extract type of identType, then we check if this
+   * is the same type as assignmentRight. If so, add it to symbol table. Else, error.
+   */
+  override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
+    println("GOT INSIDE IDENTIFIER-DECLARATION CHECK")
+    var pos = getPos()
+    println(symbolTable)
+    symbolTable.dictionary.updateWith(identifier.identifier)({
+      case Some(x) => {
+        errors += DefaultError("Variable declaration " + identifier.identifier +
+          " already defined in current scope.", pos)
+        Some(x)
+      }
+      case None => {
+        // If left type == right type, then we can add it to dictionary.
+        if (identType.sameTypes(assignmentRight, symbolTable)) {
+          assignmentRight.check(symbolTable)
+          Some((identType, assignmentRight))
+        } else {
+          errors += DefaultError(
+            "Invalid types in identifier assignment. Got: " +
+              assignmentRight.getType(symbolTable) + ", Expected: " + identType, pos)
+          None
+        }
+      }
+    })
+    println(symbolTable)
+  }
+
+  override def getPos(): (Int, Int) = position
+}
+
 /* Check Done */
 case class Assignment(assignmentLeft: AssignmentLeft, assignmentRight: AssignmentRight)(position: (Int, Int))
     extends Statement {
@@ -28,32 +70,89 @@ case class Assignment(assignmentLeft: AssignmentLeft, assignmentRight: Assignmen
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     println("GOT INSIDE ASSIGNMENT CHECK")
-    var pos = getPos()
     /* Check that assignment-left type is same as return type of assignment-right */
     assignmentRight match {
-      case expression: Expression => {
-        if (assignmentLeft
-          .getType(symbolTable)
-          .unifies(assignmentRight.getType(symbolTable))) {
-          assignmentLeft.check(symbolTable)
-          assignmentRight.check(symbolTable)
-        } else {
-          errors += DefaultError("Type mismatch in Assigment for " + this.toString, pos)
+      case ArrayLiter(expressions) =>
+        // TODO
+        println("GOT INSIDE ARRAY ASSIGNMENT CHECK")
+        assignmentLeft.getType(symbolTable) match {
+          case ArrayType(arrayType) =>
+            // Only need to compare types of arrays if the array to be assigned is not empty.
+            if (!expressions.isEmpty) {
+              for (expression <- expressions) {
+                if (!expression.getType(symbolTable).unifies(arrayType)) {
+                  errors += DefaultError("Array assignment type mismatch: Got type " + expression.getType(symbolTable) +
+                    ", Expected " + arrayType, position)
+                  return
+                }
+              }
+            }
+            assignmentLeft.check(symbolTable)
+            assignmentRight.check(symbolTable)
+          case _ =>
+            errors += DefaultError("Array type mismatch", position)
         }
-      }
-      case _ => println("ASSIGNMENT NOT DONE YET")
-//      case FunctionCall(name, arguments) => {
-//        /* Number and types of functions arguments must match the functions definition. */
-//        var func = symbolTable.lookupAll(name.identifier)
-//
-//      }
-//      case ArrayLiter(expressions) =>
-//      case NewPair(first, second) =>
-//      case PairElement(expression, isFirst) =>
+      case NewPair(first, second) =>
+        assignmentLeft.getType(symbolTable) match {
+          case PairType(elementType1, elementType2) =>
+            // Check if type of Pair assignment matches
+            if (first.getType(symbolTable).asPairElemType() != elementType1) {
+              errors += DefaultError("Pair assignment type mismatch for 1st element: " +
+                first.getType(symbolTable).asPairElemType() + ", " + elementType1, position)
+            } else if (second.getType(symbolTable).asPairElemType() != elementType2) {
+              errors += DefaultError("Pair assignment type mismatch for 2nd element: " +
+                second.getType(symbolTable).asPairElemType() + ", " + elementType2, position)
+            } else {
+              assignmentLeft.check(symbolTable)
+              assignmentRight.check(symbolTable)
+            }
+            return
+          case otherType =>
+            errors += DefaultError("Invalid assignment - Got LHS: " + otherType + ", RHS: " + assignmentRight, position)
+            return
+        }
+      case PairElement(expression, isFirst) =>
+        expression.getType(symbolTable) match {
+          case PairType(elementType1, elementType2) =>
+            if (isFirst) {
+              if (assignmentLeft.getType(symbolTable).asPairElemType() != elementType1) {
+                errors += DefaultError("Pair type mismatch for first element of pair", position)
+                return
+              }
+            } else {
+              if (assignmentLeft.getType(symbolTable).asPairElemType() != elementType2) {
+                errors += DefaultError("Pair type mismatch for second element of pair", position)
+                return
+              }
+            }
+            assignmentLeft.check(symbolTable)
+            assignmentRight.check(symbolTable)
+          case _ =>
+            errors += DefaultError("Pair Element must be of type 'pair' and must not be 'null' pair literal.", position)
+        }
+      case expression: Expression =>
+        val leftExpressionType = assignmentLeft.getType(symbolTable)
+        val rightAssignmentType = expression.getType(symbolTable)
+        // Check if left and right side of assignment have equal type
+        if (leftExpressionType.unifies(rightAssignmentType)) {
+          assignmentLeft.check(symbolTable)
+          expression.check(symbolTable)
+        } else {
+          errors += DefaultError("Invalid assignment - Got LHS: " + leftExpressionType +
+            ", RHS: " + rightAssignmentType, position)
+        }
+      case FunctionCall(name, arguments) =>
     }
 
+    //  case expression: Expression => {
+    //    if (expression.getType(symbolTable).unifies(assignmentRight.getType(symbolTable))) {
+    //    assignmentLeft.check(symbolTable)
+    //    assignmentRight.check(symbolTable)
+    //  } else {
+    //    errors += DefaultError("Type mismatch in Assigment for " + this.toString, position)
+    //  }
+    //  }
   }
-
   override def getPos(): (Int, Int) = position
 }
 
@@ -100,49 +199,14 @@ that stores the pair/array itself is also freed.
 case class Free(expression: Expression)(position: (Int, Int)) extends Statement {
   override def toString: String = "free " + expression.toString + "\n"
 
-  // TODO: this
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     println("GOT INSIDE FREE CHECK")
-    var pos = getPos()
-  }
-
-  override def getPos(): (Int, Int) = position
-}
-
-/* Check done */
-case class IdentifierDeclaration(identType: Type, identifier: Identifier, assignmentRight: AssignmentRight)(
-  position: (Int, Int)
-) extends Statement {
-  override def toString: String =
-    identType.toString + " " + identifier.toString + " = " + assignmentRight.toString + "\n"
-
-  /* Check if identifier is already defined in the symbol table (current, not parent)
-   * If so, then record error because variable names must not class with existing
-   * variable names or any keyword. Extract type of identType, then we check if this
-   * is the same type as assignmentRight. If so, add it to symbol table. Else, error.
-   */
-  override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
-    println("GOT INSIDE IDENTIFIER-DECLARATION CHECK")
-    var pos = getPos()
-    symbolTable.dictionary.updateWith(identifier.identifier)({
-      case Some(x) => {
-        errors +=
-          DefaultError("Variable declaration " + identifier.identifier + " already defined in current scope.", pos)
-        Some(x)
-      }
-      case None => {
-        // If left type == right type, then we can add it to dictionary.
-        if (identType.sameTypes(assignmentRight, symbolTable)) {
-          assignmentRight.check(symbolTable)
-          Some((identType.getType(symbolTable), assignmentRight))
-        } else {
-          errors += DefaultError(
-            "Invalid types in identifier assignment. Got: " +
-              assignmentRight.getType(symbolTable) + ", Expected: " + identType, pos)
-          None
-        }
-      }
-    })
+    expression.getType(symbolTable) match {
+      case PairType(_, _) | ArrayType(_)  =>
+        expression.check(symbolTable)
+      case _ =>
+        errors += DefaultError("Attempted to free non pair or array type.", position)
+    }
   }
 
   override def getPos(): (Int, Int) = position

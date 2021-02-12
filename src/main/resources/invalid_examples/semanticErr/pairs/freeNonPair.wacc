@@ -11,6 +11,6 @@
 begin
   int x = 5;
   println x;
-  free 9 ; 
+  free 9 ;
   println x
 end

@@ -63,7 +63,6 @@ case class PairLiter()(position: (Int, Int)) extends Expression {
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     println(">>> Checking pair literal...")
-    List.empty
   }
 
   override def getPos(): (Int, Int) = position
@@ -340,11 +339,28 @@ case class NewPair(first: Expression, second: Expression)(position: (Int, Int)) 
   override def getPos(): (Int, Int) = position
 
   override def getType(symbolTable: SymbolTable): Type = {
-    val fstType = first.getType(symbolTable)
-    val sndType = second.getType(symbolTable)
+    val fstType: PairElementType = asPairElementType(first.getType(symbolTable))
+    val sndType: PairElementType = asPairElementType(second.getType(symbolTable))
 
-    if (!fstType.isInstanceOf[PairElementType] || !sndType.isInstanceOf[PairElementType]) VoidType()
-    else PairType(fstType.asInstanceOf[PairElementType], sndType.asInstanceOf[PairElementType])
+    fstType match {
+      case VoidType() => return VoidType()
+      case _ => ()
+    }
+    sndType match {
+      case VoidType() => return VoidType()
+      case _ => ()
+    }
+    PairType(fstType, sndType)
+  }
+
+  private def asPairElementType(typ: Type): PairElementType = {
+    typ match {
+      case baseType: BaseType                   => baseType
+      case PairType(elementType1, elementType2) => PairDefault()
+      case ArrayType(arrayType)                 => ArrayType(arrayType)
+      case VoidType()                           => VoidType()
+      case FunctionType(returnType, parameters) => VoidType()
+    }
   }
 }
 
@@ -362,7 +378,16 @@ case class PairElement(expression: Expression, isFirst: Boolean)(position: (Int,
   override def getPos(): (Int, Int) = position
 
   override def getType(symbolTable: SymbolTable): Type = {
-    expression.getType(symbolTable)
+    expression.getType(symbolTable) match {
+      case PairType(elementType1, elementType2) =>
+        if (isFirst) {
+          elementType1.getType(symbolTable)
+        } else {
+          elementType2.getType(symbolTable)
+        }
+      case _ => VoidType()
+    }
+    // expression.getType(symbolTable)
   }
 }
 
