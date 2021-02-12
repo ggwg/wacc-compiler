@@ -186,8 +186,19 @@ object WACCParser {
             | 〈unary-oper〉 〈expr〉
             | 〈expr〉 〈binary-oper〉 〈expr〉
             | ‘(’〈expr〉‘)’ */
-  lazy val unaryFunctionGenerator: String => Expression => UnaryOperatorApplication =
-    (operator: String) => (expr: Expression) => UnaryOperatorApplication(UnaryOperator(operator), expr)(expr.getPos())
+  lazy val unaryFunctionGenerator: String => Expression => Expression =
+    (operator: String) =>
+      (expr: Expression) => {
+        if (!operator.equals("-")) {
+          UnaryOperatorApplication(UnaryOperator(operator), expr)(expr.getPos())
+        } else
+          expr match {
+            case IntegerLiter(None, digits) =>
+              IntegerLiter(Option(IntegerSign('-')), digits)(expr.getPos())
+            case _ => UnaryOperatorApplication(UnaryOperator(operator), expr)(expr.getPos())
+          }
+      }
+
   lazy val binaryFunctionGenerator: String => (Expression, Expression) => BinaryOperatorApplication =
     (operator: String) =>
       (expr1: Expression, expr2: Expression) =>

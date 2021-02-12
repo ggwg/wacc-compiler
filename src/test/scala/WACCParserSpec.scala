@@ -271,7 +271,7 @@ class WACCParserSpec extends AnyFlatSpec {
       .runParser("!true")
       .get shouldBe an[UnaryOperatorApplication]
     expressionParser
-      .runParser("--100")
+      .runParser("---100")
       .get shouldBe an[UnaryOperatorApplication]
     expressionParser
       .runParser("len(\"thisstring\")")
