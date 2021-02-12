@@ -18,10 +18,7 @@ case class Program(functions: List[Function], body: Statement)(position: (Int, I
       val F = symbolTable.lookup(func.name.identifier)
       if (F.isDefined) {
         errors +=
-          DefaultError(
-            "Function " + func.name.identifier + " conflicts with another variable in the current scope.",
-            getPos()
-          )
+          Error("Function " + func.name.identifier + " conflicts with another variable in the current scope.", getPos())
       }
       symbolTable.add(func.name.identifier, func.returnType, func)
     }
@@ -48,7 +45,7 @@ case class Function(returnType: Type, name: Identifier, parameters: Option[Param
 
     // Check that the function returns:
     if (!body.exitable()) {
-      errors += DefaultError("Function " + name.identifier + " may terminate without return", getPos())
+      errors += Error("Function " + name.identifier + " may terminate without return", getPos())
     }
 
     val functionSymbolTable = new SymbolTable(symbolTable, true, returnType)
@@ -90,10 +87,7 @@ case class Parameter(parameterType: Type, identifier: Identifier)(position: (Int
     symbolTable.dictionary.updateWith(identifier.identifier)({
       case Some(x) =>
         errors +=
-          DefaultError(
-            "Function parameter " + identifier.identifier + " conflicts with another parameter in scope.",
-            getPos()
-          )
+          Error("Function parameter " + identifier.identifier + " conflicts with another parameter in scope.", getPos())
         Some(x)
       case None => Some(parameterType, this)
     })
