@@ -20,7 +20,7 @@ trait ASTNode {
   /* Returns the actual type of a node */
   def getType(symbolTable: SymbolTable): Type
 
-  def compile(declaredVars: List[String], declaredSize: Int)(implicit
+  def compile(freeRegs: List[Register], declaredVars: List[String], declaredSize: Int)(implicit
     instructions: mutable.ListBuffer[Instruction],
     varDic: mutable.Map[String, mutable.Stack[Int]]
   ): Unit = ()
