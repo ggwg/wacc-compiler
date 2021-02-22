@@ -5,6 +5,7 @@ import parsley.Parsley.{pos, select}
 import parsley.implicits.{voidImplicitly => _, _}
 
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 
 sealed trait Statement extends ASTNodeVoid {
   def exitable(): Boolean = {
@@ -24,6 +25,10 @@ sealed trait Statement extends ASTNodeVoid {
 case class IdentifierDeclaration(identType: Type, name: Identifier, assignmentRight: AssignmentRight)(
   position: (Int, Int)
 ) extends Statement {
+  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): Unit = {
+    //TODO
+  }
+
   override def toString: String =
     identType.toString + " " + name.toString + " = " + assignmentRight.toString + "\n"
 
@@ -63,6 +68,9 @@ case class IdentifierDeclaration(identType: Type, name: Identifier, assignmentRi
 /* Check Done */
 case class Assignment(assignmentLeft: AssignmentLeft, assignmentRight: AssignmentRight)(position: (Int, Int))
     extends Statement {
+  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): Unit = {
+    //TODO
+  }
   override def toString: String =
     assignmentLeft.toString + " = " + assignmentRight.toString + "\n"
 
@@ -92,6 +100,10 @@ case class Assignment(assignmentLeft: AssignmentLeft, assignmentRight: Assignmen
 
 /* Check done */
 case class BeginEnd(statement: Statement)(position: (Int, Int)) extends Statement {
+  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): Unit = {
+    // TODO
+  }
+
   override def toString: String = "begin\n" + statement.toString + "end\n"
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
@@ -107,6 +119,10 @@ case class BeginEnd(statement: Statement)(position: (Int, Int)) extends Statemen
 
 /* Check done */
 case class Exit(expression: Expression)(position: (Int, Int)) extends Statement {
+  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): Unit = {
+    //TODO
+  }
+
   override def toString: String = "exit " + expression.toString + "\n"
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
@@ -131,6 +147,9 @@ element is not a reference to another pair or another array (i.e. free is not re
 that stores the pair/array itself is also freed.
  * */
 case class Free(expression: Expression)(position: (Int, Int)) extends Statement {
+  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): Unit = {
+    //TODO
+  }
   override def toString: String = "free " + expression.toString + "\n"
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
@@ -149,6 +168,9 @@ case class Free(expression: Expression)(position: (Int, Int)) extends Statement 
  * provided condition is not of the right type? */
 case class If(condition: Expression, trueStatement: Statement, falseStatement: Statement)(position: (Int, Int))
     extends Statement {
+  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): Unit = {
+    //TODO
+  }
   override def toString: String =
     "if " + condition + " then\n" + trueStatement.toString + "else\n" + falseStatement + "fi\n"
 
@@ -175,6 +197,9 @@ case class If(condition: Expression, trueStatement: Statement, falseStatement: S
 
 /* Check done */
 case class Print(expression: Expression)(position: (Int, Int)) extends Statement {
+  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): Unit = {
+    //TODO
+  }
   override def toString: String = "print " + expression.toString + "\n"
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
@@ -186,6 +211,9 @@ case class Print(expression: Expression)(position: (Int, Int)) extends Statement
 
 /* Check done */
 case class Println(expression: Expression)(position: (Int, Int)) extends Statement {
+  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): Unit = {
+    //TODO
+  }
   override def toString: String = "println " + expression.toString + "\n"
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
@@ -205,6 +233,10 @@ type of the target. For example, if the target is a variable of type ‘int’ t
 string into an integer.
  * */
 case class Read(assignmentLeft: AssignmentLeft)(position: (Int, Int)) extends Statement {
+  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): Unit = {
+    //TODO
+  }
+
   override def toString: String = "read " + assignmentLeft.toString + "\n"
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
@@ -224,6 +256,9 @@ case class Read(assignmentLeft: AssignmentLeft)(position: (Int, Int)) extends St
 
 /* Check done */
 case class Return(expression: Expression)(position: (Int, Int)) extends Statement {
+  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): Unit = {
+    //TODO
+  }
   override def toString: String = "return " + expression.toString + "\n"
 
   /* Ensure that Return call is inside a function and not global */
@@ -248,6 +283,9 @@ case class Return(expression: Expression)(position: (Int, Int)) extends Statemen
 
 /* Check done */
 case class SkipStatement()(position: (Int, Int)) extends Statement {
+  override def check(symbolTable: SymbolTable)(implicit errors: ListBuffer[Error]): Unit = {
+    //TODO
+  }
   override def toString: String = "skip\n"
 
   override def getPos(): (Int, Int) = position
@@ -255,6 +293,9 @@ case class SkipStatement()(position: (Int, Int)) extends Statement {
 
 /* Check done */
 case class StatementSequence(statement1: Statement, statement2: Statement)(position: (Int, Int)) extends Statement {
+  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): Unit = {
+    //TODO
+  }
   override def toString: String =
     statement1.toString.stripSuffix("\n") + ";\n" + statement2.toString
 
@@ -268,6 +309,9 @@ case class StatementSequence(statement1: Statement, statement2: Statement)(posit
 
 /* Check done */
 case class While(condition: Expression, statement: Statement)(position: (Int, Int)) extends Statement {
+  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): Unit = {
+    //TODO
+  }
   override def toString: String =
     "while " + condition.toString + " do\n" + statement.toString + "done\n"
 
