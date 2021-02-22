@@ -1,6 +1,7 @@
 package com.wacc
 
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 
 /* Represents the general AST node, and some useful methods to
    query information from it. */
@@ -20,10 +21,7 @@ trait ASTNode {
   /* Returns the actual type of a node */
   def getType(symbolTable: SymbolTable): Type
 
-  def compile(freeRegs: List[Register], declaredVars: List[String], declaredSize: Int)(implicit
-    instructions: mutable.ListBuffer[Instruction],
-    varDic: mutable.Map[String, mutable.Stack[Int]]
-  ): Unit = ()
+  def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): Unit = ()
 }
 
 /* Create a new trait that extends ASTNode and defined default void return */
