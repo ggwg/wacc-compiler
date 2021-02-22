@@ -306,6 +306,14 @@ case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit])(position
     case Some(sign) => sign.toString
   }) + digits.mkString
 
+  def toInt: Int = {
+    var res: Int = digits.mkString.toInt
+    if (sign.getOrElse(IntegerSign('+').sign) == '-') {
+      return -1 * res
+    }
+    res
+  }
+
   override def getPos(): (Int, Int) = position
   override def getType(symbolTable: SymbolTable): Type = IntType()
   override def check(symbolTable: SymbolTable)(implicit errors: ListBuffer[Error]): Unit = {
