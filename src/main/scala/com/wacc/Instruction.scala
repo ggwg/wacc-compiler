@@ -105,6 +105,22 @@ case class Sub(dest: Register, src: Register, op2: Operand2) extends Instruction
   override def toString: String = s"SUB $dest $src $op2"
 }
 
+case class ReverseSub(dest: Register, src: Register, op2: Operand2) extends Instruction {
+  override def toString: String = s"RSB $dest $src $op2"
+}
+
+case class And(dest: Register, src: Register, op2: Operand2) extends Instruction {
+  override def toString: String = s"AND $dest #src $op2"
+}
+
+case class Or(dest: Register, src: Register, op2: Operand2) extends Instruction {
+  override def toString: String = s"ORR $dest #src $op2"
+}
+
+case class Xor(dest: Register, src: Register, op2: Operand2) extends Instruction {
+  override def toString: String = s"EOR $dest #src $op2"
+}
+
 case class Mul(dest: Register, multiplier: Register, src: Register) extends Instruction {
   override def toString: String = s"MUL $dest $multiplier $src"
 }

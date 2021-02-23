@@ -17,6 +17,25 @@ case class UnaryOperatorApplication(operator: UnaryOperator, operand: Expression
     extends Expression {
   override def toString: String = operator.toString + " " + operand.toString
 
+  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
+    /* Evaluate the expression and store it in the first available register */
+    val resultReg = state.getResultRegister
+    val nextState = operand.compile(state)
+
+    /* Apply the unary operation */
+    operator match {
+      case Length() =>
+        instructions += Load(resultReg, RegisterLoad(resultReg))
+      case Negate() =>
+        instructions += ReverseSub(resultReg, resultReg, ImmediateValue(0))
+      case Not() =>
+        instructions += Xor(resultReg, resultReg, ImmediateValue(1))
+      case Chr() | Ord() => _
+    }
+
+    nextState
+  }
+
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
 
     /* Get the operand type */

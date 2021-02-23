@@ -9,6 +9,7 @@ case class AssemblerState(
   val declaredVars: immutable.List[String],
   val declaredSize: Int
 ) {
+  def getResultRegister: Register = freeRegs.head
 
   def nextID: Int = nextLabelID.next
 }
