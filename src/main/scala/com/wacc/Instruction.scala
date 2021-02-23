@@ -5,6 +5,7 @@ sealed trait Operand2
 sealed trait AddressAccess
 sealed trait Condition
 sealed trait Register extends Operand2
+sealed trait ImmediateValue extends Operand2
 
 case object Register0 extends Register {
   override def toString: String = "r0"
@@ -53,8 +54,12 @@ case object RegisterSP extends Register {
   override def toString: String = "sp"
 }
 
-case class ImmediateValue(value: Int) extends Operand2 {
+case class ImmediateNumber(value: Int) extends ImmediateValue {
   override def toString: String = "#" + value
+}
+
+case class ImmediateChar(chr: Char) extends ImmediateValue {
+  override def toString: String = s"#'$chr'"
 }
 
 case class ImmediateLoad(value: Int) extends AddressAccess {

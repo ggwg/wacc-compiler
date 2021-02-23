@@ -134,7 +134,7 @@ case class Exit(expression: Expression)(position: (Int, Int)) extends Statement 
       //   Then pass in result register in load for register statement.
     }
     instructions += BRANCH(Option(LT), "exit")
-    instructions += MOVE(Register0, ImmediateValue(0))
+    instructions += MOVE(Register0, ImmediateNumber(0))
     return state
   }
 

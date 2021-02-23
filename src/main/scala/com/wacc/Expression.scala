@@ -27,9 +27,9 @@ case class UnaryOperatorApplication(operator: UnaryOperator, operand: Expression
       case Length() =>
         instructions += LOAD(resultReg, RegisterLoad(resultReg))
       case Negate() =>
-        instructions += ReverseSUB(resultReg, resultReg, ImmediateValue(0))
+        instructions += ReverseSUB(resultReg, resultReg, ImmediateNumber(0))
       case Not() =>
-        instructions += XOR(resultReg, resultReg, ImmediateValue(1))
+        instructions += XOR(resultReg, resultReg, ImmediateNumber(1))
       case Chr() | Ord() => ()
     }
 
@@ -192,7 +192,7 @@ case class ArrayElement(name: Identifier, expressions: List[Expression])(positio
       var newState = state.copy(freeRegs = state.freeRegs.tail)
 
       /* Make arrayReg to point where the array is stored on the stack */
-      instructions += ADD(arrayReg, RegisterSP, ImmediateValue(state.spOffset - state.getOffset(name.identifier)))
+      instructions += ADD(arrayReg, RegisterSP, ImmediateNumber(state.spOffset - state.getOffset(name.identifier)))
       for (expr <- expressions) {
 
         /* Compute the expression and store it in an available register */
@@ -204,10 +204,10 @@ case class ArrayElement(name: Identifier, expressions: List[Expression])(positio
         /* TODO: Bound check if we want */
 
         /* Move to the specified location in the array */
-        instructions += ADD(arrayReg, arrayReg, ImmediateValue(4))
+        instructions += ADD(arrayReg, arrayReg, ImmediateNumber(4))
 
         /* TODO: Figure out how many bytes the array elements occupy (max 4) */
-        instructions += ADDLSL(arrayReg, arrayReg, indexReg, ImmediateValue(4))
+        instructions += ADDLSL(arrayReg, arrayReg, indexReg, ImmediateNumber(4))
         newState = newState.copy(freeRegs = indexReg :: newState.freeRegs)
       }
       return newState
@@ -329,7 +329,7 @@ case class BooleanLiter(boolean: Boolean)(position: (Int, Int)) extends Expressi
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     /* Move 1 or 0 into the destination register */
     val n = if (boolean) 1 else 0
-    instructions += MOVE(state.getResultRegister, ImmediateValue(n))
+    instructions += MOVE(state.getResultRegister, ImmediateNumber(n))
     state.copy(freeRegs = state.freeRegs.tail)
   }
   override def getPos(): (Int, Int) = position
