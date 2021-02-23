@@ -15,4 +15,12 @@ case class AssemblerState(
   def getOffset(ident: String): Int = varDic.getOrElse(ident, 0)
 
   def nextID: Int = nextLabelID.next
+
+  val initialState: AssemblerState = AssemblerState(
+    spOffset = 0,
+    varDic = Map.empty[String, Int],
+    freeRegs = List.empty[Register],
+    declaredVars = List.empty[String],
+    declaredSize = 0
+  )
 }
