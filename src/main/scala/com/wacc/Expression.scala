@@ -339,6 +339,11 @@ case class BooleanLiter(boolean: Boolean)(position: (Int, Int)) extends Expressi
 /* Represents a character(e.g. 'a')*/
 case class CharacterLiter(char: Char)(position: (Int, Int)) extends Expression {
   override def toString: String = "'" + char + "'"
+
+  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
+    instructions += MOVE(state.getResultRegister, ImmediateChar(char))
+    state.copy(freeRegs = state.freeRegs.tail)
+  }
   override def getPos(): (Int, Int) = position
   override def getType(symbolTable: SymbolTable): Type = CharacterType()
 }
