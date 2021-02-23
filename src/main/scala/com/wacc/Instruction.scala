@@ -6,6 +6,15 @@ sealed trait AddressAccess
 sealed trait Condition
 sealed trait Register extends Operand2
 sealed trait ImmediateValue extends Operand2
+sealed trait Label extends Instruction
+
+case class NumberLabel(value: Int) extends Label {
+  override def toString: String = "L" + value + ":"
+}
+
+case class StringLabel(value: String) extends Label {
+  override def toString: String = value + ":"
+}
 
 case object Register0 extends Register {
   override def toString: String = "r0"
