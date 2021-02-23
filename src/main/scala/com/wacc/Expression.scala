@@ -325,6 +325,13 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
 /* Represents a bool (true or false) */
 case class BooleanLiter(boolean: Boolean)(position: (Int, Int)) extends Expression {
   override def toString: String = boolean.toString
+
+  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
+    /* Move 1 or 0 into the destination register */
+    val n = if (boolean) 1 else 0
+    instructions += MOVE(state.getResultRegister, ImmediateValue(n))
+    state.copy(freeRegs = state.freeRegs.tail)
+  }
   override def getPos(): (Int, Int) = position
   override def getType(symbolTable: SymbolTable): Type = BooleanType()
 }
