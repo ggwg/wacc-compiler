@@ -128,13 +128,13 @@ case class Exit(expression: Expression)(position: (Int, Int)) extends Statement 
     // If expression is just an integer, then there is no need to use extra registers to calculate expression.
     expression match {
       // Note for expressions: Immediate value must be an integer 0-255
-      case i @ IntegerLiter(sign, digits) => instructions += Load(Register0, ImmediateLoad(i.toInt % 255))
+      case i @ IntegerLiter(sign, digits) => instructions += LOAD(Register0, ImmediateLoad(i.toInt % 255))
       case _                              =>
       // TODO: Generate code for evaluating expressions and store result in register r0.
       //   Then pass in result register in load for register statement.
     }
-    instructions += Branch(Option(Less), "exit")
-    instructions += Move(Register0, ImmediateValue(0))
+    instructions += BRANCH(Option(LT), "exit")
+    instructions += MOVE(Register0, ImmediateValue(0))
     return state
   }
 

@@ -25,12 +25,12 @@ case class UnaryOperatorApplication(operator: UnaryOperator, operand: Expression
     /* Apply the unary operation */
     operator match {
       case Length() =>
-        instructions += Load(resultReg, RegisterLoad(resultReg))
+        instructions += LOAD(resultReg, RegisterLoad(resultReg))
       case Negate() =>
-        instructions += ReverseSub(resultReg, resultReg, ImmediateValue(0))
+        instructions += ReverseSUB(resultReg, resultReg, ImmediateValue(0))
       case Not() =>
-        instructions += Xor(resultReg, resultReg, ImmediateValue(1))
-      case Chr() | Ord() => _
+        instructions += XOR(resultReg, resultReg, ImmediateValue(1))
+      case Chr() | Ord() => ()
     }
 
     nextState
@@ -178,6 +178,43 @@ case class ArrayElement(name: Identifier, expressions: List[Expression])(positio
     extends Expression
     with AssignmentLeft {
   override def toString: String = name.toString + expressions.flatMap("[" + _.toString + "]")
+
+  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
+    val arrayReg = state.getResultRegister
+    val newState = compileReference(state)(instructions)
+    instructions += LOAD(arrayReg, RegisterLoad(arrayReg))
+    state
+  }
+
+  def compileReference(state: AssemblerState)(instructions: ListBuffer[Instruction]): AssemblerState = {
+    if (state.freeRegs.length > 1) {
+      val arrayReg = state.getResultRegister
+      var newState = state.copy(freeRegs = state.freeRegs.tail)
+
+      /* Make arrayReg to point where the array is stored on the stack */
+      instructions += ADD(arrayReg, RegisterSP, ImmediateValue(state.spOffset - state.getOffset(name.identifier)))
+      for (expr <- expressions) {
+
+        /* Compute the expression and store it in an available register */
+        val indexReg = newState.getResultRegister
+        newState = expr.compile(newState)(instructions)
+
+        /* Move to the array we were pointing at */
+        instructions += LOAD(arrayReg, RegisterLoad(arrayReg))
+        /* TODO: Bound check if we want */
+
+        /* Move to the specified location in the array */
+        instructions += ADD(arrayReg, arrayReg, ImmediateValue(4))
+
+        /* TODO: Figure out how many bytes the array elements occupy (max 4) */
+        instructions += ADDLSL(arrayReg, arrayReg, indexReg, ImmediateValue(4))
+        newState = newState.copy(freeRegs = indexReg :: newState.freeRegs)
+      }
+      return newState
+    }
+    /* TODO: Running out of register case */
+    state
+  }
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     if (expressions.isEmpty) {

@@ -46,7 +46,11 @@ case object Register10 extends Register {
 }
 
 case object Register11 extends Register {
-  override def toString: String = "r10"
+  override def toString: String = "r11"
+}
+
+case object RegisterSP extends Register {
+  override def toString: String = "sp"
 }
 
 case class ImmediateValue(value: Int) extends Operand2 {
@@ -65,27 +69,33 @@ case class RegisterOffsetLoad(reg: Register, offset: ImmediateValue) extends Add
   override def toString: String = s"[$reg, $offset]"
 }
 
-case object Equal extends Condition {
+/* Equal condition */
+case object EQ extends Condition {
   override def toString: String = "EQ"
 }
 
-case object NotEqual extends Condition {
+/* Not equal condition */
+case object NE extends Condition {
   override def toString: String = "NE"
 }
 
-case object LessOrEqual extends Condition {
+/* Less or equal condition */
+case object LE extends Condition {
   override def toString: String = "LE"
 }
 
-case object GreaterOrEqual extends Condition {
+/* Greater or equal condition */
+case object GE extends Condition {
   override def toString: String = "GE"
 }
 
-case object Less extends Condition {
+/* Less than condition */
+case object LT extends Condition {
   override def toString: String = "LT"
 }
 
-case object Greater extends Condition {
+/* Greater than condition */
+case object GT extends Condition {
   override def toString: String = "GT"
 }
 
@@ -97,50 +107,54 @@ case class PopPC() extends Instruction {
   override def toString: String = "POP {PC}"
 }
 
-case class Add(dest: Register, src: Register, op2: Operand2) extends Instruction {
-  override def toString: String = s"ADD $dest $src $op2"
+case class ADD(dest: Register, src: Register, op2: Operand2) extends Instruction {
+  override def toString: String = s"ADD $dest, $src, $op2"
 }
 
-case class Sub(dest: Register, src: Register, op2: Operand2) extends Instruction {
-  override def toString: String = s"SUB $dest $src $op2"
+case class ADDLSL(dest: Register, src: Register, op2: Operand2, shift: ImmediateValue) extends Instruction {
+  override def toString: String = s"ADD $dest, $src, $op2, LSL $shift"
 }
 
-case class ReverseSub(dest: Register, src: Register, op2: Operand2) extends Instruction {
-  override def toString: String = s"RSB $dest $src $op2"
+case class SUB(dest: Register, src: Register, op2: Operand2) extends Instruction {
+  override def toString: String = s"SUB $dest, $src, $op2"
 }
 
-case class And(dest: Register, src: Register, op2: Operand2) extends Instruction {
-  override def toString: String = s"AND $dest #src $op2"
+case class ReverseSUB(dest: Register, src: Register, op2: Operand2) extends Instruction {
+  override def toString: String = s"RSB $dest, $src, $op2"
 }
 
-case class Or(dest: Register, src: Register, op2: Operand2) extends Instruction {
-  override def toString: String = s"ORR $dest #src $op2"
+case class AND(dest: Register, src: Register, op2: Operand2) extends Instruction {
+  override def toString: String = s"AND $dest, $src, $op2"
 }
 
-case class Xor(dest: Register, src: Register, op2: Operand2) extends Instruction {
-  override def toString: String = s"EOR $dest #src $op2"
+case class OR(dest: Register, src: Register, op2: Operand2) extends Instruction {
+  override def toString: String = s"ORR $dest, $src, $op2"
 }
 
-case class Mul(dest: Register, multiplier: Register, src: Register) extends Instruction {
-  override def toString: String = s"MUL $dest $multiplier $src"
+case class XOR(dest: Register, src: Register, op2: Operand2) extends Instruction {
+  override def toString: String = s"EOR $dest, $src, $op2"
 }
 
-case class Load(dest: Register, src: AddressAccess) extends Instruction {
-  override def toString: String = s"LDR $dest $src"
+case class MUL(dest: Register, multiplier: Register, src: Register) extends Instruction {
+  override def toString: String = s"MUL $dest, $multiplier, $src"
 }
 
-case class Store(src: Register, dest: AddressAccess) extends Instruction {
-  override def toString: String = s"STR $src $dest"
+case class LOAD(dest: Register, src: AddressAccess) extends Instruction {
+  override def toString: String = s"LDR $dest, $src"
 }
 
-case class Branch(cond: Option[Condition], label: String) extends Instruction {
+case class STORE(src: Register, dest: AddressAccess) extends Instruction {
+  override def toString: String = s"STR $src, $dest"
+}
+
+case class BRANCH(cond: Option[Condition], label: String) extends Instruction {
   override def toString: String = s"B${cond.map(_.toString).getOrElse("")} $label"
 }
 
-case class Compare(src: Register, op2: Operand2) extends Instruction {
-  override def toString: String = s"CMP $src $op2"
+case class COMPARE(src: Register, op2: Operand2) extends Instruction {
+  override def toString: String = s"CMP $src, $op2"
 }
 
-case class Move(dest: Register, op2: Operand2) extends Instruction {
-  override def toString: String = s"MOV $dest $op2"
+case class MOVE(dest: Register, op2: Operand2) extends Instruction {
+  override def toString: String = s"MOV $dest, $op2"
 }
