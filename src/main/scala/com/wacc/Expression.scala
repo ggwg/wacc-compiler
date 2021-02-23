@@ -177,7 +177,7 @@ case class ArgumentList(expressions: List[Expression]) extends ASTNodeVoid {
 case class ArrayElement(name: Identifier, expressions: List[Expression])(position: (Int, Int))
     extends Expression
     with AssignmentLeft {
-  override def toString: String = name.toString + expressions.flatMap("[" + _.toString + "]")
+  override def toString: String = name.toString + expressions.map("[" + _.toString + "]").mkString
 
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     val arrayReg = state.getResultRegister
@@ -207,7 +207,7 @@ case class ArrayElement(name: Identifier, expressions: List[Expression])(positio
         instructions += ADD(arrayReg, arrayReg, ImmediateNumber(4))
 
         /* TODO: Figure out how many bytes the array elements occupy (max 4) */
-        instructions += ADDLSL(arrayReg, arrayReg, indexReg, ImmediateNumber(4))
+        instructions += ADDLSL(arrayReg, arrayReg, indexReg, ImmediateNumber(2))
         newState = newState.copy(freeRegs = indexReg :: newState.freeRegs)
       }
       return newState
@@ -428,6 +428,11 @@ case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit])(position
 /* Represents a string (e.g. "Hello, World!") */
 case class StringLiter(string: String)(position: (Int, Int)) extends Expression {
   override def toString: String = "\"" + string + "\""
+
+  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
+    /* TODO: Possible preprocess these into a  header of messages */
+    state
+  }
   override def getPos(): (Int, Int) = position
   override def getType(symbolTable: SymbolTable): Type = StringType()
 }
@@ -438,6 +443,32 @@ case class ArrayLiter(expressions: List[Expression])(position: (Int, Int)) exten
     .map(_.toString)
     .reduceOption((left, right) => left + ", " + right)
     .getOrElse("") + "]"
+
+  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
+    /* TODO: Find expression sizes (max 4 bytes) */
+    val size = 4
+
+    /* Allocate memory for the array */
+    instructions += LOAD(Register0, ImmediateLoad(4 + size * expressions.length))
+    instructions += BRANCHLINK("malloc")
+
+    val arrayReg = Register0
+    val valueReg = state.getResultRegister
+
+    /* Initialize the array size */
+    instructions += MOVE(valueReg, ImmediateNumber(expressions.length))
+    instructions += STORE(valueReg, RegisterLoad(arrayReg))
+
+    var index = 0;
+    var newState = state
+    for (index <- expressions.indices) {
+      newState = expressions(index).compile(newState)
+      instructions += STORE(valueReg, RegisterOffsetLoad(arrayReg, ImmediateNumber(4 + index * size)))
+      newState = newState.copy(freeRegs = valueReg :: newState.freeRegs)
+    }
+    instructions += MOVE(valueReg, arrayReg)
+    newState.copy(freeRegs = newState.freeRegs.tail)
+  }
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     if (expressions.nonEmpty) {

@@ -156,6 +156,10 @@ case class BRANCH(cond: Option[Condition], label: String) extends Instruction {
   override def toString: String = s"B${cond.map(_.toString).getOrElse("")} $label"
 }
 
+case class BRANCHLINK(label: String) extends Instruction {
+  override def toString: String = "BL " + label
+}
+
 case class COMPARE(src: Register, op2: Operand2) extends Instruction {
   override def toString: String = s"CMP $src, $op2"
 }
