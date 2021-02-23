@@ -21,7 +21,7 @@ trait ASTNode {
   /* Returns the actual type of a node */
   def getType(symbolTable: SymbolTable): Type
 
-  def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): Unit = ()
+  def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = null
 }
 
 /* Create a new trait that extends ASTNode and defined default void return */
