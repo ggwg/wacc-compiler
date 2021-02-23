@@ -460,21 +460,16 @@ case class ArrayLiter(expressions: List[Expression])(position: (Int, Int)) exten
     instructions += MOVE(valueReg, ImmediateNumber(expressions.length))
     instructions += STORE(valueReg, RegisterLoad(arrayReg))
 
-    if (state.freeRegs.length > 1) {
+    /* Free up r0 by moving it in the result register */
+    instructions += MOVE(valueReg, arrayReg)
+    arrayReg = valueReg
+    valueReg = state.freeRegs(1)
 
-      /* Free up r0 by moving it in the result register */
-      instructions += MOVE(valueReg, arrayReg)
-      arrayReg = valueReg
-      valueReg = state.freeRegs(1)
-
-      /* For each expression, add it to the corresponding place in the array */
-      for (index <- expressions.indices) {
-        newState = expressions(index).compile(newState)
-        instructions += STORE(valueReg, RegisterOffsetLoad(arrayReg, ImmediateNumber(4 + index * size)))
-        newState = newState.copy(freeRegs = valueReg :: newState.freeRegs)
-      }
-    } else {
-      /* TODO: Handle case when running out of registers */
+    /* For each expression, add it to the corresponding place in the array */
+    for (index <- expressions.indices) {
+      newState = expressions(index).compile(newState)
+      instructions += STORE(valueReg, RegisterOffsetLoad(arrayReg, ImmediateNumber(4 + index * size)))
+      newState = newState.copy(freeRegs = valueReg :: newState.freeRegs)
     }
     newState.copy(freeRegs = newState.freeRegs.tail)
   }
@@ -524,6 +519,34 @@ case class PairLiter()(position: (Int, Int)) extends Expression {
 case class NewPair(first: Expression, second: Expression)(position: (Int, Int)) extends AssignmentRight {
   override def toString: String = "newpair(" + first.toString + ", " + second.toString + ")"
 
+  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
+    /* Allocate memory for the 2 pointers inside the pair */
+    val pairReg: Register = state.getResultRegister
+    val valueReg: Register = state.freeRegs(1)
+    instructions += LOAD(Register0, ImmediateLoad(8))
+    instructions += BRANCHLINK("malloc")
+    instructions += MOVE(pairReg, Register0)
+
+    /* Evaluate the two expressions */
+    var newState = state
+    for (offset <- List(0, 4)) {
+
+      /* Evaluate the expression */
+      val expr = if (offset == 0) first else second
+      newState = expr.compile(state.copy(freeRegs = state.freeRegs.tail))
+
+      /* Allocate memory for the first pointer
+         TODO: Find out the expression's size */
+      instructions += LOAD(Register0, ImmediateLoad(4))
+      instructions += BRANCHLINK("malloc")
+
+      /* Link the data together */
+      instructions += STORE(valueReg, RegisterLoad(Register0))
+      instructions += STORE(Register0, RegisterOffsetLoad(pairReg, ImmediateNumber(offset)))
+      newState = newState.copy(freeRegs = valueReg :: newState.freeRegs)
+    }
+    newState
+  }
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     /* Check correctness of the pair elements */
     first.check(symbolTable)
