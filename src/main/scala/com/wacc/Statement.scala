@@ -341,12 +341,20 @@ case class StatementSequence(statement1: Statement, statement2: Statement)(posit
   override def getPos(): (Int, Int) = position
 }
 
-/* ✅ Check done - ⚠️ Compile Pending */
+/* ✅ Check done - ✅ Compile done */
 case class While(condition: Expression, statement: Statement)(position: (Int, Int)) extends Statement {
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
-    // TODO
-    return state
+    val conditionID = state.nextID
+    val bodyID = state.nextID
+    instructions += BRANCH(None, "L" + conditionID)
+    instructions += NumberLabel(bodyID)
+    var newState = statement.compile(state)
+    instructions += NumberLabel(conditionID)
+    newState = condition.compile(newState)
+    instructions += BRANCH(Option(EQ), "L" + bodyID)
+    newState
   }
+
   override def toString: String =
     "while " + condition.toString + " do\n" + statement.toString + "done\n"
 
