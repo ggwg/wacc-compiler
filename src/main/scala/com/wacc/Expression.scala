@@ -388,11 +388,16 @@ case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit])(position
   }) + digits.mkString
 
   def toInt: Int = {
-    var res: Int = digits.mkString.toInt
+    val res: Int = digits.mkString.toInt
     if (sign.getOrElse(IntegerSign('+').sign) == '-') {
       return -1 * res
     }
     res
+  }
+
+  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
+    instructions += LOAD(state.getResultRegister, ImmediateLoad(toInt))
+    state.copy(freeRegs = state.freeRegs.tail)
   }
 
   override def getPos(): (Int, Int) = position
