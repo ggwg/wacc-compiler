@@ -21,7 +21,7 @@ sealed trait Statement extends ASTNodeVoid {
   }
 }
 
-/* Check done */
+/* ✅ Check done - ⚠️ Compile Pending */
 case class IdentifierDeclaration(identType: Type, name: Identifier, assignmentRight: AssignmentRight)(
   position: (Int, Int)
 ) extends Statement {
@@ -66,7 +66,7 @@ case class IdentifierDeclaration(identType: Type, name: Identifier, assignmentRi
   override def getPos(): (Int, Int) = position
 }
 
-/* Check Done */
+/* ✅ Check done - ⚠️ Compile Pending */
 case class Assignment(assignmentLeft: AssignmentLeft, assignmentRight: AssignmentRight)(position: (Int, Int))
     extends Statement {
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
@@ -100,11 +100,13 @@ case class Assignment(assignmentLeft: AssignmentLeft, assignmentRight: Assignmen
   override def getPos(): (Int, Int) = position
 }
 
-/* Check done */
+/* ✅ Check done - ✅ Compile done */
 case class BeginEnd(statement: Statement)(position: (Int, Int)) extends Statement {
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
-    // TODO
-    return state
+    instructions += PushLR
+    val nextState = statement.compile(state)
+    instructions += PopPC
+    nextState
   }
 
   override def toString: String = "begin\n" + statement.toString + "end\n"
@@ -120,7 +122,7 @@ case class BeginEnd(statement: Statement)(position: (Int, Int)) extends Statemen
   override def getPos(): (Int, Int) = position
 }
 
-/* Check done */
+/* ✅ Check done - ⚠️ Compile Pending */
 case class Exit(expression: Expression)(position: (Int, Int)) extends Statement {
 
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
@@ -131,7 +133,7 @@ case class Exit(expression: Expression)(position: (Int, Int)) extends Statement 
       case i @ IntegerLiter(sign, digits) => instructions += LOAD(Register0, ImmediateLoad(i.toInt % 255))
       case _                              =>
       // TODO: Generate code for evaluating expressions and store result in register r0.
-      //   Then pass in result register in load for register statement.
+      //       Then pass in result register in load for register statement.
     }
     instructions += BRANCH(Option(LT), "exit")
     instructions += MOVE(Register0, ImmediateNumber(0))
@@ -151,20 +153,17 @@ case class Exit(expression: Expression)(position: (Int, Int)) extends Statement 
   override def getPos(): (Int, Int) = position
 }
 
-/*
- * Memory Free Statements:
-A memory free statement ‘free’ is used to free the heap memory allo-
-cated for a pair or array and its immediate content. The statement is given an expression that must be
-of type ‘pair(T1, T2)’ or ‘T[]’ (for some T, T1, T2). The expression must evaluate to a valid reference
-to a pair or array, otherwise a segmentation fault will occur at runtime.
-If the reference is valid, then the memory for each element of the pair/array is freed, so long as the
-element is not a reference to another pair or another array (i.e. free is not recursive). Then the memory
-that stores the pair/array itself is also freed.
- * */
+/* Memory Free Statements: A memory free statement ‘free’ is used to free the heap memory allocated for a pair or array
+   and its immediate content. The statement is given an expression that must be of type ‘pair(T1, T2)’ or ‘T[]’
+   (for some T, T1, T2). The expression must evaluate to a valid reference to a pair or array, otherwise a segmentation
+   fault will occur at runtime. If the reference is valid, then the memory for each element of the pair/array is freed,
+   so long as the element is not a reference to another pair or another array (i.e. free is not recursive). Then the
+   memory that stores the pair/array itself is also freed.
+   ✅ Check done - ⚠️ Compile Pending */
 case class Free(expression: Expression)(position: (Int, Int)) extends Statement {
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     // TODO
-    return state
+    state
   }
   override def toString: String = "free " + expression.toString + "\n"
 
@@ -180,13 +179,24 @@ case class Free(expression: Expression)(position: (Int, Int)) extends Statement 
   override def getPos(): (Int, Int) = position
 }
 
-/* Check done - Do we have to do the check for the true and false branches even if the
- * provided condition is not of the right type? */
+/* ✅ Check done - ✅️ Compile Done */
 case class If(condition: Expression, trueStatement: Statement, falseStatement: Statement)(position: (Int, Int))
     extends Statement {
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
-    // TODO
-    return state
+    var newState = condition.compile(state)
+    val reg = newState.freeRegs.head
+    val falseID = newState.nextID
+    val continueID = newState.nextID
+
+    instructions += COMPARE(reg, ImmediateNumber(0))
+    instructions += BRANCH(Option(EQ), "L" + falseID)
+    newState = trueStatement.compile(newState)
+    instructions += BRANCH(Option(EQ), "L" + continueID)
+
+    instructions += NumberLabel(falseID)
+    newState = falseStatement.compile(newState)
+    instructions += NumberLabel(continueID)
+    newState
   }
   override def toString: String =
     "if " + condition + " then\n" + trueStatement.toString + "else\n" + falseStatement + "fi\n"
@@ -212,7 +222,7 @@ case class If(condition: Expression, trueStatement: Statement, falseStatement: S
   override def getPos(): (Int, Int) = position
 }
 
-/* Check done */
+/* ✅ Check done - ⚠️ Compile Pending */
 case class Print(expression: Expression)(position: (Int, Int)) extends Statement {
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     // TODO
@@ -227,7 +237,7 @@ case class Print(expression: Expression)(position: (Int, Int)) extends Statement
   override def getPos(): (Int, Int) = position
 }
 
-/* Check done */
+/* ✅ Check done - ⚠️ Compile Pending */
 case class Println(expression: Expression)(position: (Int, Int)) extends Statement {
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     // TODO
@@ -242,19 +252,17 @@ case class Println(expression: Expression)(position: (Int, Int)) extends Stateme
   override def getPos(): (Int, Int) = position
 }
 
-/*
-A read statement ‘read’ is a special assignment statement that takes its value
-from the standard input and writes it to its argument. Just like a general assignment statement, a
-read statement can target a program variable, an array element or a pair element. However, the read
-statement can only handle character or integer input.
- * The read statement determines how it will interpret the value from the standard input based on the
-type of the target. For example, if the target is a variable of type ‘int’ then it will convert the input
-string into an integer.
- * */
+/* A read statement ‘read’ is a special assignment statement that takes its value from the standard input and writes it
+   to its argument. Just like a general assignment statement, a read statement can target a program variable, an array
+   element or a pair element. However, the read statement can only handle character or integer input. The read statement
+   determines how it will interpret the value from the standard input based on the type of the target. For example, if
+   the target is a variable of type ‘int’ then it will convert the input string into an integer.
+   ✅ Check done - ⚠️ Compile Pending
+ */
 case class Read(assignmentLeft: AssignmentLeft)(position: (Int, Int)) extends Statement {
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     // TODO
-    return state
+    state
   }
 
   override def toString: String = "read " + assignmentLeft.toString + "\n"
@@ -274,11 +282,11 @@ case class Read(assignmentLeft: AssignmentLeft)(position: (Int, Int)) extends St
   override def getPos(): (Int, Int) = position
 }
 
-/* Check done */
+/* ✅ Check done - ⚠️ Compile Pending */
 case class Return(expression: Expression)(position: (Int, Int)) extends Statement {
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     // TODO
-    return state
+    state
   }
   override def toString: String = "return " + expression.toString + "\n"
 
@@ -302,17 +310,21 @@ case class Return(expression: Expression)(position: (Int, Int)) extends Statemen
   override def getPos(): (Int, Int) = position
 }
 
-/* Check done */
+/* ✅ Check done - ✅ Compile done */
 case class SkipStatement()(position: (Int, Int)) extends Statement {
-  override def check(symbolTable: SymbolTable)(implicit errors: ListBuffer[Error]): Unit = {
-    //TODO
+
+  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
+    val reg = state.freeRegs.head
+    instructions += MOVE(reg, ImmediateNumber(0))
+    state.copy(freeRegs = state.freeRegs.tail)
   }
+
   override def toString: String = "skip\n"
 
   override def getPos(): (Int, Int) = position
 }
 
-/* Check done */
+/* ✅ Check done - ✅ Compile done */
 case class StatementSequence(statement1: Statement, statement2: Statement)(position: (Int, Int)) extends Statement {
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     val nextState = statement1.compile(state)
@@ -329,7 +341,7 @@ case class StatementSequence(statement1: Statement, statement2: Statement)(posit
   override def getPos(): (Int, Int) = position
 }
 
-/* Check done */
+/* ✅ Check done - ⚠️ Compile Pending */
 case class While(condition: Expression, statement: Statement)(position: (Int, Int)) extends Statement {
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     // TODO
