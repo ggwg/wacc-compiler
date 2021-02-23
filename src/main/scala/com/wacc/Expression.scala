@@ -2,7 +2,7 @@ package com.wacc
 
 import com.wacc.operator._
 import parsley.Parsley
-import parsley.Parsley.{get, pos}
+import parsley.Parsley.pos
 import parsley.implicits.{voidImplicitly => _, _}
 
 import scala.collection.mutable
@@ -10,7 +10,9 @@ import scala.collection.mutable.ListBuffer
 
 sealed trait Expression extends AssignmentRight {}
 sealed trait AssignmentRight extends ASTNodeVoid {}
-sealed trait AssignmentLeft extends ASTNodeVoid {}
+sealed trait AssignmentLeft extends ASTNodeVoid {
+  def compileReference(state: AssemblerState)(instructions: ListBuffer[Instruction]): AssemblerState
+}
 
 /* Class representing an unary operation (e.g. chr 101) */
 case class UnaryOperatorApplication(operator: UnaryOperator, operand: Expression)(position: (Int, Int))
@@ -186,7 +188,7 @@ case class ArrayElement(name: Identifier, expressions: List[Expression])(positio
     newState
   }
 
-  def compileReference(state: AssemblerState)(instructions: ListBuffer[Instruction]): AssemblerState = {
+  override def compileReference(state: AssemblerState)(instructions: ListBuffer[Instruction]): AssemblerState = {
     if (state.freeRegs.length > 1) {
       val arrayReg = state.getResultRegister
       var newState = state.copy(freeRegs = state.freeRegs.tail)
@@ -243,7 +245,7 @@ case class ArrayElement(name: Identifier, expressions: List[Expression])(positio
     var identType = name.getType(symbolTable)
 
     /* Strip the [] until we find the array's type (e.g. int[][][] a, so a[1] has type int[][] */
-    for (i <- 1 to expressions.length)
+    for (_ <- 1 to expressions.length)
       identType match {
         case ArrayType(arrayType) => identType = arrayType
         case _                    => return VoidType()
@@ -359,7 +361,7 @@ case class Identifier(identifier: String)(position: (Int, Int)) extends Expressi
     newState
   }
 
-  def compileReference(state: AssemblerState)(instructions: ListBuffer[Instruction]): AssemblerState = {
+  override def compileReference(state: AssemblerState)(instructions: ListBuffer[Instruction]): AssemblerState = {
     val offset: Int = state.spOffset - state.getOffset(identifier)
     instructions += ADD(state.getResultRegister, RegisterSP, ImmediateNumber(offset))
     state.copy(freeRegs = state.freeRegs.tail)
@@ -460,21 +462,16 @@ case class ArrayLiter(expressions: List[Expression])(position: (Int, Int)) exten
     instructions += MOVE(valueReg, ImmediateNumber(expressions.length))
     instructions += STORE(valueReg, RegisterLoad(arrayReg))
 
-    if (state.freeRegs.length > 1) {
+    /* Free up r0 by moving it in the result register */
+    instructions += MOVE(valueReg, arrayReg)
+    arrayReg = valueReg
+    valueReg = state.freeRegs(1)
 
-      /* Free up r0 by moving it in the result register */
-      instructions += MOVE(valueReg, arrayReg)
-      arrayReg = valueReg
-      valueReg = state.freeRegs(1)
-
-      /* For each expression, add it to the corresponding place in the array */
-      for (index <- expressions.indices) {
-        newState = expressions(index).compile(newState)
-        instructions += STORE(valueReg, RegisterOffsetLoad(arrayReg, ImmediateNumber(4 + index * size)))
-        newState = newState.copy(freeRegs = valueReg :: newState.freeRegs)
-      }
-    } else {
-      /* TODO: Handle case when running out of registers */
+    /* For each expression, add it to the corresponding place in the array */
+    for (index <- expressions.indices) {
+      newState = expressions(index).compile(newState)
+      instructions += STORE(valueReg, RegisterOffsetLoad(arrayReg, ImmediateNumber(4 + index * size)))
+      newState = newState.copy(freeRegs = valueReg :: newState.freeRegs)
     }
     newState.copy(freeRegs = newState.freeRegs.tail)
   }
@@ -524,6 +521,34 @@ case class PairLiter()(position: (Int, Int)) extends Expression {
 case class NewPair(first: Expression, second: Expression)(position: (Int, Int)) extends AssignmentRight {
   override def toString: String = "newpair(" + first.toString + ", " + second.toString + ")"
 
+  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
+    /* Allocate memory for the 2 pointers inside the pair */
+    val pairReg: Register = state.getResultRegister
+    val valueReg: Register = state.freeRegs(1)
+    instructions += LOAD(Register0, ImmediateLoad(8))
+    instructions += BRANCHLINK("malloc")
+    instructions += MOVE(pairReg, Register0)
+
+    /* Evaluate the two expressions */
+    var newState = state
+    for (offset <- List(0, 4)) {
+
+      /* Evaluate the expression */
+      val expr = if (offset == 0) first else second
+      newState = expr.compile(state.copy(freeRegs = state.freeRegs.tail))
+
+      /* Allocate memory for the first pointer
+         TODO: Find out the expression's size */
+      instructions += LOAD(Register0, ImmediateLoad(4))
+      instructions += BRANCHLINK("malloc")
+
+      /* Link the data together */
+      instructions += STORE(valueReg, RegisterLoad(Register0))
+      instructions += STORE(Register0, RegisterOffsetLoad(pairReg, ImmediateNumber(offset)))
+      newState = newState.copy(freeRegs = valueReg :: newState.freeRegs)
+    }
+    newState
+  }
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     /* Check correctness of the pair elements */
     first.check(symbolTable)
@@ -567,6 +592,24 @@ case class PairElement(expression: Expression, isFirst: Boolean)(position: (Int,
     extends AssignmentRight
     with AssignmentLeft {
   override def toString: String = (if (isFirst) "fst " else "snd ") + expression.toString
+
+  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
+    val resultReg = state.getResultRegister
+    val newState = compileReference(state)(instructions)
+    instructions += LOAD(resultReg, RegisterLoad(resultReg))
+    newState
+  }
+
+  override def compileReference(state: AssemblerState)(instructions: ListBuffer[Instruction]): AssemblerState = {
+    /* Evaluate the expression */
+    val resultReg = state.getResultRegister
+    val newState = expression.compile(state)(instructions)
+    val offset = if (isFirst) 0 else 4
+
+    /* Access the first or second pointer */
+    instructions += LOAD(resultReg, RegisterOffsetLoad(resultReg, ImmediateNumber(offset)))
+    newState
+  }
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
 
