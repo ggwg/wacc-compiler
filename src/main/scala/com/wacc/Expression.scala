@@ -511,6 +511,11 @@ case class ArrayLiter(expressions: List[Expression])(position: (Int, Int)) exten
 /* Represents the null literal */
 case class PairLiter()(position: (Int, Int)) extends Expression {
   override def toString: String = "null"
+
+  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
+    instructions += LOAD(state.getResultRegister, ImmediateLoad(0))
+    state.copy(freeRegs = state.freeRegs.tail)
+  }
   override def getPos(): (Int, Int) = position
   override def getType(symbolTable: SymbolTable): Type = NullType()
 }
