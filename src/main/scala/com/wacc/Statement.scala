@@ -315,8 +315,8 @@ case class SkipStatement()(position: (Int, Int)) extends Statement {
 /* Check done */
 case class StatementSequence(statement1: Statement, statement2: Statement)(position: (Int, Int)) extends Statement {
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
-    // TODO
-    return state
+    val nextState = statement1.compile(state)
+    statement2.compile(nextState)
   }
   override def toString: String =
     statement1.toString.stripSuffix("\n") + ";\n" + statement2.toString
