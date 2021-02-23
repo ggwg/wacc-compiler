@@ -183,7 +183,7 @@ case class ArrayElement(name: Identifier, expressions: List[Expression])(positio
     val arrayReg = state.getResultRegister
     val newState = compileReference(state)(instructions)
     instructions += LOAD(arrayReg, RegisterLoad(arrayReg))
-    state
+    newState
   }
 
   def compileReference(state: AssemblerState)(instructions: ListBuffer[Instruction]): AssemblerState = {
@@ -351,6 +351,19 @@ case class CharacterLiter(char: Char)(position: (Int, Int)) extends Expression {
 /* Represents an identifier(e.g. int myIdentifier) */
 case class Identifier(identifier: String)(position: (Int, Int)) extends Expression with AssignmentLeft {
   override def toString: String = identifier
+
+  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
+    val resultReg = state.getResultRegister
+    val newState = compileReference(state)(instructions)
+    instructions += LOAD(resultReg, RegisterLoad(resultReg))
+    newState
+  }
+
+  def compileReference(state: AssemblerState)(instructions: ListBuffer[Instruction]): AssemblerState = {
+    val offset: Int = state.spOffset - state.getOffset(identifier)
+    instructions += ADD(state.getResultRegister, RegisterSP, ImmediateNumber(offset))
+    state.copy(freeRegs = state.freeRegs.tail)
+  }
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
 
