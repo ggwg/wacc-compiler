@@ -167,3 +167,8 @@ case class COMPARE(src: Register, op2: Operand2) extends Instruction {
 case class MOVE(dest: Register, op2: Operand2) extends Instruction {
   override def toString: String = s"MOV $dest, $op2"
 }
+
+object Register {
+  val usableRegisters: List[Register] =
+    List(Register4, Register5, Register6, Register7, Register8, Register10, Register11)
+}
