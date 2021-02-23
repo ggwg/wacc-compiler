@@ -591,6 +591,24 @@ case class PairElement(expression: Expression, isFirst: Boolean)(position: (Int,
     with AssignmentLeft {
   override def toString: String = (if (isFirst) "fst " else "snd ") + expression.toString
 
+  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
+    val resultReg = state.getResultRegister
+    val newState = compileReference(state)(instructions)
+    instructions += LOAD(resultReg, RegisterLoad(resultReg))
+    state
+  }
+
+  def compileReference(state: AssemblerState)(instructions: ListBuffer[Instruction]): AssemblerState = {
+    /* Evaluate the expression */
+    val resultReg = state.getResultRegister
+    val newState = expression.compile(state)(instructions)
+    val offset = if (isFirst) 0 else 4
+
+    /* Access the first or second pointer */
+    instructions += LOAD(resultReg, RegisterOffsetLoad(resultReg, ImmediateNumber(offset)))
+    newState
+  }
+
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
 
     /* The expression must be a pair */
