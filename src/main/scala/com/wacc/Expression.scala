@@ -2,7 +2,7 @@ package com.wacc
 
 import com.wacc.operator._
 import parsley.Parsley
-import parsley.Parsley.{get, pos}
+import parsley.Parsley.pos
 import parsley.implicits.{voidImplicitly => _, _}
 
 import scala.collection.mutable
@@ -10,7 +10,9 @@ import scala.collection.mutable.ListBuffer
 
 sealed trait Expression extends AssignmentRight {}
 sealed trait AssignmentRight extends ASTNodeVoid {}
-sealed trait AssignmentLeft extends ASTNodeVoid {}
+sealed trait AssignmentLeft extends ASTNodeVoid {
+  def compileReference(state: AssemblerState)(instructions: ListBuffer[Instruction]): AssemblerState
+}
 
 /* Class representing an unary operation (e.g. chr 101) */
 case class UnaryOperatorApplication(operator: UnaryOperator, operand: Expression)(position: (Int, Int))
@@ -186,7 +188,7 @@ case class ArrayElement(name: Identifier, expressions: List[Expression])(positio
     newState
   }
 
-  def compileReference(state: AssemblerState)(instructions: ListBuffer[Instruction]): AssemblerState = {
+  override def compileReference(state: AssemblerState)(instructions: ListBuffer[Instruction]): AssemblerState = {
     if (state.freeRegs.length > 1) {
       val arrayReg = state.getResultRegister
       var newState = state.copy(freeRegs = state.freeRegs.tail)
@@ -243,7 +245,7 @@ case class ArrayElement(name: Identifier, expressions: List[Expression])(positio
     var identType = name.getType(symbolTable)
 
     /* Strip the [] until we find the array's type (e.g. int[][][] a, so a[1] has type int[][] */
-    for (i <- 1 to expressions.length)
+    for (_ <- 1 to expressions.length)
       identType match {
         case ArrayType(arrayType) => identType = arrayType
         case _                    => return VoidType()
@@ -359,7 +361,7 @@ case class Identifier(identifier: String)(position: (Int, Int)) extends Expressi
     newState
   }
 
-  def compileReference(state: AssemblerState)(instructions: ListBuffer[Instruction]): AssemblerState = {
+  override def compileReference(state: AssemblerState)(instructions: ListBuffer[Instruction]): AssemblerState = {
     val offset: Int = state.spOffset - state.getOffset(identifier)
     instructions += ADD(state.getResultRegister, RegisterSP, ImmediateNumber(offset))
     state.copy(freeRegs = state.freeRegs.tail)
@@ -595,10 +597,10 @@ case class PairElement(expression: Expression, isFirst: Boolean)(position: (Int,
     val resultReg = state.getResultRegister
     val newState = compileReference(state)(instructions)
     instructions += LOAD(resultReg, RegisterLoad(resultReg))
-    state
+    newState
   }
 
-  def compileReference(state: AssemblerState)(instructions: ListBuffer[Instruction]): AssemblerState = {
+  override def compileReference(state: AssemblerState)(instructions: ListBuffer[Instruction]): AssemblerState = {
     /* Evaluate the expression */
     val resultReg = state.getResultRegister
     val newState = expression.compile(state)(instructions)
