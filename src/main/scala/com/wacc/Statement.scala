@@ -103,9 +103,9 @@ case class Assignment(assignmentLeft: AssignmentLeft, assignmentRight: Assignmen
 /* ✅ Check done - ✅ Compile done */
 case class BeginEnd(statement: Statement)(position: (Int, Int)) extends Statement {
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
-    instructions += PushLR
+    instructions += PushLR()
     val nextState = statement.compile(state)
-    instructions += PopPC
+    instructions += PopPC()
     nextState
   }
 

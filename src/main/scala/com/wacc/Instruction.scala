@@ -121,6 +121,14 @@ case class PopPC() extends Instruction {
   override def toString: String = "POP {PC}"
 }
 
+case class PUSH(reg: Register) extends Instruction {
+  override def toString: String = s"PUSH {$reg}"
+}
+
+case class POP(reg: Register) extends Instruction {
+  override def toString: String = s"POP {$reg}"
+}
+
 case class ADD(dest: Register, src: Register, op2: Operand2) extends Instruction {
   override def toString: String = s"ADD $dest, $src, $op2"
 }

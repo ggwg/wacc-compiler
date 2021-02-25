@@ -189,33 +189,46 @@ case class ArrayElement(name: Identifier, expressions: List[Expression])(positio
   }
 
   override def compileReference(state: AssemblerState)(instructions: ListBuffer[Instruction]): AssemblerState = {
-    if (state.freeRegs.length > 1) {
-      val arrayReg = state.getResultRegister
-      var newState = state.copy(freeRegs = state.freeRegs.tail)
+    val arrayReg = state.getResultRegister
+    var newState = state.copy(freeRegs = state.freeRegs.tail)
 
-      /* Make arrayReg to point where the array is stored on the stack */
-      instructions += ADD(arrayReg, RegisterSP, ImmediateNumber(state.spOffset - state.getOffset(name.identifier)))
-      for (expr <- expressions) {
+    /* Make arrayReg to point where the array is stored on the stack */
+    instructions += ADD(arrayReg, RegisterSP, ImmediateNumber(state.spOffset - state.getOffset(name.identifier)))
+    for (expr <- expressions) {
 
-        /* Compute the expression and store it in an available register */
-        val indexReg = newState.getResultRegister
+      /* Compute the expression and store it in an available register */
+      val indexReg = newState.getResultRegister
+      if (newState.freeRegs.length == 1) {
+        newState = state
+
+        /* Store the array pointer on the stack */
+        instructions += SUB(RegisterSP, RegisterSP, ImmediateNumber(4))
+        instructions += PUSH(arrayReg)
+
+        /* Compile the expression with both registers */
+        newState = expr.compile(newState.copy(spOffset = newState.spOffset + 4))(instructions)
+
+        /* Move the result into the index register and restore the array */
+        instructions += MOVE(indexReg, arrayReg)
+        instructions += POP(arrayReg)
+        instructions += ADD(RegisterSP, RegisterSP, ImmediateNumber(4))
+        newState = newState.copy(spOffset = newState.spOffset - 4)
+      } else {
         newState = expr.compile(newState)(instructions)
-
-        /* Move to the array we were pointing at */
-        instructions += LOAD(arrayReg, RegisterLoad(arrayReg))
-        /* TODO: Bound check if we want */
-
-        /* Move to the specified location in the array */
-        instructions += ADD(arrayReg, arrayReg, ImmediateNumber(4))
-
-        /* TODO: Figure out how many bytes the array elements occupy (max 4) */
-        instructions += ADDLSL(arrayReg, arrayReg, indexReg, ImmediateNumber(2))
-        newState = newState.copy(freeRegs = indexReg :: newState.freeRegs)
       }
-      return newState
+
+      /* Move to the array we were pointing at */
+      instructions += LOAD(arrayReg, RegisterLoad(arrayReg))
+      /* TODO: Bound check if we want */
+
+      /* Skip over the array size */
+      instructions += ADD(arrayReg, arrayReg, ImmediateNumber(4))
+
+      /* Move to the specified location in the array
+         TODO: Figure out how many bytes the array elements occupy (max 4) */
+      instructions += ADDLSL(arrayReg, arrayReg, indexReg, ImmediateNumber(2))
     }
-    /* TODO: Running out of register case */
-    state
+    newState
   }
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
