@@ -576,18 +576,16 @@ case class ArrayLiter(expressions: List[Expression])(position: (Int, Int)) exten
     instructions += LOAD(Register0, ImmediateLoad(4 + size * expressions.length))
     instructions += BRANCHLINK("malloc")
 
-    var arrayReg: Register = Register0
-    var valueReg: Register = state.getResultRegister
     var newState = state.copy(freeRegs = state.freeRegs.tail)
+    val arrayReg: Register = state.getResultRegister
+    val valueReg: Register = newState.getResultRegister
 
     /* Initialize the array size */
     instructions += MOVE(valueReg, ImmediateNumber(expressions.length))
-    instructions += STORE(valueReg, RegisterLoad(arrayReg))
+    instructions += STORE(valueReg, RegisterLoad(Register0))
 
     /* Free up r0 by moving it in the result register */
-    instructions += MOVE(valueReg, arrayReg)
-    arrayReg = valueReg
-    valueReg = newState.getResultRegister
+    instructions += MOVE(arrayReg, Register0)
 
     /* For each expression, add it to the corresponding place in the array */
     for (index <- expressions.indices) {
