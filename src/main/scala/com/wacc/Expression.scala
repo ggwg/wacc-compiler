@@ -98,6 +98,7 @@ case class UnaryOperatorApplication(operator: UnaryOperator, operand: Expression
 }
 
 /* Represents a function call (e.g. call fun(1)) */
+/* TODO: compile */
 case class FunctionCall(name: Identifier, arguments: Option[ArgumentList])(position: (Int, Int))
     extends AssignmentRight {
 
@@ -182,6 +183,8 @@ case class ArrayElement(name: Identifier, expressions: List[Expression])(positio
   override def toString: String = name.toString + expressions.map("[" + _.toString + "]").mkString
 
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
+
+    /* Compile the reference of the specified index, then retrieve the value pointed by it */
     val arrayReg = state.getResultRegister
     val newState = compileReference(state)(instructions)
     instructions += LOAD(arrayReg, RegisterLoad(arrayReg))
@@ -199,7 +202,7 @@ case class ArrayElement(name: Identifier, expressions: List[Expression])(positio
       /* Compute the expression and store it in an available register */
       val indexReg = newState.getResultRegister
       if (newState.freeRegs.length == 1) {
-        newState = state
+        newState = newState.copy(freeRegs = arrayReg :: newState.freeRegs)
 
         /* Store the array pointer on the stack */
         instructions += SUB(RegisterSP, RegisterSP, ImmediateNumber(4))
@@ -211,8 +214,12 @@ case class ArrayElement(name: Identifier, expressions: List[Expression])(positio
         /* Move the result into the index register and restore the array */
         instructions += MOVE(indexReg, arrayReg)
         instructions += POP(arrayReg)
+
+        /* Reset the SP to where it originally was */
         instructions += ADD(RegisterSP, RegisterSP, ImmediateNumber(4))
-        newState = newState.copy(spOffset = newState.spOffset - 4)
+
+        /* Mark the index register as in use */
+        newState = newState.copy(spOffset = newState.spOffset - 4, freeRegs = newState.freeRegs.tail)
       } else {
         newState = expr.compile(newState)(instructions)
       }
@@ -227,6 +234,9 @@ case class ArrayElement(name: Identifier, expressions: List[Expression])(positio
       /* Move to the specified location in the array
          TODO: Figure out how many bytes the array elements occupy (max 4) */
       instructions += ADDLSL(arrayReg, arrayReg, indexReg, ImmediateNumber(2))
+
+      /* Add index register back to the free registers list */
+      newState = newState.copy(freeRegs = indexReg :: newState.freeRegs)
     }
     newState
   }
@@ -284,7 +294,7 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
 
     /* Compute the second operand */
     if (newState.freeRegs.length == 1) {
-      newState = state
+      newState = newState.copy(freeRegs = firstOp :: newState.freeRegs)
 
       /* Store the array pointer on the stack */
       instructions += SUB(RegisterSP, RegisterSP, ImmediateNumber(4))
@@ -293,11 +303,13 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
       /* Compile the expression with both registers */
       newState = rightOperand.compile(newState.copy(spOffset = newState.spOffset + 4))(instructions)
 
-      /* Move the result into the second operand and restonre the first operand */
+      /* Move the result into the second operand and restore the first operand */
       instructions += MOVE(firstOp, secondOp)
       instructions += POP(firstOp)
       instructions += ADD(RegisterSP, RegisterSP, ImmediateNumber(4))
-      newState = newState.copy(spOffset = newState.spOffset - 4)
+
+      /* Mark the second operand register as unavailable */
+      newState = newState.copy(spOffset = newState.spOffset - 4, freeRegs = newState.freeRegs.tail)
     } else {
       rightOperand.compile(newState)
     }
@@ -361,7 +373,9 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
         instructions += MOVE(resultReg, ImmediateNumber(1), Some(GE))
         instructions += MOVE(resultReg, ImmediateNumber(0), Some(LT))
     }
-    newState
+
+    /* Mark the second operand register as free */
+    newState.copy(freeRegs = secondOp :: newState.freeRegs)
   }
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
@@ -460,12 +474,16 @@ case class Identifier(identifier: String)(position: (Int, Int)) extends Expressi
 
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     val resultReg = state.getResultRegister
+    /* Find the position of the identifier in the stack */
     val newState = compileReference(state)(instructions)
+
+    /* Access it */
     instructions += LOAD(resultReg, RegisterLoad(resultReg))
     newState
   }
 
   override def compileReference(state: AssemblerState)(instructions: ListBuffer[Instruction]): AssemblerState = {
+    /* Find the position of the identifier in the stack relative to the SP */
     val offset: Int = state.spOffset - state.getOffset(identifier)
     instructions += ADD(state.getResultRegister, RegisterSP, ImmediateNumber(offset))
     state.copy(freeRegs = state.freeRegs.tail)
@@ -560,7 +578,7 @@ case class ArrayLiter(expressions: List[Expression])(position: (Int, Int)) exten
 
     var arrayReg: Register = Register0
     var valueReg: Register = state.getResultRegister
-    var newState = state
+    var newState = state.copy(freeRegs = state.freeRegs.tail)
 
     /* Initialize the array size */
     instructions += MOVE(valueReg, ImmediateNumber(expressions.length))
@@ -569,15 +587,17 @@ case class ArrayLiter(expressions: List[Expression])(position: (Int, Int)) exten
     /* Free up r0 by moving it in the result register */
     instructions += MOVE(valueReg, arrayReg)
     arrayReg = valueReg
-    valueReg = state.freeRegs(1)
+    valueReg = newState.getResultRegister
 
     /* For each expression, add it to the corresponding place in the array */
     for (index <- expressions.indices) {
       newState = expressions(index).compile(newState)
       instructions += STORE(valueReg, RegisterOffsetLoad(arrayReg, ImmediateNumber(4 + index * size)))
+
+      /* Make the value register available for the next expression */
       newState = newState.copy(freeRegs = valueReg :: newState.freeRegs)
     }
-    newState.copy(freeRegs = newState.freeRegs.tail)
+    newState
   }
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
@@ -634,14 +654,14 @@ case class NewPair(first: Expression, second: Expression)(position: (Int, Int)) 
     instructions += MOVE(pairReg, Register0)
 
     /* Evaluate the two expressions */
-    var newState = state
+    var newState = state.copy(freeRegs = state.freeRegs.tail)
     for (offset <- List(0, 4)) {
 
       /* Evaluate the expression */
       val expr = if (offset == 0) first else second
-      newState = expr.compile(state.copy(freeRegs = state.freeRegs.tail))
+      newState = expr.compile(newState)
 
-      /* Allocate memory for the first pointer
+      /* Allocate memory for the pointer
          TODO: Find out the expression's size */
       instructions += LOAD(Register0, ImmediateLoad(4))
       instructions += BRANCHLINK("malloc")
@@ -699,7 +719,11 @@ case class PairElement(expression: Expression, isFirst: Boolean)(position: (Int,
 
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     val resultReg = state.getResultRegister
+
+    /* Find the address of the pair element */
     val newState = compileReference(state)(instructions)
+
+    /* Access it */
     instructions += LOAD(resultReg, RegisterLoad(resultReg))
     newState
   }
