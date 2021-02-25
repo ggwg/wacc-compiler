@@ -293,7 +293,7 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
       /* Compile the expression with both registers */
       newState = rightOperand.compile(newState.copy(spOffset = newState.spOffset + 4))(instructions)
 
-      /* Move the result into the index register and restore the array */
+      /* Move the result into the second operand and restonre the first operand */
       instructions += MOVE(firstOp, secondOp)
       instructions += POP(firstOp)
       instructions += ADD(RegisterSP, RegisterSP, ImmediateNumber(4))
@@ -304,37 +304,62 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
 
     /* Apply the specified operation */
     operator match {
+      /* Integer operations */
       case Add() =>
         /* TODO: Overflow check */
         instructions += ADD(resultReg, firstOp, secondOp)
-      case And() =>
-        instructions += AND(resultReg, firstOp, secondOp)
+      case Subtract() =>
+        /* TODO: Overflow check */
+        instructions += SUB(resultReg, firstOp, secondOp)
+      case Multiply() =>
+        /* TODO: Overflow check */
+        instructions += MUL(resultReg, secondOp, firstOp)
       case Divide() =>
         instructions += MOVE(Register0, firstOp)
         instructions += MOVE(Register1, secondOp)
         /* TODO: Division by 0 check */
         instructions += BRANCHLINK("__aeabi_idiv")
         instructions += MOVE(Register0, resultReg)
-      case Equals()           =>
-      case GreaterEqualThan() =>
-      case GreaterThan()      =>
       case Modulo() =>
         instructions += MOVE(Register0, firstOp)
         instructions += MOVE(Register1, secondOp)
         /* TODO: Division by 0 check */
         instructions += BRANCHLINK("__aeabi_idivmod")
         instructions += MOVE(Register1, resultReg)
-      case Multiply() =>
-        /* TODO: Overflow check */
-        instructions += MUL(resultReg, secondOp, firstOp)
-      case NotEquals() =>
+
+      /* Boolean operations */
+      case And() =>
+        instructions += AND(resultReg, firstOp, secondOp)
       case Or() =>
         instructions += OR(resultReg, firstOp, secondOp)
+
+      /* Comparison operations */
+      case Equals() =>
+        instructions += COMPARE(firstOp, secondOp)
+        instructions += MOVE(resultReg, ImmediateNumber(1), Some(EQ))
+        instructions += MOVE(resultReg, ImmediateNumber(0), Some(NE))
+      case NotEquals() =>
+        instructions += COMPARE(firstOp, secondOp)
+        instructions += MOVE(resultReg, ImmediateNumber(1), Some(NE))
+        instructions += MOVE(resultReg, ImmediateNumber(0), Some(EQ))
+
+      case GreaterThan() =>
+        instructions += COMPARE(firstOp, secondOp)
+        instructions += MOVE(resultReg, ImmediateNumber(1), Some(GT))
+        instructions += MOVE(resultReg, ImmediateNumber(0), Some(LE))
       case SmallerEqualThan() =>
-      case SmallerThan()      =>
-      case Subtract()         =>
-        /* TODO: Overflow check */
-        instructions += SUB(resultReg, firstOp, secondOp)
+        instructions += COMPARE(firstOp, secondOp)
+        instructions += MOVE(resultReg, ImmediateNumber(1), Some(LE))
+        instructions += MOVE(resultReg, ImmediateNumber(0), Some(GT))
+
+      case SmallerThan() =>
+        instructions += COMPARE(firstOp, secondOp)
+        instructions += MOVE(resultReg, ImmediateNumber(1), Some(LT))
+        instructions += MOVE(resultReg, ImmediateNumber(0), Some(GE))
+      case GreaterEqualThan() =>
+        instructions += COMPARE(firstOp, secondOp)
+        instructions += MOVE(resultReg, ImmediateNumber(1), Some(GE))
+        instructions += MOVE(resultReg, ImmediateNumber(0), Some(LT))
     }
     newState
   }
