@@ -4,7 +4,7 @@ import com.wacc
 import com.wacc.{ASTNodeVoid, SymbolTable}
 import parsley.Parsley
 
-trait BinaryOperator extends ASTNodeVoid
+sealed trait BinaryOperator extends ASTNodeVoid
 
 case class Add() extends BinaryOperator {
   override def toString: String = "+"

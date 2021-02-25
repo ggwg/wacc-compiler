@@ -273,6 +273,72 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
 ) extends Expression {
   override def toString: String = leftOperand.toString + " " + operator.toString + " " + rightOperand.toString
 
+  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
+    /* Registers holding the expression results */
+    val resultReg = state.getResultRegister
+    val firstOp = state.getResultRegister
+    val secondOp = state.freeRegs(1)
+
+    /* Compute the first operand */
+    var newState = leftOperand.compile(state)
+
+    /* Compute the second operand */
+    if (newState.freeRegs.length == 1) {
+      newState = state
+
+      /* Store the array pointer on the stack */
+      instructions += SUB(RegisterSP, RegisterSP, ImmediateNumber(4))
+      instructions += PUSH(firstOp)
+
+      /* Compile the expression with both registers */
+      newState = rightOperand.compile(newState.copy(spOffset = newState.spOffset + 4))(instructions)
+
+      /* Move the result into the index register and restore the array */
+      instructions += MOVE(firstOp, secondOp)
+      instructions += POP(firstOp)
+      instructions += ADD(RegisterSP, RegisterSP, ImmediateNumber(4))
+      newState = newState.copy(spOffset = newState.spOffset - 4)
+    } else {
+      rightOperand.compile(newState)
+    }
+
+    /* Apply the specified operation */
+    operator match {
+      case Add() =>
+        /* TODO: Overflow check */
+        instructions += ADD(resultReg, firstOp, secondOp)
+      case And() =>
+        instructions += AND(resultReg, firstOp, secondOp)
+      case Divide() =>
+        instructions += MOVE(Register0, firstOp)
+        instructions += MOVE(Register1, secondOp)
+        /* TODO: Division by 0 check */
+        instructions += BRANCHLINK("__aeabi_idiv")
+        instructions += MOVE(Register0, resultReg)
+      case Equals()           =>
+      case GreaterEqualThan() =>
+      case GreaterThan()      =>
+      case Modulo() =>
+        instructions += MOVE(Register0, firstOp)
+        instructions += MOVE(Register1, secondOp)
+        /* TODO: Division by 0 check */
+        instructions += BRANCHLINK("__aeabi_idivmod")
+        instructions += MOVE(Register1, resultReg)
+      case Multiply() =>
+        /* TODO: Overflow check */
+        instructions += MUL(resultReg, secondOp, firstOp)
+      case NotEquals() =>
+      case Or() =>
+        instructions += OR(resultReg, firstOp, secondOp)
+      case SmallerEqualThan() =>
+      case SmallerThan()      =>
+      case Subtract()         =>
+        /* TODO: Overflow check */
+        instructions += SUB(resultReg, firstOp, secondOp)
+    }
+    newState
+  }
+
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
 
     /* Extract the operand types */
