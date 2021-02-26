@@ -8,6 +8,9 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 sealed trait Statement extends ASTNodeVoid {
+
+  /* Returns true if the statement ends with a return or exit no matter what 'branches' it takes,
+     false otherwise. */
   def exitable(): Boolean = {
     this match {
       case Exit(_) | Return(_) => true
@@ -20,6 +23,8 @@ sealed trait Statement extends ASTNodeVoid {
     }
   }
 
+  /* Given the 'parent' state, this function compiles the scope statement with a scope state, then
+     ensures the compilation can proceed after exiting the scope statement. */
   def compileNewScope(state: AssemblerState)(instructions: ListBuffer[Instruction]): AssemblerState = {
     /* Create a new state for the new scope */
     var scopeState = state.newScopeState
@@ -52,14 +57,8 @@ case class IdentifierDeclaration(identType: Type, name: Identifier, assignmentRi
     /* Update the state to reflect the change */
     val newSPOffset = newState.spOffset + 4
     val newVarDic = newState.varDic + (name.identifier -> newSPOffset)
-    val newDeclaredVars = name.identifier :: newState.declaredVars
     val newDeclaredSize = newState.declaredSize + 4
-    newState = newState.copy(
-      spOffset = newSPOffset,
-      varDic = newVarDic,
-      declaredVars = newDeclaredVars,
-      declaredSize = newDeclaredSize
-    )
+    newState = newState.copy(spOffset = newSPOffset, varDic = newVarDic, declaredSize = newDeclaredSize)
 
     /* Mark the result register as free */
     newState.copy(freeRegs = resultReg :: newState.freeRegs)

@@ -11,6 +11,7 @@ import scala.collection.mutable.ListBuffer
 sealed trait Expression extends AssignmentRight {}
 sealed trait AssignmentRight extends ASTNodeVoid {}
 sealed trait AssignmentLeft extends ASTNodeVoid {
+  /* Compile the reference of a left assignment and store it in the first free register. */
   def compileReference(state: AssemblerState)(instructions: ListBuffer[Instruction]): AssemblerState
 }
 

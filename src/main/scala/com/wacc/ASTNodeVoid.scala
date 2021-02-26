@@ -21,7 +21,24 @@ trait ASTNode {
   /* Returns the actual type of a node */
   def getType(symbolTable: SymbolTable): Type
 
-  // TODO: Remove null
+  // TODO: Remove null; Maybe add flags in the state so that we add helper functions
+  // TODO: at the end of the program
+  /* Given a compilation state, this function compiles the current node and stores the list of
+     generated instructions in the instructions list. Returns the new state after the entire code was
+     compiled
+     The classes that need to be compiled are located in the Expression, Statement and Program files.
+
+     When compiling an expression, the result of the expression is put in the first register of the
+     free registers list, and the return state will contain all the other remaining registers. No other
+     assembler state fields are modified. A precondition of the function is that the state MUST have
+     at least TWO free registers.
+
+     When compiling a statement we generate the required instructions and return the new state in which
+     many fields may have been modified.
+
+     When compiling the program, we generate 'standalone' assembly codes for every function (i.e. different
+     new states each time), and then compile the body with a fresh initial state.
+   */
   def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = null
 }
 
