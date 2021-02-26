@@ -378,9 +378,7 @@ case class Return(expression: Expression)(position: (Int, Int)) extends Statemen
 case class SkipStatement()(position: (Int, Int)) extends Statement {
 
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
-    val reg = state.freeRegs.head
-    instructions += MOVE(reg, ImmediateNumber(0))
-    state.copy(freeRegs = state.freeRegs.tail)
+    state
   }
 
   override def toString: String = "skip\n"
