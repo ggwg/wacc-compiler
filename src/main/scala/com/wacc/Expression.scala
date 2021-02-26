@@ -12,7 +12,7 @@ sealed trait Expression extends AssignmentRight {}
 sealed trait AssignmentRight extends ASTNodeVoid {}
 sealed trait AssignmentLeft extends ASTNodeVoid {
   /* Compile the reference of a left assignment and store it in the first free register. */
-  def compileReference(state: AssemblerState)(instructions: ListBuffer[Instruction]): AssemblerState
+  def compileReference(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState
 }
 
 /* Class representing an unary operation (e.g. chr 101) */
@@ -187,12 +187,14 @@ case class ArrayElement(name: Identifier, expressions: List[Expression])(positio
 
     /* Compile the reference of the specified index, then retrieve the value pointed by it */
     val arrayReg = state.getResultRegister
-    val newState = compileReference(state)(instructions)
+    val newState = compileReference(state)
     instructions += LOAD(arrayReg, RegisterLoad(arrayReg))
     newState
   }
 
-  override def compileReference(state: AssemblerState)(instructions: ListBuffer[Instruction]): AssemblerState = {
+  override def compileReference(
+    state: AssemblerState
+  )(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     val arrayReg = state.getResultRegister
     var newState = state.copy(freeRegs = state.freeRegs.tail)
 
@@ -476,14 +478,16 @@ case class Identifier(identifier: String)(position: (Int, Int)) extends Expressi
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     val resultReg = state.getResultRegister
     /* Find the position of the identifier in the stack */
-    val newState = compileReference(state)(instructions)
+    val newState = compileReference(state)
 
     /* Access it */
     instructions += LOAD(resultReg, RegisterLoad(resultReg))
     newState
   }
 
-  override def compileReference(state: AssemblerState)(instructions: ListBuffer[Instruction]): AssemblerState = {
+  override def compileReference(
+    state: AssemblerState
+  )(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     /* Find the position of the identifier in the stack relative to the SP */
     val offset: Int = state.spOffset - state.getOffset(identifier)
     instructions += ADD(state.getResultRegister, RegisterSP, ImmediateNumber(offset))
@@ -720,14 +724,16 @@ case class PairElement(expression: Expression, isFirst: Boolean)(position: (Int,
     val resultReg = state.getResultRegister
 
     /* Find the address of the pair element */
-    val newState = compileReference(state)(instructions)
+    val newState = compileReference(state)
 
     /* Access it */
     instructions += LOAD(resultReg, RegisterLoad(resultReg))
     newState
   }
 
-  override def compileReference(state: AssemblerState)(instructions: ListBuffer[Instruction]): AssemblerState = {
+  override def compileReference(
+    state: AssemblerState
+  )(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     /* Evaluate the expression */
     val resultReg = state.getResultRegister
     val newState = expression.compile(state)(instructions)
