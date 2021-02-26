@@ -136,14 +136,14 @@ case class Assignment(assignmentLeft: AssignmentLeft, assignmentRight: Assignmen
 case class BeginEnd(statement: Statement)(position: (Int, Int)) extends Statement {
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     /* Create a new state for the new scope */
-    var newState = state.newScopeState
-    newState = statement.compile(newState)
+    var scopeState = state.newScopeState
+    scopeState = statement.compile(scopeState)
 
     /* Reset the SP to where we were initially */
-    instructions += ADD(RegisterSP, RegisterSP, ImmediateNumber(newState.declaredSize))
+    instructions += ADD(RegisterSP, RegisterSP, ImmediateNumber(scopeState.declaredSize))
 
-    /* Restore the state to hold the correct fields, before entering the scope */
-    newState.fromScopeToInitialState(state)
+    /* Restore the state to hold the correct fields */
+    scopeState.fromScopeToInitialState(state)
   }
 
   override def toString: String = "begin\n" + statement.toString + "end\n"
@@ -219,18 +219,53 @@ case class Free(expression: Expression)(position: (Int, Int)) extends Statement 
 case class If(condition: Expression, trueStatement: Statement, falseStatement: Statement)(position: (Int, Int))
     extends Statement {
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
+
+    /* Compile the if condition */
+    val conditionReg = state.getResultRegister
+
+    /* State variables */
     var newState = condition.compile(state)
-    val reg = newState.freeRegs.head
+    var scopeState = newState.newScopeState
+
+    /* Get the label IDs */
     val falseID = newState.nextID
     val continueID = newState.nextID
 
-    instructions += COMPARE(reg, ImmediateNumber(0))
-    instructions += BRANCH(Option(EQ), "L" + falseID)
-    newState = trueStatement.compile(newState)
-    instructions += BRANCH(Option(EQ), "L" + continueID)
+    /* Compare the condition with false (i.e. 0) */
+    instructions += COMPARE(conditionReg, ImmediateNumber(0))
 
+    /* Mark the condition register as available to use */
+    newState = newState.copy(freeRegs = conditionReg :: newState.freeRegs)
+
+    /* If condition is false, go to the false branch */
+    instructions += BRANCH(Option(EQ), "L" + falseID)
+
+    /* TODO: Code duplication whenever we have a new scope */
+    /* We compile the true branch with a new scope */
+    scopeState = newState.newScopeState
+    scopeState = trueStatement.compile(scopeState)
+
+    /* Reset the SP to where we were initially */
+    instructions += ADD(RegisterSP, RegisterSP, ImmediateNumber(scopeState.declaredSize))
+
+    /* Restore the state to hold the correct fields */
+    newState = scopeState.fromScopeToInitialState(newState)
+
+    /* Finish the if */
+    instructions += BRANCH(None, "L" + continueID)
+
+    /* We compile the false branch with a new scope */
     instructions += NumberLabel(falseID)
-    newState = falseStatement.compile(newState)
+    scopeState = newState.newScopeState
+    scopeState = falseStatement.compile(scopeState)
+
+    /* Reset the SP to where we were initially */
+    instructions += ADD(RegisterSP, RegisterSP, ImmediateNumber(scopeState.declaredSize))
+
+    /* Restore the state to hold the correct fields */
+    newState = scopeState.fromScopeToInitialState(newState)
+
+    /* End of the if */
     instructions += NumberLabel(continueID)
     newState
   }

@@ -182,7 +182,7 @@ case class COMPARE(src: Register, op2: Operand2) extends Instruction {
 }
 
 case class MOVE(dest: Register, op2: Operand2, cond: Option[Condition] = Option.empty) extends Instruction {
-  override def toString: String = s"MOV$cond $dest, $op2"
+  override def toString: String = s"MOV${cond.map(_.toString).getOrElse("")} $dest, $op2"
 }
 
 object Register {
