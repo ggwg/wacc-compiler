@@ -87,7 +87,7 @@ case class IdentifierDeclaration(identType: Type, name: Identifier, assignmentRi
   override def getPos(): (Int, Int) = position
 }
 
-/* ✅ Check done - ⚠️ Compile Pending */
+/* ✅ Check done - ⚠️ Compile done */
 case class Assignment(assignmentLeft: AssignmentLeft, assignmentRight: AssignmentRight)(position: (Int, Int))
     extends Statement {
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
@@ -158,18 +158,17 @@ case class BeginEnd(statement: Statement)(position: (Int, Int)) extends Statemen
 case class Exit(expression: Expression)(position: (Int, Int)) extends Statement {
 
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
-    // Load into register r0 the exit value (evaluated expression)
-    // If expression is just an integer, then there is no need to use extra registers to calculate expression.
-    expression match {
-      // Note for expressions: Immediate value must be an integer 0-255
-      case i @ IntegerLiter(sign, digits) => instructions += LOAD(Register0, ImmediateLoad(i.toInt % 255))
-      case _                              =>
-      // TODO: Generate code for evaluating expressions and store result in register r0.
-      //       Then pass in result register in load for register statement.
-    }
-    instructions += BRANCH(Option(LT), "exit")
-    instructions += MOVE(Register0, ImmediateNumber(0))
-    return state
+
+    /* Compile the expression and store it in r0 */
+    val resultReg = state.getResultRegister
+    val newState = expression.compile(state)
+    instructions += MOVE(Register0, resultReg)
+
+    /* Call the exit function */
+    instructions += BRANCHLINK("exit")
+
+    /* Mark the result register as usable */
+    newState.copy(freeRegs = resultReg :: newState.freeRegs)
   }
 
   override def toString: String = "exit " + expression.toString + "\n"
