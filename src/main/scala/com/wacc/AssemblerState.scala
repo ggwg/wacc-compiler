@@ -23,6 +23,9 @@ case class AssemblerState(
   /* Returns the register in which an expression's result will be stored */
   def getResultRegister: Register = freeRegs.head
 
+  /* Returns the second register in the list, to be used as needed */
+  def getHelperRegister: Register = freeRegs.tail.head
+
   /* Returns the offset of a given variable name. Since our semantic analysis was successful,
      we are guaranteed to have a mapping for the variable in our varDic */
   def getOffset(ident: String): Int = varDic.getOrElse(ident, 0)

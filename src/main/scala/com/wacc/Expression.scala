@@ -288,7 +288,7 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
     /* Registers holding the expression results */
     val resultReg = state.getResultRegister
     val firstOp = state.getResultRegister
-    val secondOp = state.freeRegs(1)
+    val secondOp = state.getHelperRegister
 
     /* Compute the first operand */
     var newState = leftOperand.compile(state)
@@ -647,7 +647,7 @@ case class NewPair(first: Expression, second: Expression)(position: (Int, Int)) 
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     /* Allocate memory for the 2 pointers inside the pair */
     val pairReg: Register = state.getResultRegister
-    val valueReg: Register = state.freeRegs(1)
+    val valueReg: Register = state.getHelperRegister
     instructions += LOAD(Register0, ImmediateLoad(8))
     instructions += BRANCHLINK("malloc")
     instructions += MOVE(pairReg, Register0)
