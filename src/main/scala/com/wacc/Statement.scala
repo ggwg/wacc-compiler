@@ -406,14 +406,31 @@ case class StatementSequence(statement1: Statement, statement2: Statement)(posit
 /* ✅ Check done - ✅ Compile done */
 case class While(condition: Expression, statement: Statement)(position: (Int, Int)) extends Statement {
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
+    /* Get the label IDs */
     val conditionID = state.nextID
     val bodyID = state.nextID
+
+    /* Branch to the condition */
     instructions += BRANCH(None, "L" + conditionID)
+
+    /* Compile the while body with a new scope */
     instructions += NumberLabel(bodyID)
-    var newState = statement.compile(state)
+    var newState = statement.compileNewScope(state)(instructions)
+
+    /* Compile the condition */
+    val conditionReg = newState.getResultRegister
     instructions += NumberLabel(conditionID)
     newState = condition.compile(newState)
+
+    /* Check if the condition is true */
+    instructions += COMPARE(conditionReg, ImmediateNumber(1))
+
+    /* Mark the condition register as free to use */
+    newState = newState.copy(freeRegs = conditionReg :: newState.freeRegs)
+
+    /* Jump to the body if it is true */
     instructions += BRANCH(Option(EQ), "L" + bodyID)
+
     newState
   }
 
