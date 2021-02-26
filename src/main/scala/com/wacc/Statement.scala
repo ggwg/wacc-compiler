@@ -19,6 +19,20 @@ sealed trait Statement extends ASTNodeVoid {
       case _                               => false
     }
   }
+
+  def compileNewScope(state: AssemblerState)(instructions: ListBuffer[Instruction]): AssemblerState = {
+    /* Create a new state for the new scope */
+    var scopeState = state.newScopeState
+
+    /* Compile the body with the new scope */
+    scopeState = this.compile(scopeState)(instructions)
+
+    /* Reset the SP to where we were initially */
+    instructions += ADD(RegisterSP, RegisterSP, ImmediateNumber(scopeState.declaredSize))
+
+    /* Restore the state to hold the correct fields */
+    scopeState.fromScopeToInitialState(state)
+  }
 }
 
 /* ✅ Check done - ⚠️ Compile done */
@@ -135,15 +149,7 @@ case class Assignment(assignmentLeft: AssignmentLeft, assignmentRight: Assignmen
 /* ✅ Check done - ✅ Compile done */
 case class BeginEnd(statement: Statement)(position: (Int, Int)) extends Statement {
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
-    /* Create a new state for the new scope */
-    var scopeState = state.newScopeState
-    scopeState = statement.compile(scopeState)
-
-    /* Reset the SP to where we were initially */
-    instructions += ADD(RegisterSP, RegisterSP, ImmediateNumber(scopeState.declaredSize))
-
-    /* Restore the state to hold the correct fields */
-    scopeState.fromScopeToInitialState(state)
+    compileNewScope(state)(instructions)
   }
 
   override def toString: String = "begin\n" + statement.toString + "end\n"
@@ -222,10 +228,7 @@ case class If(condition: Expression, trueStatement: Statement, falseStatement: S
 
     /* Compile the if condition */
     val conditionReg = state.getResultRegister
-
-    /* State variables */
     var newState = condition.compile(state)
-    var scopeState = newState.newScopeState
 
     /* Get the label IDs */
     val falseID = newState.nextID
@@ -240,30 +243,15 @@ case class If(condition: Expression, trueStatement: Statement, falseStatement: S
     /* If condition is false, go to the false branch */
     instructions += BRANCH(Option(EQ), "L" + falseID)
 
-    /* TODO: Code duplication whenever we have a new scope */
-    /* We compile the true branch with a new scope */
-    scopeState = newState.newScopeState
-    scopeState = trueStatement.compile(scopeState)
+    /* Compile the true statement with a new scope */
+    newState = trueStatement.compileNewScope(newState)(instructions)
 
-    /* Reset the SP to where we were initially */
-    instructions += ADD(RegisterSP, RegisterSP, ImmediateNumber(scopeState.declaredSize))
-
-    /* Restore the state to hold the correct fields */
-    newState = scopeState.fromScopeToInitialState(newState)
-
-    /* Finish the if */
+    /* We finished executing the branch. Jump to the end. */
     instructions += BRANCH(None, "L" + continueID)
 
-    /* We compile the false branch with a new scope */
+    /* Compile the false branch with a new scope */
     instructions += NumberLabel(falseID)
-    scopeState = newState.newScopeState
-    scopeState = falseStatement.compile(scopeState)
-
-    /* Reset the SP to where we were initially */
-    instructions += ADD(RegisterSP, RegisterSP, ImmediateNumber(scopeState.declaredSize))
-
-    /* Restore the state to hold the correct fields */
-    newState = scopeState.fromScopeToInitialState(newState)
+    newState = falseStatement.compileNewScope(newState)(instructions)
 
     /* End of the if */
     instructions += NumberLabel(continueID)
