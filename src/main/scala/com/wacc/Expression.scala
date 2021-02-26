@@ -208,14 +208,12 @@ case class ArrayElement(name: Identifier, expressions: List[Expression])(positio
         newState = newState.copy(freeRegs = arrayReg :: newState.freeRegs)
 
         /* Store the array pointer on the stack */
-        instructions += SUB(RegisterSP, RegisterSP, ImmediateNumber(4))
         instructions += PUSH(arrayReg)
 
         /* Compile the expression with both registers */
         newState = expr.compile(newState.copy(spOffset = newState.spOffset + 4))(instructions)
 
         /* Move the result into the index register and restore the array */
-        instructions += MOVE(indexReg, arrayReg)
         instructions += POP(arrayReg)
 
         /* Reset the SP to where it originally was */
@@ -300,7 +298,6 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
       newState = newState.copy(freeRegs = firstOp :: newState.freeRegs)
 
       /* Store the array pointer on the stack */
-      instructions += SUB(RegisterSP, RegisterSP, ImmediateNumber(4))
       instructions += PUSH(firstOp)
 
       /* Compile the expression with both registers */
@@ -309,7 +306,6 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
       /* Move the result into the second operand and restore the first operand */
       instructions += MOVE(firstOp, secondOp)
       instructions += POP(firstOp)
-      instructions += ADD(RegisterSP, RegisterSP, ImmediateNumber(4))
 
       /* Mark the second operand register as unavailable */
       newState = newState.copy(spOffset = newState.spOffset - 4, freeRegs = newState.freeRegs.tail)
