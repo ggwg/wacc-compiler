@@ -340,11 +340,17 @@ case class Read(assignmentLeft: AssignmentLeft)(position: (Int, Int)) extends St
   override def getPos(): (Int, Int) = position
 }
 
-/* ✅ Check done - ⚠️ Compile Pending */
+/* ✅ Check done - ⚠️ Compile done */
 case class Return(expression: Expression)(position: (Int, Int)) extends Statement {
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
-    // TODO
-    state
+
+    /* Compile the expression and store it in r0 */
+    val resultReg = state.getResultRegister
+    val newState = expression.compile(state)
+    instructions += MOVE(Register0, resultReg)
+
+    /* Mark the result register as usable */
+    newState.copy(freeRegs = resultReg :: newState.freeRegs)
   }
   override def toString: String = "return " + expression.toString + "\n"
 
