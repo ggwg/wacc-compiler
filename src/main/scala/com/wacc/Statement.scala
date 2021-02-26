@@ -21,13 +21,34 @@ sealed trait Statement extends ASTNodeVoid {
   }
 }
 
-/* ✅ Check done - ⚠️ Compile Pending */
+/* ✅ Check done - ⚠️ Compile done */
 case class IdentifierDeclaration(identType: Type, name: Identifier, assignmentRight: AssignmentRight)(
   position: (Int, Int)
 ) extends Statement {
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
-    // TODO
-    return state
+    /* Compile the right hand side */
+    val resultReg = state.getResultRegister
+    var newState = assignmentRight.compile(state)
+
+    /* Store the identifier on the stack
+       TODO: Find out the variable's size */
+    instructions += SUB(RegisterSP, RegisterSP, ImmediateNumber(4))
+    instructions += STORE(resultReg, RegisterLoad(RegisterSP))
+
+    /* Update the state to reflect the change */
+    val newSPOffset = newState.spOffset + 4
+    val newVarDic = newState.varDic + (name.identifier -> newSPOffset)
+    val newDeclaredVars = name.identifier :: newState.declaredVars
+    val newDeclaredSize = newState.declaredSize + 4
+    newState = newState.copy(
+      spOffset = newSPOffset,
+      varDic = newVarDic,
+      declaredVars = newDeclaredVars,
+      declaredSize = newDeclaredSize
+    )
+
+    /* Mark the result register as free */
+    newState.copy(freeRegs = resultReg :: newState.freeRegs)
   }
 
   override def toString: String =
