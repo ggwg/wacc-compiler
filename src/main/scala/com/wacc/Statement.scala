@@ -349,6 +349,9 @@ case class Return(expression: Expression)(position: (Int, Int)) extends Statemen
     val newState = expression.compile(state)
     instructions += MOVE(Register0, resultReg)
 
+    /* Return */
+    instructions += PopPC()
+
     /* Mark the result register as usable */
     newState.copy(freeRegs = resultReg :: newState.freeRegs)
   }

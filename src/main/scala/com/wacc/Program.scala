@@ -5,12 +5,40 @@ import parsley.Parsley.pos
 import parsley.implicits.{voidImplicitly => _, _}
 
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 
 case class Program(functions: List[Function], body: Statement)(position: (Int, Int)) extends ASTNodeVoid {
   override def toString: String = "begin\n" + functions
     .map(_.toString)
     .reduceOption((left, right) => left + right)
     .getOrElse("") + body.toString + "end"
+
+  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
+    var newState = state
+
+    /* Compile all the functions */
+    for (function <- functions) {
+      newState = function.compile(newState)
+    }
+
+    /* Push the LR */
+    instructions += PushLR()
+
+    /* Compile the program body */
+    newState = body.compileNewScope(newState)(instructions)
+
+    /* Add the main label */
+    instructions += StringLabel("main")
+
+    /* Set the exit code to 0 */
+    instructions += LOAD(Register0, ImmediateLoad(0))
+
+    /* Pop the PC */
+    instructions += PopPC()
+
+    /* TODO: Add the .ltorg thingy */
+    newState
+  }
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     functions.foreach { func =>
@@ -40,6 +68,24 @@ case class Function(returnType: Type, name: Identifier, parameters: Option[Param
   override def toString: String =
     returnType.toString + " " + name.toString + "(" +
       parameters.getOrElse("").toString + ") is\n" + body.toString + "end\n"
+
+  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
+    // TODO
+    /* Set up the arguments */
+
+    /* Set up the state */
+    var newState = state
+    // TODO...
+
+    /* Compile the function body */
+    instructions += PushLR()
+    newState = body.compileNewScope(newState)(instructions)
+    instructions += PopPC()
+
+    /* Reset the state to where it was initially */
+    // TODO...
+    state
+  }
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
 
