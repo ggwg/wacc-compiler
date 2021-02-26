@@ -15,6 +15,15 @@ case class AssemblerState(
   def getOffset(ident: String): Int = varDic.getOrElse(ident, 0)
 
   def nextID: Int = nextLabelID.next
+
+  def newScopeState: AssemblerState = this.copy(declaredVars = List.empty, declaredSize = 0)
+
+  def fromScopeToInitialState(state: AssemblerState): AssemblerState = this.copy(
+    spOffset = state.spOffset,
+    varDic = state.varDic,
+    declaredSize = state.declaredSize,
+    declaredVars = state.declaredVars
+  )
 }
 
 object AssemblerState {

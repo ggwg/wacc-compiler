@@ -135,10 +135,15 @@ case class Assignment(assignmentLeft: AssignmentLeft, assignmentRight: Assignmen
 /* ✅ Check done - ✅ Compile done */
 case class BeginEnd(statement: Statement)(position: (Int, Int)) extends Statement {
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
-    instructions += PushLR()
-    val nextState = statement.compile(state)
-    instructions += PopPC()
-    nextState
+    /* Create a new state for the new scope */
+    var newState = state.newScopeState
+    newState = statement.compile(newState)
+
+    /* Reset the SP to where we were initially */
+    instructions += ADD(RegisterSP, RegisterSP, ImmediateNumber(newState.declaredSize))
+
+    /* Restore the state to hold the correct fields, before entering the scope */
+    newState.fromScopeToInitialState(state)
   }
 
   override def toString: String = "begin\n" + statement.toString + "end\n"
