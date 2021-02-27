@@ -36,7 +36,9 @@ case class Program(functions: List[Function], body: Statement)(position: (Int, I
     /* Pop the PC */
     instructions += PopPC()
 
-    /* TODO: Add the .ltorg thingy */
+    /* Add the ltorg directive */
+    instructions += LtorgDirective()
+
     newState
   }
 
@@ -100,6 +102,9 @@ case class Function(returnType: Type, name: Identifier, parameters: Option[Param
 
     instructions += PopPC()
     newState = newState.copy(spOffset = newState.spOffset - 4)
+
+    /* Add the ltorg directive */
+    instructions += LtorgDirective()
 
     /* Reset the state to where it was initially */
     newState.copy(spOffset = state.spOffset)

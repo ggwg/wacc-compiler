@@ -43,6 +43,22 @@ case class AssemblerState(
   /* Returns true if we mapped the given message to an ID */
   def containsMessage(message: String): Boolean = messageDic.contains(message)
 
+  /* Adds a message to the message dictionary if it is not already in there */
+  def putMessageIfAbsent(message: String): AssemblerState = {
+    /* Check if we already created the message */
+    if (!this.containsMessage(message)) {
+      val messageID = this.getNextMessageID
+      this.copy(messageDic = this.messageDic + (message -> messageID))
+    } else {
+      this
+    }
+  }
+
+  /* Retrieves the ID of a message */
+  def getMessageID(message: String): Int = {
+    this.messageDic(message)
+  }
+
   /* Creates a new scope state from the initial state */
   def newScopeState: AssemblerState = this.copy(declaredSize = 0)
 

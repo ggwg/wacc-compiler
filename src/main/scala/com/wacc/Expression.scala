@@ -630,13 +630,10 @@ case class StringLiter(string: String)(position: (Int, Int)) extends Expression 
     var newState = state
 
     /* Check if we already created the message */
-    if (!newState.containsMessage(string)) {
-      val messageID = newState.getNextMessageID
-      newState = newState.copy(messageDic = newState.messageDic + (string -> messageID))
-    }
+    newState = newState.putMessageIfAbsent(string)
 
     /* Retrieve the message ID */
-    val messageID = newState.messageDic(string)
+    val messageID = newState.getMessageID(string)
 
     /* Load the message into the result register */
     instructions += LOAD(newState.getResultRegister, MessageLoad(messageID))
