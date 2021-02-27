@@ -8,7 +8,9 @@ import parsley.implicits.{voidImplicitly => _, _}
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
-sealed trait Expression extends AssignmentRight {}
+sealed trait Expression extends AssignmentRight {
+  def getExpressionType: Type
+}
 sealed trait AssignmentRight extends ASTNodeVoid {}
 sealed trait AssignmentLeft extends ASTNodeVoid {
   /* Compile the reference of a left assignment and store it in the first free register. */
@@ -91,7 +93,9 @@ case class UnaryOperatorApplication(operator: UnaryOperator, operand: Expression
 
   override def getPos(): (Int, Int) = position
 
-  override def getType(symbolTable: SymbolTable): Type = operator match {
+  override def getType(symbolTable: SymbolTable): Type = getExpressionType
+
+  override def getExpressionType: Type = operator match {
     case Chr() => CharacterType()
     case Not() => BooleanType()
     case _     => IntType()
@@ -194,6 +198,8 @@ case class ArgumentList(expressions: List[Expression]) extends ASTNodeVoid {
 case class ArrayElement(name: Identifier, expressions: List[Expression])(position: (Int, Int))
     extends Expression
     with AssignmentLeft {
+  var expressionType: Type = VoidType()
+
   override def toString: String = name.toString + expressions.map("[" + _.toString + "]").mkString
 
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
@@ -261,12 +267,12 @@ case class ArrayElement(name: Identifier, expressions: List[Expression])(positio
     } else {
       /* Go through each expression and check if it's of type int */
       expressions.foreach(expression => {
-        val expressionType = expression.getType(symbolTable)
-        if (!expressionType.unifies(IntType()))
+        val getExpressionType = expression.getType(symbolTable)
+        if (!getExpressionType.unifies(IntType()))
           errors += ArrayElementError.expectation(
             name.identifier,
             IntType.toString(),
-            expressionType.toString,
+            getExpressionType.toString,
             getPos()
           )
       })
@@ -274,6 +280,8 @@ case class ArrayElement(name: Identifier, expressions: List[Expression])(positio
       /* Check correctness of each expression */
       expressions.foreach(_.check(symbolTable))
     }
+
+    expressionType = getType(symbolTable)
   }
 
   override def getPos(): (Int, Int) = position
@@ -289,6 +297,8 @@ case class ArrayElement(name: Identifier, expressions: List[Expression])(positio
       }
     identType
   }
+
+  override def getExpressionType: Type = expressionType
 }
 
 /* Represents a binary operation (e.g. 1 + 2) */
@@ -447,11 +457,12 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
 
   override def getPos(): (Int, Int) = position
 
-  override def getType(symbolTable: SymbolTable): Type =
-    operator match {
-      case Add() | Divide() | Modulo() | Multiply() | Subtract() => IntType()
-      case _                                                     => BooleanType()
-    }
+  override def getType(symbolTable: SymbolTable): Type = getExpressionType
+
+  override def getExpressionType: Type = operator match {
+    case Add() | Divide() | Modulo() | Multiply() | Subtract() => IntType()
+    case _                                                     => BooleanType()
+  }
 }
 
 /* Represents a bool (true or false) */
@@ -466,6 +477,7 @@ case class BooleanLiter(boolean: Boolean)(position: (Int, Int)) extends Expressi
   }
   override def getPos(): (Int, Int) = position
   override def getType(symbolTable: SymbolTable): Type = BooleanType()
+  override def getExpressionType: Type = BooleanType()
 }
 
 /* Represents a character(e.g. 'a')*/
@@ -478,10 +490,14 @@ case class CharacterLiter(char: Char)(position: (Int, Int)) extends Expression {
   }
   override def getPos(): (Int, Int) = position
   override def getType(symbolTable: SymbolTable): Type = CharacterType()
+
+  override def getExpressionType: Type = CharacterType()
 }
 
 /* Represents an identifier(e.g. int myIdentifier) */
 case class Identifier(identifier: String)(position: (Int, Int)) extends Expression with AssignmentLeft {
+  var expressionType: Type = VoidType()
+
   override def toString: String = identifier
 
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
@@ -509,11 +525,15 @@ case class Identifier(identifier: String)(position: (Int, Int)) extends Expressi
       /* Identifier was a void type - indicating that it hasn't been defined yet */
       errors += IdentifierError.undefined(identifier, getPos())
     }
+
+    expressionType = getType(symbolTable)
   }
 
   override def getType(symbolTable: SymbolTable): Type =
     /* Look up the symbol table hierarchy for the type of the identifier using it's name */
     symbolTable.lookupAll(identifier).getOrElse((VoidType(), null))._1
+
+  override def getExpressionType: Type = expressionType
 
   override def getPos(): (Int, Int) = position
 }
@@ -540,6 +560,8 @@ case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit])(position
 
   override def getPos(): (Int, Int) = position
   override def getType(symbolTable: SymbolTable): Type = IntType()
+
+  override def getExpressionType: Type = IntType()
   override def check(symbolTable: SymbolTable)(implicit errors: ListBuffer[Error]): Unit = {
     /* Map the characters to digits */
     val intDigits = digits.map(_.digit - '0')
@@ -573,6 +595,8 @@ case class StringLiter(string: String)(position: (Int, Int)) extends Expression 
   }
   override def getPos(): (Int, Int) = position
   override def getType(symbolTable: SymbolTable): Type = StringType()
+
+  override def getExpressionType: Type = StringType()
 }
 
 /* Represents an array literal(e.g. [1, 2, 3, 4]) */
@@ -619,9 +643,13 @@ case class ArrayLiter(expressions: List[Expression])(position: (Int, Int)) exten
 
       /* All other elements must have the same type */
       for (expression <- expressions.tail) {
-        val expressionType = expression.getType(symbolTable)
-        if (!expressionType.unifies(arrayElementType)) {
-          errors += ArrayLiterError.expectation(arrayElementType.toString, expressionType.toString, expression.getPos())
+        val getExpressionType = expression.getType(symbolTable)
+        if (!getExpressionType.unifies(arrayElementType)) {
+          errors += ArrayLiterError.expectation(
+            arrayElementType.toString,
+            getExpressionType.toString,
+            expression.getPos()
+          )
           return
         }
       }
@@ -651,6 +679,8 @@ case class PairLiter()(position: (Int, Int)) extends Expression {
   }
   override def getPos(): (Int, Int) = position
   override def getType(symbolTable: SymbolTable): Type = NullType()
+
+  override def getExpressionType: Type = NullType()
 }
 
 /* Represents creation of a new pair (e.g. newPair(1, "one")) */
@@ -756,11 +786,11 @@ case class PairElement(expression: Expression, isFirst: Boolean)(position: (Int,
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
 
     /* The expression must be a pair */
-    val expressionType = expression.getType(symbolTable)
-    expressionType match {
+    val getExpressionType = expression.getType(symbolTable)
+    getExpressionType match {
       case PairType(_, _) => ()
       case _ =>
-        errors += PairElementError.expectation("pair", expressionType.toString, isFirst, expression.getPos())
+        errors += PairElementError.expectation("pair", getExpressionType.toString, isFirst, expression.getPos())
     }
 
     expression.check(symbolTable)
