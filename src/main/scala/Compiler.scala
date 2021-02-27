@@ -76,6 +76,7 @@ object Compiler {
     val assembledFileName = baseName + ".s"
     val file = new File(assembledFileName)
     val writer = new FileWriter(file)
+    writer.write(".global main\n")
     instructions.foreach(i => writer.write(i.toString + "\n"))
     writer.close()
   }
