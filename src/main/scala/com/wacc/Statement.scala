@@ -203,8 +203,38 @@ case class Exit(expression: Expression)(position: (Int, Int)) extends Statement 
    ✅ Check done - ⚠️ Compile Pending */
 case class Free(expression: Expression)(position: (Int, Int)) extends Statement {
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
-    // TODO
-    state
+    /* Compile the expression */
+    val resultReg = state.getResultRegister
+    var newState = expression.compile(state)
+    /* TODO: Null check */
+
+    expression.getExpressionType match {
+      case ArrayType(_) =>
+        /* Free the array memory */
+        instructions += MOVE(Register0, resultReg)
+        instructions += BRANCHLINK("free")
+      case PairType(_, _) =>
+        instructions += MOVE(Register0, resultReg)
+
+        /* Save the pair pointer on the stack */
+        instructions += PUSH(Register0)
+
+        /* Free the first pointer */
+        instructions += LOAD(Register0, RegisterLoad(Register0))
+        instructions += BRANCHLINK("free")
+
+        /* Retrieve the pair pointer */
+        instructions += LOAD(Register0, RegisterLoad(RegisterSP))
+
+        /* Free the second pointer */
+        instructions += LOAD(Register0, RegisterOffsetLoad(Register0, ImmediateNumber(4)))
+        instructions += BRANCHLINK("free")
+
+        /* Free the pair pointer */
+        instructions += POP(Register0)
+        instructions += BRANCHLINK("free")
+    }
+    newState
   }
   override def toString: String = "free " + expression.toString + "\n"
 
