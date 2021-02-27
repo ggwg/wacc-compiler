@@ -234,7 +234,7 @@ case class Free(expression: Expression)(position: (Int, Int)) extends Statement 
         instructions += POP(Register0)
         instructions += BRANCHLINK("free")
     }
-    newState
+    newState.copy(freeRegs = resultReg :: newState.freeRegs)
   }
   override def toString: String = "free " + expression.toString + "\n"
 
@@ -436,8 +436,28 @@ case class Println(expression: Expression)(position: (Int, Int)) extends Stateme
  */
 case class Read(assignmentLeft: AssignmentLeft)(position: (Int, Int)) extends Statement {
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
-    // TODO
-    state
+    /* Find the reference to what we want to read and put in in r1 */
+    val pointerReg = state.getResultRegister
+    var newState = assignmentLeft.compileReference(state)
+    instructions += MOVE(Register1, pointerReg)
+
+    /* Decide if we read an int or a char */
+    val format = assignmentLeft.getLeftType match {
+      case IntType()       => "%d\\0"
+      case CharacterType() => "%c\\0"
+    }
+    /* Get the format string ID */
+    newState = newState.putMessageIfAbsent(format)
+    val formatID = newState.getMessageID(format)
+
+    /* Put the format in register 0 */
+    instructions += LOAD(Register0, MessageLoad(formatID))
+
+    /* Call scanf */
+    instructions += BRANCHLINK("scanf")
+
+    /* Mark the pointer register as free */
+    newState.copy(freeRegs = pointerReg :: newState.freeRegs)
   }
 
   override def toString: String = "read " + assignmentLeft.toString + "\n"
