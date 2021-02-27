@@ -148,7 +148,7 @@ case class Assignment(assignmentLeft: AssignmentLeft, assignmentRight: Assignmen
 /* ✅ Check done - ✅ Compile done */
 case class BeginEnd(statement: Statement)(position: (Int, Int)) extends Statement {
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
-    compileNewScope(state)(instructions)
+    statement.compileNewScope(state)(instructions)
   }
 
   override def toString: String = "begin\n" + statement.toString + "end\n"
