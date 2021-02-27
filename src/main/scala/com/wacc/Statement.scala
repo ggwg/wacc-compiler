@@ -110,7 +110,7 @@ case class Assignment(assignmentLeft: AssignmentLeft, assignmentRight: Assignmen
 
     /* Compile the value to be assigned to the left side */
     val assignmentPointer = newState.getResultRegister
-    newState = assignmentRight.compile(state)
+    newState = assignmentRight.compile(newState)
 
     /* Assign the value */
     instructions += STORE(assignmentPointer, RegisterLoad(assignPointer))
