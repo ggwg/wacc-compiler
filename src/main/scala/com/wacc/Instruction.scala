@@ -161,12 +161,12 @@ case class MUL(dest: Register, multiplier: Register, src: Register) extends Inst
   override def toString: String = s"\tMUL $dest, $multiplier, $src"
 }
 
-case class LOAD(dest: Register, src: AddressAccess) extends Instruction {
-  override def toString: String = s"\tLDR $dest, $src"
+case class LOAD(dest: Register, src: AddressAccess, isByte: Boolean = false) extends Instruction {
+  override def toString: String = s"\tLDR${if (isByte) "B"} $dest, $src"
 }
 
-case class STORE(src: Register, dest: AddressAccess) extends Instruction {
-  override def toString: String = s"\tSTR $src, $dest"
+case class STORE(src: Register, dest: AddressAccess, isByte: Boolean = false) extends Instruction {
+  override def toString: String = s"\tSTR${if (isByte) "B"} $src, $dest"
 }
 
 case class BRANCH(cond: Option[Condition], label: String) extends Instruction {
