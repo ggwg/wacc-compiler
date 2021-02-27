@@ -21,14 +21,14 @@ case class Program(functions: List[Function], body: Statement)(position: (Int, I
       newState = function.compile(newState)
     }
 
+    /* Add the main label */
+    instructions += StringLabel("main")
+
     /* Push the LR */
     instructions += PushLR()
 
     /* Compile the program body */
     newState = body.compileNewScope(newState)(instructions)
-
-    /* Add the main label */
-    instructions += StringLabel("main")
 
     /* Set the exit code to 0 */
     instructions += LOAD(Register0, ImmediateLoad(0))
@@ -77,14 +77,21 @@ case class Function(returnType: Type, name: Identifier, parameters: Option[Param
     var newState = state
     // TODO...
 
+    /* Add the function label */
+    instructions += StringLabel("f_" + name.identifier)
+
     /* Compile the function body */
     instructions += PushLR()
+    newState = newState.copy(spOffset = newState.spOffset + 4)
+
     newState = body.compileNewScope(newState)(instructions)
+
     instructions += PopPC()
+    newState = newState.copy(spOffset = newState.spOffset - 4)
 
     /* Reset the state to where it was initially */
     // TODO...
-    state
+    newState
   }
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {

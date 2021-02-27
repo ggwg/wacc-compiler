@@ -353,7 +353,7 @@ case class Return(expression: Expression)(position: (Int, Int)) extends Statemen
     instructions += PopPC()
 
     /* Mark the result register as usable */
-    newState.copy(freeRegs = resultReg :: newState.freeRegs)
+    newState.copy(spOffset = newState.spOffset - 4, freeRegs = resultReg :: newState.freeRegs)
   }
   override def toString: String = "return " + expression.toString + "\n"
 
