@@ -109,7 +109,6 @@ case class UnaryOperatorApplication(operator: UnaryOperator, operand: Expression
 }
 
 /* Represents a function call (e.g. call fun(1)) */
-/* TODO: compile */
 case class FunctionCall(name: Identifier, arguments: Option[ArgumentList])(position: (Int, Int))
     extends AssignmentRight {
 
@@ -120,15 +119,43 @@ case class FunctionCall(name: Identifier, arguments: Option[ArgumentList])(posit
     }) + ")"
 
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
-    /* TODO: Set up the function arguments */
-
-    /* TODO: Set up the call state */
     var newState = state
+    val resultReg = newState.getResultRegister
+    var declaredSize = 0
+
+    /* If we have arguments */
+    if (arguments.isDefined) {
+      val params = arguments.get
+
+      /* Process them */
+      for (expr <- params.expressions) {
+        /* Argument size */
+        val size = expr.getSize
+
+        /* Compile the expression */
+        newState = expr.compile(newState)
+
+        /* Store the result on the stack */
+        instructions += ADD(RegisterSP, RegisterSP, ImmediateNumber(size))
+        instructions += STORE(resultReg, RegisterLoad(RegisterSP), size == 1)
+        declaredSize += size
+
+        /* Update the state */
+        newState = newState.copy(spOffset = newState.spOffset + size, freeRegs = resultReg :: newState.freeRegs)
+      }
+    }
+
+    /* Jump to the function */
+    instructions += BRANCHLINK("f_" + name.identifier)
+
+    /* Reset the stack pointer */
+    instructions += ADD(RegisterSP, RegisterSP, ImmediateNumber(declaredSize))
+
+    /* Move the result */
+    instructions += MOVE(resultReg, Register0)
 
     /* Call the function */
     instructions += BRANCHLINK("f_" + name.identifier)
-
-    /* TODO: Reset the state */
     newState
   }
 
