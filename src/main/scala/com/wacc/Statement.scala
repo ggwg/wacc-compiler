@@ -325,7 +325,7 @@ case class Print(expression: Expression)(position: (Int, Int)) extends Statement
       case CharacterType() =>
         "%c"
       case StringType() | BooleanType() =>
-        "%s"
+        "%.*s"
       case _ =>
         "%p"
     }) + "\\0"
@@ -383,7 +383,7 @@ case class Println(expression: Expression)(position: (Int, Int)) extends Stateme
       case CharacterType() =>
         "%c"
       case StringType() | BooleanType() =>
-        "%s"
+        "%.*s"
       case _ =>
         "%p"
     }) + "\\n\\0"
