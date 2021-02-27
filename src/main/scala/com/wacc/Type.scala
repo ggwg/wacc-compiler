@@ -7,6 +7,10 @@ import parsley.implicits.{voidImplicitly => _, _}
 sealed trait Type extends ASTNodeVoid {
   def unifies(otherType: Type): Boolean
   override def getType(symbolTable: SymbolTable): Type = this
+  def getSize: Int = this match {
+    case BooleanType() | CharacterType() => 1
+    case _                               => 4
+  }
 }
 
 /* This trait represents types that can appear inside a pair */

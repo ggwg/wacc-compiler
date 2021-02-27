@@ -10,7 +10,7 @@ case class AssemblerState(
   spOffset: Int,
   /* For every identifier in this dictionary we keep the distance between where
      the variable is stored on the stack, and the beginning of the stack, similarly
-     to spOffset */
+     to spOffset. We also track what type the variable is. */
   varDic: immutable.Map[String, Int],
   /* List of available registers to be used when compiling a piece of code */
   freeRegs: immutable.List[Register],
@@ -28,7 +28,7 @@ case class AssemblerState(
 
   /* Returns the offset of a given variable name. Since our semantic analysis was successful,
      we are guaranteed to have a mapping for the variable in our varDic */
-  def getOffset(ident: String): Int = varDic.getOrElse(ident, 0)
+  def getOffset(ident: String): Int = varDic.getOrElse(ident, (0))
 
   /* Returns the next free label ID */
   def nextID: Int = nextLabelID.next

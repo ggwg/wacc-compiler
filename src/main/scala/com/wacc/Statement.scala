@@ -49,15 +49,15 @@ case class IdentifierDeclaration(identType: Type, name: Identifier, assignmentRi
     val resultReg = state.getResultRegister
     var newState = assignmentRight.compile(state)
 
-    /* Store the identifier on the stack
-       TODO: Find out the variable's size */
-    instructions += SUB(RegisterSP, RegisterSP, ImmediateNumber(4))
-    instructions += STORE(resultReg, RegisterLoad(RegisterSP))
+    /* Store the identifier on the stack */
+    val size = identType.getSize
+    instructions += SUB(RegisterSP, RegisterSP, ImmediateNumber(size))
+    instructions += STORE(resultReg, RegisterLoad(RegisterSP), size == 1)
 
     /* Update the state to reflect the change */
-    val newSPOffset = newState.spOffset + 4
+    val newSPOffset = newState.spOffset + size
     val newVarDic = newState.varDic + (name.identifier -> newSPOffset)
-    val newDeclaredSize = newState.declaredSize + 4
+    val newDeclaredSize = newState.declaredSize + size
     newState = newState.copy(spOffset = newSPOffset, varDic = newVarDic, declaredSize = newDeclaredSize)
 
     /* Mark the result register as free */
@@ -113,7 +113,7 @@ case class Assignment(assignmentLeft: AssignmentLeft, assignmentRight: Assignmen
     newState = assignmentRight.compile(newState)
 
     /* Assign the value */
-    instructions += STORE(assignmentPointer, RegisterLoad(assignPointer))
+    instructions += STORE(assignmentPointer, RegisterLoad(assignPointer), assignmentLeft.getLeftType.getSize == 1)
 
     /* Mark the registers as being usable */
     newState.copy(freeRegs = assignPointer :: assignmentPointer :: newState.freeRegs)

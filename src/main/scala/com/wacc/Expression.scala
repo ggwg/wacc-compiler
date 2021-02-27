@@ -9,12 +9,18 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 sealed trait Expression extends AssignmentRight {
+
+  /* Returns the size of an expression */
+  def getSize: Int = this.getExpressionType.getSize
+
   def getExpressionType: Type
 }
 sealed trait AssignmentRight extends ASTNodeVoid {}
 sealed trait AssignmentLeft extends ASTNodeVoid {
   /* Compile the reference of a left assignment and store it in the first free register. */
   def compileReference(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState
+
+  def getLeftType: Type
 }
 
 /* Class representing an unary operation (e.g. chr 101) */
@@ -207,7 +213,7 @@ case class ArrayElement(name: Identifier, expressions: List[Expression])(positio
     /* Compile the reference of the specified index, then retrieve the value pointed by it */
     val arrayReg = state.getResultRegister
     val newState = compileReference(state)
-    instructions += LOAD(arrayReg, RegisterLoad(arrayReg))
+    instructions += LOAD(arrayReg, RegisterLoad(arrayReg), expressionType.getSize == 1)
     newState
   }
 
@@ -219,8 +225,8 @@ case class ArrayElement(name: Identifier, expressions: List[Expression])(positio
 
     /* Make arrayReg to point where the array is stored on the stack */
     instructions += ADD(arrayReg, RegisterSP, ImmediateNumber(state.spOffset - state.getOffset(name.identifier)))
-    for (expr <- expressions) {
-
+    for (i <- expressions.indices) {
+      val expr = expressions(i)
       /* Compute the expression and store it in an available register */
       val indexReg = newState.getResultRegister
       if (newState.freeRegs.length == 1) {
@@ -251,9 +257,12 @@ case class ArrayElement(name: Identifier, expressions: List[Expression])(positio
       /* Skip over the array size */
       instructions += ADD(arrayReg, arrayReg, ImmediateNumber(4))
 
-      /* Move to the specified location in the array
-         TODO: Figure out how many bytes the array elements occupy (max 4) */
-      instructions += ADDLSL(arrayReg, arrayReg, indexReg, ImmediateNumber(2))
+      /* Move to the specified location in the array */
+      var shift = 2;
+      if (i == expressions.length - 1 && expressionType.getSize == 1) {
+        shift = 0
+      }
+      instructions += ADDLSL(arrayReg, arrayReg, indexReg, ImmediateNumber(shift))
 
       /* Add index register back to the free registers list */
       newState = newState.copy(freeRegs = indexReg :: newState.freeRegs)
@@ -299,6 +308,8 @@ case class ArrayElement(name: Identifier, expressions: List[Expression])(positio
   }
 
   override def getExpressionType: Type = expressionType
+
+  override def getLeftType: Type = expressionType
 }
 
 /* Represents a binary operation (e.g. 1 + 2) */
@@ -506,7 +517,7 @@ case class Identifier(identifier: String)(position: (Int, Int)) extends Expressi
     val newState = compileReference(state)
 
     /* Access it */
-    instructions += LOAD(resultReg, RegisterLoad(resultReg))
+    instructions += LOAD(resultReg, RegisterLoad(resultReg), expressionType.getSize == 1)
     newState
   }
 
@@ -534,6 +545,8 @@ case class Identifier(identifier: String)(position: (Int, Int)) extends Expressi
     symbolTable.lookupAll(identifier).getOrElse((VoidType(), null))._1
 
   override def getExpressionType: Type = expressionType
+
+  override def getLeftType: Type = expressionType
 
   override def getPos(): (Int, Int) = position
 }
@@ -607,8 +620,7 @@ case class ArrayLiter(expressions: List[Expression])(position: (Int, Int)) exten
     .getOrElse("") + "]"
 
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
-    /* TODO: Find expression sizes (max 4 bytes) */
-    val size = 4
+    val size = if (expressions.length == 0) 0 else expressions.head.getSize
 
     /* Allocate memory for the array */
     instructions += LOAD(Register0, ImmediateLoad(4 + size * expressions.length))
@@ -628,7 +640,7 @@ case class ArrayLiter(expressions: List[Expression])(position: (Int, Int)) exten
     /* For each expression, add it to the corresponding place in the array */
     for (index <- expressions.indices) {
       newState = expressions(index).compile(newState)
-      instructions += STORE(valueReg, RegisterOffsetLoad(arrayReg, ImmediateNumber(4 + index * size)))
+      instructions += STORE(valueReg, RegisterOffsetLoad(arrayReg, ImmediateNumber(4 + index * size)), size == 1)
 
       /* Make the value register available for the next expression */
       newState = newState.copy(freeRegs = valueReg :: newState.freeRegs)
@@ -703,13 +715,13 @@ case class NewPair(first: Expression, second: Expression)(position: (Int, Int)) 
       val expr = if (offset == 0) first else second
       newState = expr.compile(newState)
 
-      /* Allocate memory for the pointer
-         TODO: Find out the expression's size */
-      instructions += LOAD(Register0, ImmediateLoad(4))
+      /* Allocate memory for the pointer */
+      val size = expr.getSize
+      instructions += LOAD(Register0, ImmediateLoad(size))
       instructions += BRANCHLINK("malloc")
 
       /* Link the data together */
-      instructions += STORE(valueReg, RegisterLoad(Register0))
+      instructions += STORE(valueReg, RegisterLoad(Register0), size == 1)
       instructions += STORE(Register0, RegisterOffsetLoad(pairReg, ImmediateNumber(offset)))
       newState = newState.copy(freeRegs = valueReg :: newState.freeRegs)
     }
@@ -757,6 +769,8 @@ case class NewPair(first: Expression, second: Expression)(position: (Int, Int)) 
 case class PairElement(expression: Expression, isFirst: Boolean)(position: (Int, Int))
     extends AssignmentRight
     with AssignmentLeft {
+  var pairElementType: Type = VoidType()
+
   override def toString: String = (if (isFirst) "fst " else "snd ") + expression.toString
 
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
@@ -794,6 +808,8 @@ case class PairElement(expression: Expression, isFirst: Boolean)(position: (Int,
     }
 
     expression.check(symbolTable)
+
+    pairElementType = getType(symbolTable)
   }
 
   override def getPos(): (Int, Int) = position
@@ -810,6 +826,8 @@ case class PairElement(expression: Expression, isFirst: Boolean)(position: (Int,
       case _ => VoidType()
     }
   }
+
+  override def getLeftType: Type = pairElementType
 }
 
 /*  -----------------------------  Class objects  -----------------------------  */
