@@ -280,11 +280,55 @@ case class If(condition: Expression, trueStatement: Statement, falseStatement: S
   override def getPos(): (Int, Int) = position
 }
 
-/* ✅ Check done - ⚠️ Compile Pending */
+/* ✅ Check done - ⚠️ Compile done */
+// TODO: Code duplication in println
 case class Print(expression: Expression)(position: (Int, Int)) extends Statement {
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
-    // TODO
-    return state
+    /* Compile the expression */
+    val resultReg = state.getResultRegister
+    var newState = expression.compile(state)
+
+    /* Find the message format based on the expression's type */
+    val format = expression.getExpressionType match {
+      case IntType() =>
+        "%d"
+      case CharacterType() =>
+        "%c"
+      case StringType() | BooleanType() =>
+        "%s"
+      case _ =>
+        "%p"
+    }
+
+    /* Get the format ID from the state */
+    newState = newState.putMessageIfAbsent(format)
+    val formatID = newState.getMessageID(format)
+
+    /* printf first argument, the format */
+    instructions += LOAD(Register0, MessageLoad(formatID))
+
+    /* printf second argument, the thing to be printed */
+    instructions += MOVE(Register1, resultReg)
+
+    /* If a boolean, replace it with true or false */
+    if (expression.getExpressionType == BooleanType()) {
+
+      /* True and false IDs */
+      newState = newState.putMessageIfAbsent("true")
+      newState = newState.putMessageIfAbsent("false")
+      val trueID = newState.getMessageID("true")
+      val falseID = newState.getMessageID("false")
+
+      instructions += COMPARE(Register1, ImmediateNumber(0))
+      instructions += LOAD(Register1, MessageLoad(falseID), cond = Some(EQ))
+      instructions += LOAD(Register1, MessageLoad(trueID), cond = Some(NE))
+    }
+
+    /* Call printf */
+    instructions += BRANCHLINK("printf")
+
+    /* Mark the result register as usable */
+    newState.copy(freeRegs = resultReg :: newState.freeRegs)
   }
   override def toString: String = "print " + expression.toString + "\n"
 
@@ -298,8 +342,51 @@ case class Print(expression: Expression)(position: (Int, Int)) extends Statement
 /* ✅ Check done - ⚠️ Compile Pending */
 case class Println(expression: Expression)(position: (Int, Int)) extends Statement {
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
-    // TODO
-    return state
+    /* Compile the expression */
+    val resultReg = state.getResultRegister
+    var newState = expression.compile(state)
+
+    /* Find the message format based on the expression's type */
+    val format = (expression.getExpressionType match {
+      case IntType() =>
+        "%d"
+      case CharacterType() =>
+        "%c"
+      case StringType() | BooleanType() =>
+        "%s"
+      case _ =>
+        "%p"
+    }) + "\n"
+
+    /* Get the format ID from the state */
+    newState = newState.putMessageIfAbsent(format)
+    val formatID = newState.getMessageID(format)
+
+    /* printf first argument, the format */
+    instructions += LOAD(Register0, MessageLoad(formatID))
+
+    /* printf second argument, the thing to be printed */
+    instructions += MOVE(Register1, resultReg)
+
+    /* If a boolean, replace it with true or false */
+    if (expression.getExpressionType == BooleanType()) {
+
+      /* True and false IDs */
+      newState = newState.putMessageIfAbsent("true")
+      newState = newState.putMessageIfAbsent("false")
+      val trueID = newState.getMessageID("true")
+      val falseID = newState.getMessageID("false")
+
+      instructions += COMPARE(Register1, ImmediateNumber(0))
+      instructions += LOAD(Register1, MessageLoad(falseID), cond = Some(EQ))
+      instructions += LOAD(Register1, MessageLoad(trueID), cond = Some(NE))
+    }
+
+    /* Call printf */
+    instructions += BRANCHLINK("printf")
+
+    /* Mark the result register as usable */
+    newState.copy(freeRegs = resultReg :: newState.freeRegs)
   }
   override def toString: String = "println " + expression.toString + "\n"
 
