@@ -638,7 +638,7 @@ case class StringLiter(string: String)(position: (Int, Int)) extends Expression 
     /* Load the message into the result register */
     instructions += LOAD(newState.getResultRegister, MessageLoad(messageID))
 
-    newState
+    newState.copy(freeRegs = newState.freeRegs.tail)
   }
   override def getPos(): (Int, Int) = position
   override def getType(symbolTable: SymbolTable): Type = StringType()
