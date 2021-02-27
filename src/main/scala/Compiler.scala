@@ -89,7 +89,21 @@ object Compiler {
     /* Add all the messages */
     for ((message, id) <- finalState.messageDic) {
       header += StringLabel("msg_" + id)
-      header += WordDirective(message.length)
+
+      /* Compute the effective message length, taking escaped chars into account*/
+      var length = 0
+      var isEscaped = false
+      for (i <- message.indices) {
+        if (isEscaped) {
+          isEscaped = false
+          length += 1
+        } else if (message(i) == '\\') {
+          isEscaped = true
+        } else {
+          length += 1
+        }
+      }
+      header += WordDirective(length)
       header += AsciiDirective(message)
     }
 

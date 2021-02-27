@@ -289,7 +289,7 @@ case class Print(expression: Expression)(position: (Int, Int)) extends Statement
     var newState = expression.compile(state)
 
     /* Find the message format based on the expression's type */
-    val format = expression.getExpressionType match {
+    val format = (expression.getExpressionType match {
       case IntType() =>
         "%d"
       case CharacterType() =>
@@ -298,7 +298,7 @@ case class Print(expression: Expression)(position: (Int, Int)) extends Statement
         "%s"
       case _ =>
         "%p"
-    }
+    }) + "\\0"
 
     /* Get the format ID from the state */
     newState = newState.putMessageIfAbsent(format)
@@ -306,7 +306,6 @@ case class Print(expression: Expression)(position: (Int, Int)) extends Statement
 
     /* printf first argument, the format */
     instructions += LOAD(Register0, MessageLoad(formatID))
-    instructions += ADD(Register0, Register0, ImmediateNumber(4))
 
     /* printf second argument, the thing to be printed */
     instructions += MOVE(Register1, resultReg)
@@ -357,7 +356,7 @@ case class Println(expression: Expression)(position: (Int, Int)) extends Stateme
         "%s"
       case _ =>
         "%p"
-    }) + "\\n"
+    }) + "\\n\\0"
 
     /* Get the format ID from the state */
     newState = newState.putMessageIfAbsent(format)
@@ -365,7 +364,6 @@ case class Println(expression: Expression)(position: (Int, Int)) extends Stateme
 
     /* printf first argument, the format */
     instructions += LOAD(Register0, MessageLoad(formatID))
-    instructions += ADD(Register0, Register0, ImmediateNumber(4))
 
     /* printf second argument, the thing to be printed */
     instructions += MOVE(Register1, resultReg)
