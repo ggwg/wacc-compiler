@@ -109,6 +109,19 @@ case class FunctionCall(name: Identifier, arguments: Option[ArgumentList])(posit
       case None       => ""
     }) + ")"
 
+  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
+    /* TODO: Set up the function arguments */
+
+    /* TODO: Set up the call state */
+    var newState = state
+
+    /* Call the function */
+    instructions += BRANCHLINK("f_" + name.identifier)
+
+    /* TODO: Reset the state */
+    newState
+  }
+
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
 
     /* Lookup the function's type using it's name across the entire symbol table hierarchy */
