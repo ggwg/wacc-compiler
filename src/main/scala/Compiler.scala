@@ -1,4 +1,15 @@
-import com.wacc.{AssemblerState, Error, Instruction, PopPC, SymbolTable}
+import com.wacc.{
+  AsciiDirective,
+  AssemblerState,
+  DataDirective,
+  Error,
+  Instruction,
+  MessageLoad,
+  PopPC,
+  StringLabel,
+  SymbolTable,
+  WordDirective
+}
 import parsley.Failure
 
 import java.io.{File, FileWriter}
@@ -70,12 +81,25 @@ object Compiler {
     val instructions: ListBuffer[Instruction] = ListBuffer.empty
     var finalState = AST.compile(AssemblerState.initialState)(instructions)
 
-    /* TODO: Add the necessary headers and footers for the program */
+    val header: ListBuffer[Instruction] = ListBuffer.empty
+
+    /* Data directive */
+    header += DataDirective()
+
+    /* Add all the messages */
+    for ((message, id) <- finalState.messageDic) {
+      header += StringLabel("msg_" + id)
+      header += WordDirective(message.length)
+      header += AsciiDirective(message)
+    }
+
+    /* TODO: Add footers for the program */
 
     /* Write to an assembly file */
     val assembledFileName = baseName + ".s"
     val file = new File(assembledFileName)
     val writer = new FileWriter(file)
+    header.foreach(i => writer.write(i.toString + "\n"))
     writer.write(".global main\n")
     instructions.foreach(i => writer.write(i.toString + "\n"))
     writer.close()

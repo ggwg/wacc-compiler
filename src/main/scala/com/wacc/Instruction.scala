@@ -7,6 +7,7 @@ sealed trait Condition
 sealed trait Register extends Operand2
 sealed trait ImmediateValue extends Operand2
 sealed trait Label extends Instruction
+sealed trait Directive extends Instruction
 
 case class NumberLabel(value: Int) extends Label {
   override def toString: String = "L" + value + ":"
@@ -69,6 +70,10 @@ case class ImmediateNumber(value: Int) extends ImmediateValue {
 
 case class ImmediateChar(chr: Char) extends ImmediateValue {
   override def toString: String = s"#'$chr'"
+}
+
+case class MessageLoad(id: Int) extends AddressAccess {
+  override def toString: String = s"=msg_$id"
 }
 
 case class ImmediateLoad(value: Int) extends AddressAccess {
@@ -183,6 +188,22 @@ case class COMPARE(src: Register, op2: Operand2) extends Instruction {
 
 case class MOVE(dest: Register, op2: Operand2, cond: Option[Condition] = Option.empty) extends Instruction {
   override def toString: String = s"\tMOV${cond.map(_.toString).getOrElse("")} $dest, $op2"
+}
+
+case class DataDirective() extends Directive {
+  override def toString: String = ".data"
+}
+
+case class LtorgDirective() extends Directive {
+  override def toString: String = "\t.ltorg"
+}
+
+case class WordDirective(size: Int) extends Directive {
+  override def toString: String = s"\t.word $size"
+}
+
+case class AsciiDirective(message: String) extends Directive {
+  override def toString: String = "\t.ascii \"" + message + "\""
 }
 
 object Register {

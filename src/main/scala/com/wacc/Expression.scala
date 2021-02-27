@@ -603,8 +603,21 @@ case class StringLiter(string: String)(position: (Int, Int)) extends Expression 
   override def toString: String = "\"" + string + "\""
 
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
-    /* TODO: Possible preprocess these into a  header of messages */
-    state
+    var newState = state
+
+    /* Check if we already created the message */
+    if (!newState.containsMessage(string)) {
+      val messageID = newState.getNextMessageID
+      newState = newState.copy(messageDic = newState.messageDic + (string -> messageID))
+    }
+
+    /* Retrieve the message ID */
+    val messageID = newState.messageDic(string)
+
+    /* Load the message into the result register */
+    instructions += LOAD(newState.getResultRegister, MessageLoad(messageID))
+
+    newState
   }
   override def getPos(): (Int, Int) = position
   override def getType(symbolTable: SymbolTable): Type = StringType()
