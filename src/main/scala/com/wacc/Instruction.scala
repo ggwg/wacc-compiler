@@ -114,75 +114,75 @@ case object GT extends Condition {
 }
 
 case class PushLR() extends Instruction {
-  override def toString: String = "PUSH {LR}"
+  override def toString: String = "\tPUSH {LR}"
 }
 
 case class PopPC() extends Instruction {
-  override def toString: String = "POP {PC}"
+  override def toString: String = "\tPOP {PC}"
 }
 
 case class PUSH(reg: Register) extends Instruction {
-  override def toString: String = s"PUSH {$reg}"
+  override def toString: String = s"\tPUSH {$reg}"
 }
 
 case class POP(reg: Register) extends Instruction {
-  override def toString: String = s"POP {$reg}"
+  override def toString: String = s"\tPOP {$reg}"
 }
 
 case class ADD(dest: Register, src: Register, op2: Operand2) extends Instruction {
-  override def toString: String = s"ADD $dest, $src, $op2"
+  override def toString: String = s"\tADD $dest, $src, $op2"
 }
 
 case class ADDLSL(dest: Register, src: Register, op2: Operand2, shift: ImmediateValue) extends Instruction {
-  override def toString: String = s"ADD $dest, $src, $op2, LSL $shift"
+  override def toString: String = s"\tADD $dest, $src, $op2, LSL $shift"
 }
 
 case class SUB(dest: Register, src: Register, op2: Operand2) extends Instruction {
-  override def toString: String = s"SUB $dest, $src, $op2"
+  override def toString: String = s"\tSUB $dest, $src, $op2"
 }
 
 case class ReverseSUB(dest: Register, src: Register, op2: Operand2) extends Instruction {
-  override def toString: String = s"RSB $dest, $src, $op2"
+  override def toString: String = s"\tRSB $dest, $src, $op2"
 }
 
 case class AND(dest: Register, src: Register, op2: Operand2) extends Instruction {
-  override def toString: String = s"AND $dest, $src, $op2"
+  override def toString: String = s"\tAND $dest, $src, $op2"
 }
 
 case class OR(dest: Register, src: Register, op2: Operand2) extends Instruction {
-  override def toString: String = s"ORR $dest, $src, $op2"
+  override def toString: String = s"\tORR $dest, $src, $op2"
 }
 
 case class XOR(dest: Register, src: Register, op2: Operand2) extends Instruction {
-  override def toString: String = s"EOR $dest, $src, $op2"
+  override def toString: String = s"\tEOR $dest, $src, $op2"
 }
 
 case class MUL(dest: Register, multiplier: Register, src: Register) extends Instruction {
-  override def toString: String = s"MUL $dest, $multiplier, $src"
+  override def toString: String = s"\tMUL $dest, $multiplier, $src"
 }
 
 case class LOAD(dest: Register, src: AddressAccess) extends Instruction {
-  override def toString: String = s"LDR $dest, $src"
+  override def toString: String = s"\tLDR $dest, $src"
 }
 
 case class STORE(src: Register, dest: AddressAccess) extends Instruction {
-  override def toString: String = s"STR $src, $dest"
+  override def toString: String = s"\tSTR $src, $dest"
 }
 
 case class BRANCH(cond: Option[Condition], label: String) extends Instruction {
-  override def toString: String = s"B${cond.map(_.toString).getOrElse("")} $label"
+  override def toString: String = s"\tB${cond.map(_.toString).getOrElse("")} $label"
 }
 
 case class BRANCHLINK(label: String) extends Instruction {
-  override def toString: String = "BL " + label
+  override def toString: String = "\\tBL " + label
 }
 
 case class COMPARE(src: Register, op2: Operand2) extends Instruction {
-  override def toString: String = s"CMP $src, $op2"
+  override def toString: String = s"\tCMP $src, $op2"
 }
 
 case class MOVE(dest: Register, op2: Operand2, cond: Option[Condition] = Option.empty) extends Instruction {
-  override def toString: String = s"MOV${cond.map(_.toString).getOrElse("")} $dest, $op2"
+  override def toString: String = s"\tMOV${cond.map(_.toString).getOrElse("")} $dest, $op2"
 }
 
 object Register {

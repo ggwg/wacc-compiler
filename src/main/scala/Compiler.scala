@@ -1,20 +1,33 @@
-import com.wacc.{Error, SymbolTable}
+import com.wacc.{AssemblerState, Error, Instruction, PopPC, SymbolTable}
 import parsley.Failure
 
+import java.io.{File, FileWriter}
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 import scala.io.Source
 
 object Compiler {
   def main(args: Array[String]): Unit = {
     if (args.length != 1) {
-      println("Usage: ./compiler <path_to_file>")
+      println("Usage: ./compile <path_to_file>")
       return
     }
 
+    val fileName = args(0)
+    val split = fileName.split('.')
+
+    /* Check that the input is correct */
+    if (split.length != 2 || !split(1).equals("wacc")) {
+      println("File path must be of the form 'path/name.wacc' or 'name.wacc'")
+      return
+    }
+
+    /* Retrieve the base file name from the path */
+    val baseName = split(0).split('/').last
+
     /* Read the file into the input string */
-    val filename = args(0)
     var input = ""
-    for (line <- Source.fromFile(filename).getLines()) {
+    for (line <- Source.fromFile(fileName).getLines()) {
       input += line + "\n"
     }
 
@@ -53,6 +66,17 @@ object Compiler {
       sys.exit(200)
     }
 
-    /* TODO: Output AST to assembly */
+    /* Compile the program */
+    val instructions: ListBuffer[Instruction] = ListBuffer.empty
+    var finalState = AST.compile(AssemblerState.initialState)(instructions)
+
+    /* TODO: Add the necessary headers and footers for the program */
+
+    /* Write to an assembly file */
+    val assembledFileName = baseName + ".s"
+    val file = new File(assembledFileName)
+    val writer = new FileWriter(file)
+    instructions.foreach(i => writer.write(i.toString + "\n"))
+    writer.close()
   }
 }
