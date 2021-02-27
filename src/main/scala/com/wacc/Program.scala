@@ -70,12 +70,24 @@ case class Function(returnType: Type, name: Identifier, parameters: Option[Param
       parameters.getOrElse("").toString + ") is\n" + body.toString + "end\n"
 
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
-    // TODO
-    /* Set up the arguments */
-
-    /* Set up the state */
     var newState = state
-    // TODO...
+
+    /* If we have parameters */
+    if (parameters.isDefined) {
+      val params = parameters.get
+
+      /* Process them */
+      for (param <- params.parameters) {
+        /* Parameter size */
+        val size = param.parameterType.getSize
+
+        /* Update the state */
+        newState = newState.copy(
+          spOffset = newState.spOffset + size,
+          varDic = newState.varDic + (param.identifier.identifier -> (newState.spOffset + size))
+        )
+      }
+    }
 
     /* Add the function label */
     instructions += StringLabel("f_" + name.identifier)
@@ -90,8 +102,7 @@ case class Function(returnType: Type, name: Identifier, parameters: Option[Param
     newState = newState.copy(spOffset = newState.spOffset - 4)
 
     /* Reset the state to where it was initially */
-    // TODO...
-    newState
+    newState.copy(spOffset = state.spOffset)
   }
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {

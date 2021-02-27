@@ -153,9 +153,6 @@ case class FunctionCall(name: Identifier, arguments: Option[ArgumentList])(posit
 
     /* Move the result */
     instructions += MOVE(resultReg, Register0)
-
-    /* Call the function */
-    instructions += BRANCHLINK("f_" + name.identifier)
     newState
   }
 

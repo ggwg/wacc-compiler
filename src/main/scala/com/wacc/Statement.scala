@@ -350,6 +350,7 @@ case class Return(expression: Expression)(position: (Int, Int)) extends Statemen
     instructions += MOVE(Register0, resultReg)
 
     /* Return */
+    instructions += ADD(RegisterSP, RegisterSP, ImmediateNumber(newState.declaredSize))
     instructions += PopPC()
 
     /* Mark the result register as usable */
