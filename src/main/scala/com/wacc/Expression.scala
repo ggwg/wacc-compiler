@@ -527,10 +527,10 @@ case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit])(position
 
   def toInt: Int = {
     val res: Int = digits.mkString.toInt
-    if (sign.getOrElse(IntegerSign('+').sign) == '-') {
-      return -1 * res
+    sign match {
+      case Some(IntegerSign('-')) => -res
+      case _                      => res
     }
-    res
   }
 
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
