@@ -174,7 +174,7 @@ case class BRANCH(cond: Option[Condition], label: String) extends Instruction {
 }
 
 case class BRANCHLINK(label: String) extends Instruction {
-  override def toString: String = "\\tBL " + label
+  override def toString: String = "\tBL " + label
 }
 
 case class COMPARE(src: Register, op2: Operand2) extends Instruction {
