@@ -357,7 +357,7 @@ case class Println(expression: Expression)(position: (Int, Int)) extends Stateme
         "%s"
       case _ =>
         "%p"
-    }) + "\n"
+    }) + "\\n"
 
     /* Get the format ID from the state */
     newState = newState.putMessageIfAbsent(format)
