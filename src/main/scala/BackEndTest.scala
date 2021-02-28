@@ -34,28 +34,6 @@ object BackEndTest {
     compileAll(resources, outputDir)
   }
 
-  def testAllFiles(dir: File): Unit = {
-    var count: Int = 0
-    for (file <- dir.listFiles()) {
-      if (file.isDirectory) {
-        testAllFiles(file)
-      } else {
-        val fileName = file.getAbsolutePath
-        var input = ""
-        for (line <- Source.fromFile(fileName).getLines()) {
-          input += line + '\n'
-        }
-        if ((skipWhitespace *> programParser).runParser(input).isSuccess) {
-          count += 1
-        } else {
-          println("BIG FAIL")
-        }
-      }
-    }
-
-    println("Correct: " + count)
-  }
-
   def compileAll(dir: File, outputDir: String): Unit = {
     for (file <- dir.listFiles()) {
       if (file.isDirectory) {
