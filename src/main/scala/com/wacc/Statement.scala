@@ -325,7 +325,7 @@ case class Print(expression: Expression)(position: (Int, Int)) extends Statement
       case CharacterType() =>
         "%c"
       case StringType() | BooleanType() =>
-        "%.*s"
+        "%s"
       case _ =>
         "%p"
     }) + "\\0"
@@ -336,9 +336,11 @@ case class Print(expression: Expression)(position: (Int, Int)) extends Statement
 
     /* printf first argument, the format */
     instructions += LOAD(Register0, MessageLoad(formatID))
+    instructions += ADD(Register0, Register0, ImmediateNumber(4))
 
     /* printf second argument, the thing to be printed */
     instructions += MOVE(Register1, resultReg)
+    instructions += ADD(Register1, Register1, ImmediateNumber(4))
 
     /* If a boolean, replace it with true or false */
     if (expression.getExpressionType == BooleanType()) {
@@ -383,7 +385,7 @@ case class Println(expression: Expression)(position: (Int, Int)) extends Stateme
       case CharacterType() =>
         "%c"
       case StringType() | BooleanType() =>
-        "%.*s"
+        "%s"
       case _ =>
         "%p"
     }) + "\\n\\0"
@@ -394,9 +396,11 @@ case class Println(expression: Expression)(position: (Int, Int)) extends Stateme
 
     /* printf first argument, the format */
     instructions += LOAD(Register0, MessageLoad(formatID))
+    instructions += ADD(Register0, Register0, ImmediateNumber(4))
 
     /* printf second argument, the thing to be printed */
     instructions += MOVE(Register1, resultReg)
+    instructions += ADD(Register1, Register1, ImmediateNumber(4))
 
     /* If a boolean, replace it with true or false */
     if (expression.getExpressionType == BooleanType()) {
