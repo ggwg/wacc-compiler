@@ -125,28 +125,13 @@ case class FunctionCall(name: Identifier, arguments: Option[ArgumentList])(posit
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     var newState = state
     val resultReg = newState.getResultRegister
-    var declaredSize = 0
+
+    /* Total size of the arguments */
+    val declaredSize = arguments.map(_.expressions.map(_.getSize).sum).getOrElse(0)
 
     /* If we have arguments */
     if (arguments.isDefined) {
-      val params = arguments.get
-
-      /* Process them */
-      for (expr <- params.expressions) {
-        /* Argument size */
-        val size = expr.getSize
-
-        /* Compile the expression */
-        newState = expr.compile(newState)
-
-        /* Store the result on the stack */
-        instructions += SUB(RegisterSP, RegisterSP, ImmediateNumber(size))
-        instructions += STORE(resultReg, RegisterLoad(RegisterSP), size == 1)
-        declaredSize += size
-
-        /* Update the state */
-        newState = newState.copy(spOffset = newState.spOffset + size, freeRegs = resultReg :: newState.freeRegs)
-      }
+      newState = arguments.get.compile(newState)
     }
 
     /* Jump to the function */
@@ -221,6 +206,29 @@ case class FunctionCall(name: Identifier, arguments: Option[ArgumentList])(posit
 /* Represents a list of arguments (e.g. (expr1, expr2)) */
 case class ArgumentList(expressions: List[Expression]) extends ASTNodeVoid {
   override def toString: String = expressions.map(_.toString).reduce((left, right) => left + ", " + right)
+
+  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
+    val resultReg = state.getResultRegister
+    var newState = state
+
+    /* Process the arguments */
+    for (expr <- expressions) {
+      /* Argument size */
+      val size = expr.getSize
+
+      /* Compile the expression */
+      newState = expr.compile(newState)
+
+      /* Store the result on the stack */
+      instructions += SUB(RegisterSP, RegisterSP, ImmediateNumber(size))
+      instructions += STORE(resultReg, RegisterLoad(RegisterSP), size == 1)
+
+      /* Update the state */
+      newState = newState.copy(spOffset = newState.spOffset + size, freeRegs = resultReg :: newState.freeRegs)
+    }
+
+    newState
+  }
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     /* Check the correctness of each argument */
