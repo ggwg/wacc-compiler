@@ -114,6 +114,7 @@ object Compiler {
     val file = new File(assembledFileName)
     val writer = new FileWriter(file)
     header.foreach(i => writer.write(i.toString + "\n"))
+    writer.write(".text\n")
     writer.write(".global main\n")
     instructions.foreach(i => writer.write(i.toString + "\n"))
     writer.close()

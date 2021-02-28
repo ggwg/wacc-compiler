@@ -26,6 +26,7 @@ case class Program(functions: List[Function], body: Statement)(position: (Int, I
 
     /* Push the LR */
     instructions += PushLR()
+    newState = newState.copy(spOffset = newState.spOffset + 4)
 
     /* Compile the program body */
     newState = body.compileNewScope(newState)(instructions)
@@ -35,6 +36,7 @@ case class Program(functions: List[Function], body: Statement)(position: (Int, I
 
     /* Pop the PC */
     instructions += PopPC()
+    newState = newState.copy(spOffset = newState.spOffset - 4)
 
     /* Add the ltorg directive */
     instructions += LtorgDirective()
@@ -106,8 +108,7 @@ case class Function(returnType: Type, name: Identifier, parameters: Option[Param
     /* Add the ltorg directive */
     instructions += LtorgDirective()
 
-    /* Reset the state to where it was initially */
-    newState.copy(spOffset = state.spOffset)
+    newState
   }
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {

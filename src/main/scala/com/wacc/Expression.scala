@@ -136,7 +136,7 @@ case class FunctionCall(name: Identifier, arguments: Option[ArgumentList])(posit
         newState = expr.compile(newState)
 
         /* Store the result on the stack */
-        instructions += ADD(RegisterSP, RegisterSP, ImmediateNumber(size))
+        instructions += SUB(RegisterSP, RegisterSP, ImmediateNumber(size))
         instructions += STORE(resultReg, RegisterLoad(RegisterSP), size == 1)
         declaredSize += size
 
