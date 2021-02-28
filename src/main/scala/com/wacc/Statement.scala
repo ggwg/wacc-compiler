@@ -340,7 +340,10 @@ case class Print(expression: Expression)(position: (Int, Int)) extends Statement
 
     /* printf second argument, the thing to be printed */
     instructions += MOVE(Register1, resultReg)
-    instructions += ADD(Register1, Register1, ImmediateNumber(4))
+    expression.getExpressionType match {
+      case StringType() | BooleanType() => instructions += ADD(Register1, Register1, ImmediateNumber(4))
+      case _                            => ()
+    }
 
     /* If a boolean, replace it with true or false */
     if (expression.getExpressionType == BooleanType()) {
@@ -400,7 +403,10 @@ case class Println(expression: Expression)(position: (Int, Int)) extends Stateme
 
     /* printf second argument, the thing to be printed */
     instructions += MOVE(Register1, resultReg)
-    instructions += ADD(Register1, Register1, ImmediateNumber(4))
+    expression.getExpressionType match {
+      case StringType() | BooleanType() => instructions += ADD(Register1, Register1, ImmediateNumber(4))
+      case _                            => ()
+    }
 
     /* If a boolean, replace it with true or false */
     if (expression.getExpressionType == BooleanType()) {
@@ -456,6 +462,7 @@ case class Read(assignmentLeft: AssignmentLeft)(position: (Int, Int)) extends St
 
     /* Put the format in register 0 */
     instructions += LOAD(Register0, MessageLoad(formatID))
+    instructions += ADD(Register0, Register0, ImmediateNumber(4))
 
     /* Call scanf */
     instructions += BRANCHLINK("scanf")
