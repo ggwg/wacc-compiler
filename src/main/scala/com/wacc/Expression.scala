@@ -362,7 +362,7 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
       newState = rightOperand.compile(newState.copy(spOffset = newState.spOffset + 4))(instructions)
 
       /* Move the result into the second operand and restore the first operand */
-      instructions += MOVE(firstOp, secondOp)
+      instructions += MOVE(secondOp, firstOp)
       instructions += POP(firstOp)
 
       /* Mark the second operand register as unavailable */
