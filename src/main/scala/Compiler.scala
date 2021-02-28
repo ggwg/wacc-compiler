@@ -10,14 +10,51 @@ import com.wacc.{
   SymbolTable,
   WordDirective
 }
-import parsley.Failure
+import parsley.{Failure, Success}
 
 import java.io.{File, FileWriter}
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
-import scala.io.Source
 
 object Compiler {
+
+  /* Compute the effective message length, taking escaped chars into account*/
+  def getMessageLength(message: String): Int = {
+    var length = 0
+    var isEscaped = false
+    for (i <- message.indices) {
+      if (isEscaped) {
+        isEscaped = false
+        length += 1
+      } else if (message(i) == '\\') {
+        isEscaped = true
+      } else {
+        length += 1
+      }
+    }
+    length
+  }
+
+  def generateHeader(state: AssemblerState): ListBuffer[Instruction] = {
+    var header: ListBuffer[Instruction] = ListBuffer.empty
+
+    /* Data directive */
+    header += DataDirective()
+
+    /* Add all the messages */
+    for ((message, id) <- state.messageDic) {
+      header += StringLabel("msg_" + id)
+
+      /* Message length */
+      val length = getMessageLength(message)
+
+      /* Add the message's length and content, \0 included*/
+      header += WordDirective(length + 1)
+      header += AsciiDirective(message + "\\0")
+    }
+    header
+  }
+
   def main(args: Array[String]): Unit = {
     if (args.length != 1) {
       println("Usage: ./compile <path_to_file>")
@@ -36,17 +73,14 @@ object Compiler {
     /* Retrieve the base file name from the path */
     val baseName = split(0).split('/').last
 
-    /* Read the file into the input string */
-    var input = ""
-    for (line <- Source.fromFile(fileName).getLines()) {
-      input += line + "\n"
-    }
-
     /* Parse the input */
-    val parseResult = WACCParser.programParser.runParser(input)
-    if (parseResult.isFailure) {
-      println("#syntax_error#\n" + parseResult.asInstanceOf[Failure].msg)
-      sys.exit(100)
+    val parseResult = WACCParser.programParser.parseFromFile(new File(fileName))
+
+    parseResult match {
+      case Failure(msg) =>
+        println("#syntax_error#\n" + msg)
+        sys.exit(100)
+      case Success(_) => ()
     }
 
     /* Semantic Analysis
@@ -70,56 +104,41 @@ object Compiler {
     }
 
     /* Check for semantic errors */
-    for (error <- semanticErrors) {
-      error.throwError()
-    }
+    semanticErrors.foreach(_.throwError())
     if (semanticErrors.nonEmpty) {
       sys.exit(200)
     }
 
     /* Compile the program */
     val instructions: ListBuffer[Instruction] = ListBuffer.empty
-    var finalState = AST.compile(AssemblerState.initialState)(instructions)
-
-    val header: ListBuffer[Instruction] = ListBuffer.empty
-
-    /* Data directive */
-    header += DataDirective()
-
-    /* Add all the messages */
-    for ((message, id) <- finalState.messageDic) {
-      header += StringLabel("msg_" + id)
-
-      /* Compute the effective message length, taking escaped chars into account*/
-      var length = 0
-      var isEscaped = false
-      for (i <- message.indices) {
-        if (isEscaped) {
-          isEscaped = false
-          length += 1
-        } else if (message(i) == '\\') {
-          isEscaped = true
-        } else {
-          length += 1
-        }
-      }
-
-      header += WordDirective(length + 1)
-      header += AsciiDirective(message + "\\0")
-    }
+    var state = AST.compile(AssemblerState.initialState)(instructions)
 
     /* TODO: Add footers for the program */
+    // TODO code goes here
+
+    /* Add the program headers. Program headers include messages */
+    val header: ListBuffer[Instruction] = generateHeader(state)
 
     /* TODO: Split add and sub operations which use more than #1024 */
 
     /* Write to an assembly file */
-    val assembledFileName = baseName + ".s"
+    // TODO: Footer
+    writeToFile(baseName + ".s", header, instructions)
+  }
+
+  def writeToFile(assembledFileName: String, header: ListBuffer[Instruction], body: ListBuffer[Instruction]): Unit = {
     val file = new File(assembledFileName)
     val writer = new FileWriter(file)
-    header.foreach(i => writer.write(i.toString + "\n"))
+
+    /* Write all messages */
+    header.foreach(instr => writer.write(instr.toString + "\n"))
+
+    /* Add directives */
     writer.write(".text\n")
     writer.write(".global main\n")
-    instructions.foreach(i => writer.write(i.toString + "\n"))
+
+    /* Write the program instructions */
+    body.foreach(instr => writer.write(instr.toString + "\n"))
     writer.close()
   }
 }
