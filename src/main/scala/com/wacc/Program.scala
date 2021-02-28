@@ -1,5 +1,6 @@
 package com.wacc
 
+import com.wacc.Function.initSP
 import parsley.Parsley
 import parsley.Parsley.pos
 import parsley.implicits.{voidImplicitly => _, _}
@@ -89,9 +90,9 @@ case class Function(returnType: Type, name: Identifier, parameters: Option[Param
 
     /* Compile the function body. We add a special entry in the dictionary so that when we
        return we know where to reposition the stack pointer */
-    newState = newState.copy(varDic = newState.varDic + ("-initSP" -> newState.spOffset))
+    newState = newState.copy(varDic = newState.varDic + (initSP -> newState.spOffset))
     newState = body.compileNewScope(newState)(instructions)
-    newState = newState.copy(varDic = newState.varDic - "-initSP")
+    newState = newState.copy(varDic = newState.varDic - initSP)
 
     /* Pop the PC */
     instructions += PopPC()
@@ -184,6 +185,8 @@ object Program {
 }
 
 object Function {
+  val initSP: String = "-initSPOffset"
+
   def apply(
     returnType: Parsley[Type],
     name: Parsley[Identifier],

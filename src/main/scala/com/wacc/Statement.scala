@@ -433,17 +433,15 @@ case class Return(expression: Expression)(position: (Int, Int)) extends Statemen
     /* Compile the expression and store it in r0 */
     val resultReg = state.getResultRegister
     val newState = expression.compile(state)
+    val functionDeclaredSize = newState.spOffset - newState.getOffset(Function.initSP)
     instructions += MOVE(Register0, resultReg)
 
     /* Return */
-    instructions += ADD(RegisterSP, RegisterSP, ImmediateNumber(newState.spOffset - newState.getOffset("-initSP")))
+    instructions += ADD(RegisterSP, RegisterSP, ImmediateNumber(functionDeclaredSize))
     instructions += PopPC()
 
     /* Mark the result register as usable */
-    newState.copy(
-      spOffset = newState.spOffset - newState.getOffset("-initSP"),
-      freeRegs = resultReg :: newState.freeRegs
-    )
+    newState.copy(spOffset = newState.getOffset(Function.initSP), freeRegs = resultReg :: newState.freeRegs)
   }
   override def toString: String = "return " + expression.toString + "\n"
 
