@@ -100,7 +100,10 @@ case class Function(returnType: Type, name: Identifier, parameters: Option[Param
     instructions += PushLR()
     newState = newState.copy(spOffset = newState.spOffset + 4)
 
+    /* Mark the*/
+    newState = newState.copy(varDic = newState.varDic + ("-initSP" -> newState.spOffset))
     newState = body.compileNewScope(newState)(instructions)
+    newState = newState.copy(varDic = newState.varDic - "-initSP")
 
     instructions += PopPC()
     newState = newState.copy(spOffset = newState.spOffset - 4)
