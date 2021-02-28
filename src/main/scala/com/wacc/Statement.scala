@@ -340,10 +340,6 @@ case class Print(expression: Expression)(position: (Int, Int)) extends Statement
 
     /* printf second argument, the thing to be printed */
     instructions += MOVE(Register1, resultReg)
-    expression.getExpressionType match {
-      case StringType() | BooleanType() => instructions += ADD(Register1, Register1, ImmediateNumber(4))
-      case _                            => ()
-    }
 
     /* If a boolean, replace it with true or false */
     if (expression.getExpressionType == BooleanType()) {
@@ -357,6 +353,11 @@ case class Print(expression: Expression)(position: (Int, Int)) extends Statement
       instructions += COMPARE(Register1, ImmediateNumber(0))
       instructions += LOAD(Register1, MessageLoad(falseID), cond = Some(EQ))
       instructions += LOAD(Register1, MessageLoad(trueID), cond = Some(NE))
+    }
+
+    expression.getExpressionType match {
+      case StringType() | BooleanType() => instructions += ADD(Register1, Register1, ImmediateNumber(4))
+      case _                            => ()
     }
 
     /* Call printf */
@@ -403,10 +404,6 @@ case class Println(expression: Expression)(position: (Int, Int)) extends Stateme
 
     /* printf second argument, the thing to be printed */
     instructions += MOVE(Register1, resultReg)
-    expression.getExpressionType match {
-      case StringType() | BooleanType() => instructions += ADD(Register1, Register1, ImmediateNumber(4))
-      case _                            => ()
-    }
 
     /* If a boolean, replace it with true or false */
     if (expression.getExpressionType == BooleanType()) {
@@ -420,6 +417,12 @@ case class Println(expression: Expression)(position: (Int, Int)) extends Stateme
       instructions += COMPARE(Register1, ImmediateNumber(0))
       instructions += LOAD(Register1, MessageLoad(falseID), cond = Some(EQ))
       instructions += LOAD(Register1, MessageLoad(trueID), cond = Some(NE))
+    }
+
+    /* Move the register to the start of the string if it's a message */
+    expression.getExpressionType match {
+      case StringType() | BooleanType() => instructions += ADD(Register1, Register1, ImmediateNumber(4))
+      case _                            => ()
     }
 
     /* Call printf */

@@ -109,6 +109,8 @@ object Compiler {
 
     /* TODO: Add footers for the program */
 
+    /* TODO: Split add and sub operations which use more than #1024 */
+
     /* Write to an assembly file */
     val assembledFileName = baseName + ".s"
     val file = new File(assembledFileName)
