@@ -323,7 +323,7 @@ case class Print(expression: Expression, isNewLine: Boolean)(position: (Int, Int
         "%d"
       case CharacterType() =>
         "%c"
-      case StringType() | BooleanType() =>
+      case StringType() | BooleanType() | ArrayType(CharacterType()) =>
         "%s"
       case _ =>
         "%p"
@@ -355,8 +355,9 @@ case class Print(expression: Expression, isNewLine: Boolean)(position: (Int, Int
     }
 
     expression.getExpressionType match {
-      case StringType() | BooleanType() => instructions += ADD(Register1, Register1, ImmediateNumber(4))
-      case _                            => ()
+      case StringType() | BooleanType() | ArrayType(CharacterType()) =>
+        instructions += ADD(Register1, Register1, ImmediateNumber(4))
+      case _ => ()
     }
 
     /* Call printf */
