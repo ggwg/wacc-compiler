@@ -103,8 +103,9 @@ object Compiler {
           length += 1
         }
       }
-      header += WordDirective(length)
-      header += AsciiDirective(message)
+
+      header += WordDirective(length + 1)
+      header += AsciiDirective(message + "\\0")
     }
 
     /* TODO: Add footers for the program */

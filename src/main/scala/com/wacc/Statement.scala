@@ -311,8 +311,7 @@ case class If(condition: Expression, trueStatement: Statement, falseStatement: S
 }
 
 /* ✅ Check done - ⚠️ Compile done */
-// TODO: Code duplication in println
-case class Print(expression: Expression)(position: (Int, Int)) extends Statement {
+case class Print(expression: Expression, isNewLine: Boolean)(position: (Int, Int)) extends Statement {
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     /* Compile the expression */
     val resultReg = state.getResultRegister
@@ -328,7 +327,7 @@ case class Print(expression: Expression)(position: (Int, Int)) extends Statement
         "%s"
       case _ =>
         "%p"
-    }) + "\\0"
+    }) + (if (isNewLine) "\\n" else "")
 
     /* Get the format ID from the state */
     newState = newState.putMessageIfAbsent(format)
@@ -366,72 +365,7 @@ case class Print(expression: Expression)(position: (Int, Int)) extends Statement
     /* Mark the result register as usable */
     newState.copy(freeRegs = resultReg :: newState.freeRegs)
   }
-  override def toString: String = "print " + expression.toString + "\n"
-
-  override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
-    expression.check(symbolTable)
-  }
-
-  override def getPos(): (Int, Int) = position
-}
-
-/* ✅ Check done - ⚠️ Compile Pending */
-case class Println(expression: Expression)(position: (Int, Int)) extends Statement {
-  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
-    /* Compile the expression */
-    val resultReg = state.getResultRegister
-    var newState = expression.compile(state)
-
-    /* Find the message format based on the expression's type */
-    val format = (expression.getExpressionType match {
-      case IntType() =>
-        "%d"
-      case CharacterType() =>
-        "%c"
-      case StringType() | BooleanType() =>
-        "%s"
-      case _ =>
-        "%p"
-    }) + "\\n\\0"
-
-    /* Get the format ID from the state */
-    newState = newState.putMessageIfAbsent(format)
-    val formatID = newState.getMessageID(format)
-
-    /* printf first argument, the format */
-    instructions += LOAD(Register0, MessageLoad(formatID))
-    instructions += ADD(Register0, Register0, ImmediateNumber(4))
-
-    /* printf second argument, the thing to be printed */
-    instructions += MOVE(Register1, resultReg)
-
-    /* If a boolean, replace it with true or false */
-    if (expression.getExpressionType == BooleanType()) {
-
-      /* True and false IDs */
-      newState = newState.putMessageIfAbsent("true")
-      newState = newState.putMessageIfAbsent("false")
-      val trueID = newState.getMessageID("true")
-      val falseID = newState.getMessageID("false")
-
-      instructions += COMPARE(Register1, ImmediateNumber(0))
-      instructions += LOAD(Register1, MessageLoad(falseID), cond = Some(EQ))
-      instructions += LOAD(Register1, MessageLoad(trueID), cond = Some(NE))
-    }
-
-    /* Move the register to the start of the string if it's a message */
-    expression.getExpressionType match {
-      case StringType() | BooleanType() => instructions += ADD(Register1, Register1, ImmediateNumber(4))
-      case _                            => ()
-    }
-
-    /* Call printf */
-    instructions += BRANCHLINK("printf")
-
-    /* Mark the result register as usable */
-    newState.copy(freeRegs = resultReg :: newState.freeRegs)
-  }
-  override def toString: String = "println " + expression.toString + "\n"
+  override def toString: String = "print" + (if (isNewLine) "ln " else " ") + expression.toString + "\n"
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     expression.check(symbolTable)
@@ -456,8 +390,8 @@ case class Read(assignmentLeft: AssignmentLeft)(position: (Int, Int)) extends St
 
     /* Decide if we read an int or a char */
     val format = assignmentLeft.getLeftType match {
-      case IntType()       => "%d\\0"
-      case CharacterType() => "%c\\0"
+      case IntType()       => "%d"
+      case CharacterType() => "%c"
     }
     /* Get the format string ID */
     newState = newState.putMessageIfAbsent(format)
@@ -616,8 +550,8 @@ object Statement {
       case ("free", e)    => Free(e)
       case ("return", e)  => Return(e)
       case ("exit", e)    => Exit(e)
-      case ("print", e)   => Print(e)
-      case ("println", e) => Println(e)
+      case ("print", e)   => Print(e, isNewLine = false)
+      case ("println", e) => Print(e, isNewLine = true)
     }
 }
 
