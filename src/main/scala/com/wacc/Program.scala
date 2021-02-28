@@ -91,7 +91,7 @@ case class Function(returnType: Type, name: Identifier, parameters: Option[Param
     /* Compile the function body. We add a special entry in the dictionary so that when we
        return we know where to reposition the stack pointer */
     newState = newState.copy(varDic = newState.varDic + (initSP -> newState.spOffset))
-    newState = body.compileNewScope(newState)(instructions)
+    newState = body.compileNewScope(newState)
     newState = newState.copy(varDic = newState.varDic - initSP)
 
     /* Pop the PC */

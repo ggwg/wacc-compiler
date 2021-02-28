@@ -272,7 +272,7 @@ case class ArrayElement(name: Identifier, expressions: List[Expression])(positio
         instructions += PUSH(arrayReg)
 
         /* Compile the expression with both registers */
-        newState = expr.compile(newState.copy(spOffset = newState.spOffset + 4))(instructions)
+        newState = expr.compile(newState.copy(spOffset = newState.spOffset + 4))
 
         /* Move the result into the index register and restore the array */
         instructions += POP(arrayReg)
@@ -283,7 +283,7 @@ case class ArrayElement(name: Identifier, expressions: List[Expression])(positio
         /* Mark the index register as in use */
         newState = newState.copy(spOffset = newState.spOffset - 4, freeRegs = newState.freeRegs.tail)
       } else {
-        newState = expr.compile(newState)(instructions)
+        newState = expr.compile(newState)
       }
 
       /* Move to the array we were pointing at */
@@ -371,7 +371,7 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
       instructions += PUSH(firstOp)
 
       /* Compile the expression with both registers */
-      newState = rightOperand.compile(newState.copy(spOffset = newState.spOffset + 4))(instructions)
+      newState = rightOperand.compile(newState.copy(spOffset = newState.spOffset + 4))
 
       /* Move the result into the second operand and restore the first operand */
       instructions += MOVE(secondOp, firstOp)
@@ -835,7 +835,7 @@ case class PairElement(expression: Expression, isFirst: Boolean)(position: (Int,
   )(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     /* Evaluate the expression */
     val resultReg = state.getResultRegister
-    val newState = expression.compile(state)(instructions)
+    val newState = expression.compile(state)
     val offset = if (isFirst) 0 else 4
 
     /* Access the first or second pointer */

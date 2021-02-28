@@ -30,7 +30,7 @@ sealed trait Statement extends ASTNodeVoid {
     var scopeState = state.newScopeState
 
     /* Compile the body with the new scope */
-    scopeState = this.compile(scopeState)(instructions)
+    scopeState = this.compile(scopeState)
 
     /* Reset the SP to where we were initially */
     instructions += ADD(RegisterSP, RegisterSP, ImmediateNumber(scopeState.declaredSize))
@@ -106,7 +106,7 @@ case class Assignment(assignmentLeft: AssignmentLeft, assignmentRight: Assignmen
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     /* Compile the pointer of the thing that will be assigned */
     val assignmentRegister = state.getResultRegister
-    var newState = assignmentRight.compile(state)(instructions)
+    var newState = assignmentRight.compile(state)
 
     /* Compile the value to be assigned to the left side */
     val assignPointer = newState.getResultRegister
@@ -148,7 +148,7 @@ case class Assignment(assignmentLeft: AssignmentLeft, assignmentRight: Assignmen
 /* ✅ Check done - ✅ Compile done */
 case class BeginEnd(statement: Statement)(position: (Int, Int)) extends Statement {
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
-    statement.compileNewScope(state)(instructions)
+    statement.compileNewScope(state)
   }
 
   override def toString: String = "begin\n" + statement.toString + "end\n"
@@ -273,14 +273,14 @@ case class If(condition: Expression, trueStatement: Statement, falseStatement: S
     instructions += BRANCH(Option(EQ), "L" + falseID)
 
     /* Compile the true statement with a new scope */
-    newState = trueStatement.compileNewScope(newState)(instructions)
+    newState = trueStatement.compileNewScope(newState)
 
     /* We finished executing the branch. Jump to the end. */
     instructions += BRANCH(None, "L" + continueID)
 
     /* Compile the false branch with a new scope */
     instructions += NumberLabel(falseID)
-    newState = falseStatement.compileNewScope(newState)(instructions)
+    newState = falseStatement.compileNewScope(newState)
 
     /* End of the if */
     instructions += NumberLabel(continueID)
@@ -506,7 +506,7 @@ case class While(condition: Expression, statement: Statement)(position: (Int, In
 
     /* Compile the while body with a new scope */
     instructions += NumberLabel(bodyID)
-    var newState = statement.compileNewScope(state)(instructions)
+    var newState = statement.compileNewScope(state)
 
     /* Compile the condition */
     val conditionReg = newState.getResultRegister
