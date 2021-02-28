@@ -390,8 +390,8 @@ case class Read(assignmentLeft: AssignmentLeft)(position: (Int, Int)) extends St
 
     /* Decide if we read an int or a char */
     val format = assignmentLeft.getLeftType match {
-      case IntType()       => "%d"
-      case CharacterType() => "%c"
+      case IntType()       => " %d"
+      case CharacterType() => " %c"
     }
     /* Get the format string ID */
     newState = newState.putMessageIfAbsent(format)

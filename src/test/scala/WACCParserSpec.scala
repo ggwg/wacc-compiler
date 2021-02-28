@@ -134,7 +134,7 @@ class WACCParserSpec extends AnyFlatSpec {
   it should "parse a println statement" in {
     statementParser
       .runParser("println \"a printed string\"")
-      .get shouldBe a[Println]
+      .get shouldBe a[Print]
   }
   it should "parse an if statement" in {
     statementParser
