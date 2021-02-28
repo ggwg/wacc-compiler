@@ -394,7 +394,7 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
         instructions += MOVE(Register1, secondOp)
         /* TODO: Division by 0 check */
         instructions += BRANCHLINK("__aeabi_idivmod")
-        instructions += MOVE(resultReg, Register0)
+        instructions += MOVE(resultReg, Register1)
 
       /* Boolean operations */
       case And() =>
