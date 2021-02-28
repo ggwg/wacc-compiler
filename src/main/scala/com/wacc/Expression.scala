@@ -153,7 +153,7 @@ case class FunctionCall(name: Identifier, arguments: Option[ArgumentList])(posit
 
     /* Move the result */
     instructions += MOVE(resultReg, Register0)
-    newState.copy(spOffset = newState.spOffset - declaredSize)
+    newState.copy(spOffset = newState.spOffset - declaredSize, freeRegs = newState.freeRegs.tail)
   }
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {

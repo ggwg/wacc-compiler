@@ -105,18 +105,18 @@ case class Assignment(assignmentLeft: AssignmentLeft, assignmentRight: Assignmen
     extends Statement {
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     /* Compile the pointer of the thing that will be assigned */
-    val assignPointer = state.getResultRegister
-    var newState = assignmentLeft.compileReference(state)(instructions)
+    val assignmentRegister = state.getResultRegister
+    var newState = assignmentRight.compile(state)(instructions)
 
     /* Compile the value to be assigned to the left side */
-    val assignmentPointer = newState.getResultRegister
-    newState = assignmentRight.compile(newState)
+    val assignPointer = newState.getResultRegister
+    newState = assignmentLeft.compileReference(newState)
 
     /* Assign the value */
-    instructions += STORE(assignmentPointer, RegisterLoad(assignPointer), assignmentLeft.getLeftType.getSize == 1)
+    instructions += STORE(assignmentRegister, RegisterLoad(assignPointer), assignmentLeft.getLeftType.getSize == 1)
 
     /* Mark the registers as being usable */
-    newState.copy(freeRegs = assignPointer :: assignmentPointer :: newState.freeRegs)
+    newState.copy(freeRegs = assignmentRegister :: assignPointer :: newState.freeRegs)
   }
   override def toString: String =
     assignmentLeft.toString + " = " + assignmentRight.toString + "\n"
