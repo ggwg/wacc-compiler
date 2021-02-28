@@ -368,7 +368,7 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
       /* Mark the second operand register as unavailable */
       newState = newState.copy(spOffset = newState.spOffset - 4, freeRegs = newState.freeRegs.tail)
     } else {
-      rightOperand.compile(newState)
+      newState = rightOperand.compile(newState)
     }
 
     /* Apply the specified operation */
@@ -388,13 +388,13 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
         instructions += MOVE(Register1, secondOp)
         /* TODO: Division by 0 check */
         instructions += BRANCHLINK("__aeabi_idiv")
-        instructions += MOVE(Register0, resultReg)
+        instructions += MOVE(resultReg, Register0)
       case Modulo() =>
         instructions += MOVE(Register0, firstOp)
         instructions += MOVE(Register1, secondOp)
         /* TODO: Division by 0 check */
         instructions += BRANCHLINK("__aeabi_idivmod")
-        instructions += MOVE(Register1, resultReg)
+        instructions += MOVE(resultReg, Register0)
 
       /* Boolean operations */
       case And() =>
