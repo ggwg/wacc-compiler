@@ -29,7 +29,7 @@ case class Program(functions: List[Function], body: Statement)(position: (Int, I
     newState = newState.copy(spOffset = newState.spOffset + 4)
 
     /* Compile the program body */
-    newState = body.compileNewScope(newState)(instructions)
+    newState = body.compileNewScope(newState)
 
     /* Set the exit code to 0 */
     instructions += LOAD(Register0, ImmediateLoad(0))
@@ -64,7 +64,6 @@ case class Program(functions: List[Function], body: Statement)(position: (Int, I
   override def getPos(): (Int, Int) = position
 }
 
-/* Check done */
 /* Function declaration - see P31 of semantic analysis slides */
 case class Function(returnType: Type, name: Identifier, parameters: Option[ParameterList], body: Statement)(
   position: (Int, Int)
@@ -76,35 +75,25 @@ case class Function(returnType: Type, name: Identifier, parameters: Option[Param
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     var newState = state
 
-    /* If we have parameters */
+    /* Compile the parameters */
     if (parameters.isDefined) {
-      val params = parameters.get
-
-      /* Process them */
-      for (param <- params.parameters) {
-        /* Parameter size */
-        val size = param.parameterType.getSize
-
-        /* Update the state */
-        newState = newState.copy(
-          spOffset = newState.spOffset + size,
-          varDic = newState.varDic + (param.identifier.identifier -> (newState.spOffset + size))
-        )
-      }
+      newState = parameters.get.compile(newState)
     }
 
     /* Add the function label */
     instructions += StringLabel("f_" + name.identifier)
 
-    /* Compile the function body */
+    /* Push the LR */
     instructions += PushLR()
     newState = newState.copy(spOffset = newState.spOffset + 4)
 
-    /* Mark the*/
+    /* Compile the function body. We add a special entry in the dictionary so that when we
+       return we know where to reposition the stack pointer */
     newState = newState.copy(varDic = newState.varDic + ("-initSP" -> newState.spOffset))
     newState = body.compileNewScope(newState)(instructions)
     newState = newState.copy(varDic = newState.varDic - "-initSP")
 
+    /* Pop the PC */
     instructions += PopPC()
     newState = newState.copy(spOffset = newState.spOffset - 4)
 
@@ -116,7 +105,7 @@ case class Function(returnType: Type, name: Identifier, parameters: Option[Param
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
 
-    // Check that the function returns:
+    /* Check that the function returns: */
     if (!body.exitable()) {
       errors += Error("Function " + name.identifier + " may terminate without return", getPos(), 100)
     }
@@ -141,6 +130,17 @@ case class ParameterList(parameters: List[Parameter])(position: (Int, Int)) exte
       .reduceOption((left, right) => left + ", " + right)
       .getOrElse("")
 
+  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
+    var newState = state
+
+    /* Process each parameter */
+    for (param <- parameters) {
+      newState = param.compile(newState)
+    }
+
+    newState
+  }
+
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     for (parameter <- parameters) {
       parameter.check(symbolTable)
@@ -153,6 +153,17 @@ case class ParameterList(parameters: List[Parameter])(position: (Int, Int)) exte
 case class Parameter(parameterType: Type, identifier: Identifier)(position: (Int, Int)) extends ASTNodeVoid {
   override def toString: String =
     parameterType.toString + " " + identifier.toString
+
+  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
+    /* Parameter size */
+    val size = parameterType.getSize
+
+    /* Update the state */
+    state.copy(
+      spOffset = state.spOffset + size,
+      varDic = state.varDic + (identifier.identifier -> (state.spOffset + size))
+    )
+  }
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     symbolTable.dictionary.updateWith(identifier.identifier)({

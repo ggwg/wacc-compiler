@@ -13,6 +13,8 @@ sealed trait Expression extends AssignmentRight {
   /* Returns the size of an expression */
   def getSize: Int = this.getExpressionType.getSize
 
+  /* Returns the type of an expression. If the type depends on identifiers, it was
+     precalculated during the semantic check and statically stored in each node */
   def getExpressionType: Type
 }
 sealed trait AssignmentRight extends ASTNodeVoid {}
@@ -20,6 +22,8 @@ sealed trait AssignmentLeft extends ASTNodeVoid {
   /* Compile the reference of a left assignment and store it in the first free register. */
   def compileReference(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState
 
+  /* Returns the type of the left assignment. If the type couldn't be automatically inferred, it was
+     precalculated during the semantic check and statically stored in each node */
   def getLeftType: Type
 }
 
@@ -282,7 +286,7 @@ case class ArrayElement(name: Identifier, expressions: List[Expression])(positio
       instructions += ADD(arrayReg, arrayReg, ImmediateNumber(4))
 
       /* Move to the specified location in the array */
-      var shift = 2;
+      var shift = 2
       if (i == expressions.length - 1 && expressionType.getSize == 1) {
         shift = 0
       }
@@ -654,7 +658,7 @@ case class ArrayLiter(expressions: List[Expression])(position: (Int, Int)) exten
     .getOrElse("") + "]"
 
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
-    val size = if (expressions.length == 0) 0 else expressions.head.getSize
+    val size = if (expressions.isEmpty) 0 else expressions.head.getSize
 
     /* Allocate memory for the array */
     instructions += LOAD(Register0, ImmediateLoad(4 + size * expressions.length))

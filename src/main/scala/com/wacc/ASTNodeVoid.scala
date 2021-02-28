@@ -38,6 +38,10 @@ trait ASTNode {
 
      When compiling the program, we generate 'standalone' assembly codes for every function (i.e. different
      new states each time), and then compile the body with a fresh initial state.
+
+     When compiling a function (paired with a function call), we set up each function argument on
+     the stack, from left to right (e.g. for the function int f(int x, int y), in order to call
+     f(1, 2) we push 1 on the stack, followed by 2
    */
   def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = null
 }

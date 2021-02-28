@@ -25,7 +25,7 @@ sealed trait Statement extends ASTNodeVoid {
 
   /* Given the 'parent' state, this function compiles the scope statement with a scope state, then
      ensures the compilation can proceed after exiting the scope statement. */
-  def compileNewScope(state: AssemblerState)(instructions: ListBuffer[Instruction]): AssemblerState = {
+  def compileNewScope(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     /* Create a new state for the new scope */
     var scopeState = state.newScopeState
 
