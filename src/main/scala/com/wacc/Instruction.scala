@@ -166,6 +166,10 @@ case class SUB(dest: Register, src: Register, op2: Operand2) extends Instruction
   override def toString: String = s"\tSUB $dest, $src, $op2"
 }
 
+case class SUBS(dest: Register, src: Register, op2: Operand2) extends Instruction {
+  override def toString: String = s"\tSUBS $dest, $src, $op2"
+}
+
 case class ReverseSUB(dest: Register, src: Register, op2: Operand2) extends Instruction {
   override def toString: String = s"\tRSB $dest, $src, $op2"
 }

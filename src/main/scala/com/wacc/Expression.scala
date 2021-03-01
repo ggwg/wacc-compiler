@@ -400,7 +400,10 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
 
       case Subtract() =>
         /* TODO: Overflow check */
-        instructions += SUB(resultReg, firstOp, secondOp)
+        newState = newState.putMessageIfAbsent(message)
+        instructions += SUBS(resultReg, firstOp, secondOp)
+        instructions += BLVS("p_throw_overflow_error")
+        newState = newState.copy(p_throw_overflow_error = true, p_throw_runtime_error = true)
       case Multiply() =>
         /* TODO: Overflow check */
         instructions += MUL(resultReg, secondOp, firstOp)
