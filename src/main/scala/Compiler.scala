@@ -62,6 +62,7 @@ object Compiler {
 
   def generateFooter(state: AssemblerState): ListBuffer[Instruction] = {
     var footer: ListBuffer[Instruction] = ListBuffer.empty
+    var overflowMessage = "OverflowError: the result is too small/large to store in a 4-byte signed-integer."
 
     if (state.p_throw_overflow_error) {
       footer += StringLabel("p_throw_overflow_error")
@@ -70,6 +71,7 @@ object Compiler {
     }
     if (state.p_throw_runtime_error) {
       footer += StringLabel("p_throw_runtime_error")
+      footer += LOAD(Register0, MessageLoad(state.getMessageID(overflowMessage)))
       footer += BRANCHLINK("printf")
       footer += MOVE(Register0, ImmediateNumber(-1))
       footer += BRANCHLINK("exit")
