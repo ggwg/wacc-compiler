@@ -48,7 +48,7 @@ case class UnaryOperatorApplication(operator: UnaryOperator, operand: Expression
         nextState = nextState.putMessageIfAbsent(overflowMessage)
         instructions += ReverseSUB(resultReg, resultReg, ImmediateNumber(0))
         instructions += BLVS("p_throw_overflow_error")
-        nextState = nextState.copy(p_throw_overflow_error = true, p_throw_runtime_error = true)
+        return nextState.copy(p_throw_overflow_error = true, p_throw_runtime_error = true)
       case Not() =>
         instructions += XOR(resultReg, resultReg, ImmediateNumber(1))
       case Chr() | Ord() => ()
@@ -416,7 +416,7 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
       case Divide() =>
         instructions += MOVE(Register0, firstOp)
         instructions += MOVE(Register1, secondOp)
-        newState = newState.putMessageIfAbsent(overflowMessage)
+        newState = newState.putMessageIfAbsent(divideByZeroMessage)
         instructions += BRANCHLINK("__aeabi_idiv")
         instructions += MOVE(resultReg, Register0)
         newState = newState.copy(p_throw_runtime_error = true)
@@ -424,7 +424,7 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
       case Modulo() =>
         instructions += MOVE(Register0, firstOp)
         instructions += MOVE(Register1, secondOp)
-        newState = newState.putMessageIfAbsent(overflowMessage)
+        newState = newState.putMessageIfAbsent(divideByZeroMessage)
         instructions += BRANCHLINK("__aeabi_idivmod")
         instructions += MOVE(resultReg, Register1)
         newState = newState.copy(p_throw_runtime_error = true)
@@ -610,23 +610,15 @@ case class Identifier(identifier: String)(position: (Int, Int)) extends Expressi
 
 /* Represents an integer (e.g. 1234 or -100) */
 case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit])(position: (Int, Int)) extends Expression {
-  var value = 0
+  var amount = 0
 
   override def toString: String = (sign match {
     case None       => ""
     case Some(sign) => sign.toString
   }) + digits.mkString
 
-  def toInt: Int = {
-    val res: Int = value
-    sign match {
-      case Some(IntegerSign('-')) => -res
-      case _                      => res
-    }
-  }
-
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
-    instructions += LOAD(state.getResultRegister, ImmediateLoad(toInt))
+    instructions += LOAD(state.getResultRegister, ImmediateLoad(amount))
     state.copy(freeRegs = state.freeRegs.tail)
   }
 
@@ -655,7 +647,7 @@ case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit])(position
       }
     }
 
-    this.value = value.toInt
+    amount = value.toInt
   }
 }
 
