@@ -1,6 +1,7 @@
 package com.wacc
 
 import scala.collection.immutable
+import scala.collection.mutable.ListBuffer
 
 /* This class represents the state of the compiler while it is converting
    the code into assembly */
@@ -22,7 +23,10 @@ case class AssemblerState(
   messageDic: immutable.Map[String, Int],
   /* How much space on the stack the current code compilation is using for variables.
      Useful when exiting scopes to reset the stack pointer to the original value */
-  declaredSize: Int
+  declaredSize: Int,
+  /* Whether functions are set */
+  p_throw_overflow_error: Boolean,
+  p_throw_runtime_error: Boolean
 ) {
   /* Returns the register in which an expression's result will be stored */
   def getResultRegister: Register = freeRegs.head
@@ -77,6 +81,8 @@ object AssemblerState {
       varDic = Map.empty,
       freeRegs = Register.usableRegisters,
       declaredSize = 0,
-      messageDic = Map.empty
+      messageDic = Map.empty,
+      p_throw_overflow_error = false,
+      p_throw_runtime_error = false
     )
 }

@@ -1,15 +1,4 @@
-import com.wacc.{
-  AsciiDirective,
-  AssemblerState,
-  DataDirective,
-  Error,
-  Instruction,
-  MessageLoad,
-  PopPC,
-  StringLabel,
-  SymbolTable,
-  WordDirective
-}
+import com.wacc.{AsciiDirective, AssemblerState, BRANCHLINK, DataDirective, Error, ImmediateNumber, Instruction, LOAD, MOVE, MessageLoad, PopPC, Register0, StringLabel, SymbolTable, WordDirective}
 import parsley.{Failure, Success}
 
 import java.io.{File, FileWriter}
@@ -53,6 +42,23 @@ object Compiler {
       header += AsciiDirective(message + "\\0")
     }
     header
+  }
+
+  def generateFooter(state: AssemblerState): ListBuffer[Instruction] = {
+    var footer: ListBuffer[Instruction] = ListBuffer.empty
+
+    if (state.p_throw_overflow_error) {
+      footer += StringLabel("p_throw_overflow_error")
+      // TODO: LOAD MESSAGE INTO R0
+      footer += BRANCHLINK("p_throw_runtime_error")
+    }
+    if (state.p_throw_runtime_error) {
+      footer += StringLabel("p_throw_runtime_error")
+      // TODO: BL p_print_string - print the string
+      footer += MOVE(Register0, ImmediateNumber(-1))
+      footer += BRANCHLINK("exit")
+    }
+    footer
   }
 
   def main(args: Array[String]): Unit = {
@@ -119,14 +125,20 @@ object Compiler {
     /* Add the program headers. Program headers include messages */
     val header: ListBuffer[Instruction] = generateHeader(state)
 
+    /* Add the program footers. Program footers include error labels */
+    val footer: ListBuffer[Instruction] = generateFooter(state)
+
     /* TODO: Split add and sub operations which use more than #1024 */
 
     /* Write to an assembly file */
     // TODO: Footer
-    writeToFile(baseName + ".s", header, instructions)
+    writeToFile(baseName + ".s", header, instructions, footer)
   }
 
-  def writeToFile(assembledFileName: String, header: ListBuffer[Instruction], body: ListBuffer[Instruction]): Unit = {
+  def writeToFile(assembledFileName: String,
+                  header: ListBuffer[Instruction],
+                  body: ListBuffer[Instruction],
+                  footer: ListBuffer[Instruction]): Unit = {
     val file = new File(assembledFileName)
     val writer = new FileWriter(file)
 
@@ -139,6 +151,7 @@ object Compiler {
 
     /* Write the program instructions */
     body.foreach(instr => writer.write(instr.toString + "\n"))
+    footer.foreach(instr => writer.write(instr.toString + "\n"))
     writer.close()
   }
 }

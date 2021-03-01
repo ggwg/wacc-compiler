@@ -27,8 +27,8 @@ object BackEndTest {
    */
 
   def main(args: Array[String]): Unit = {
-    val inputDir  = "src/main/resources/valid_examples/if"
-    val outputDir = "src/main/out/valid_examples/if"
+    val inputDir  = "src/main/resources/valid_examples/runtimeErr"
+    val outputDir = "src/main/out/valid_examples/runtimeErr"
 
     val resources = new File(inputDir)
     compileAll(resources, outputDir)
@@ -48,6 +48,8 @@ object BackEndTest {
   }
 
   def compileIndividual(dir: String, outputDir: String): Unit = {
+    /* Identify the file */
+    println(dir)
     val fileName = dir
     val split = fileName.split('.')
 

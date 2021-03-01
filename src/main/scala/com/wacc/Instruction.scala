@@ -1,5 +1,7 @@
 package com.wacc
 
+import scala.collection.mutable.ListBuffer
+
 sealed trait Instruction
 sealed trait Operand2
 sealed trait AddressAccess
@@ -8,6 +10,20 @@ sealed trait Register extends Operand2
 sealed trait ImmediateValue extends Operand2
 sealed trait Label extends Instruction
 sealed trait Directive extends Instruction
+
+class Instructions() {
+  var instructions: ListBuffer[Instruction] = new ListBuffer[Instruction]
+
+  def addInstruction(instruction: Instruction) = instructions.addOne(instruction)
+
+  override def toString: String = {
+    val str = new StringBuilder()
+    for (instruction <- instructions) {
+      str.addAll(instruction.toString)
+    }
+    str.toString()
+  }
+}
 
 case class NumberLabel(value: Int) extends Label {
   override def toString: String = "L" + value + ":"
@@ -182,6 +198,10 @@ case class BRANCH(cond: Option[Condition], label: String) extends Instruction {
 
 case class BRANCHLINK(label: String) extends Instruction {
   override def toString: String = "\tBL " + label
+}
+
+case class BLVS(label: String) extends Instruction {
+  override def toString: String = "\tBLVS " + label
 }
 
 case class COMPARE(src: Register, op2: Operand2) extends Instruction {
