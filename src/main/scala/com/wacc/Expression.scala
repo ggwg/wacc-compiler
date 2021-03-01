@@ -35,14 +35,19 @@ case class UnaryOperatorApplication(operator: UnaryOperator, operand: Expression
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     /* Evaluate the expression and store it in the first available register */
     val resultReg = state.getResultRegister
-    val nextState = operand.compile(state)
+    var nextState = operand.compile(state)
+
+    val message = "OverflowError: the result is too small/large to store in a 4-byte signed-integer."
 
     /* Apply the unary operation */
     operator match {
       case Length() =>
         instructions += LOAD(resultReg, RegisterLoad(resultReg))
       case Negate() =>
+        nextState = nextState.putMessageIfAbsent(message)
         instructions += ReverseSUB(resultReg, resultReg, ImmediateNumber(0))
+        instructions += BLVS("p_throw_overflow_error")
+        nextState = nextState.copy(p_throw_overflow_error = true, p_throw_runtime_error = true)
       case Not() =>
         instructions += XOR(resultReg, resultReg, ImmediateNumber(1))
       case Chr() | Ord() => ()
