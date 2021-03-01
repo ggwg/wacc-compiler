@@ -71,7 +71,7 @@ object Compiler {
     }
     if (state.p_throw_runtime_error) {
       footer += StringLabel("p_throw_runtime_error")
-      footer += BRANCHLINK("p_print_string")
+      footer += BRANCHLINK("printf")
       footer += MOVE(Register0, ImmediateNumber(-1))
       footer += BRANCHLINK("exit")
     }
