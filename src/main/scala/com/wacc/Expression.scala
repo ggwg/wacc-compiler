@@ -37,6 +37,7 @@ case class UnaryOperatorApplication(operator: UnaryOperator, operand: Expression
     val resultReg = state.getResultRegister
     val nextState = operand.compile(state)
 
+    /* TODO: Unary operator runtime errors */
     /* Apply the unary operation */
     operator match {
       case Length() =>
@@ -383,33 +384,45 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
       newState = rightOperand.compile(newState)
     }
 
+    val overflowMessage = "OverflowError: the result is too small/large to store in a 4-byte signed-integer."
+    val divideByZeroMessage = "DivideByZeroError: divide or modulo by zero"
+
     /* Apply the specified operation */
     operator match {
       /* Integer operations */
       case Add() =>
-        /* TODO: Overflow check */
-        instructions += ADD(resultReg, firstOp, secondOp)
+        newState = newState.putMessageIfAbsent(overflowMessage)
+        instructions += ADDS(resultReg, firstOp, secondOp)
         instructions += BLVS("p_throw_overflow_error")
         newState = newState.copy(p_throw_overflow_error = true, p_throw_runtime_error = true)
 
       case Subtract() =>
-        /* TODO: Overflow check */
+        newState = newState.putMessageIfAbsent(overflowMessage)
         instructions += SUB(resultReg, firstOp, secondOp)
+        instructions += BLVS("p_throw_overflow_error")
+        newState = newState.copy(p_throw_overflow_error = true, p_throw_runtime_error = true)
+
       case Multiply() =>
-        /* TODO: Overflow check */
+        newState = newState.putMessageIfAbsent(overflowMessage)
         instructions += MUL(resultReg, secondOp, firstOp)
+        instructions += BLNE("p_throw_overflow_error")
+        newState = newState.copy(p_throw_overflow_error = true, p_throw_runtime_error = true)
+
       case Divide() =>
         instructions += MOVE(Register0, firstOp)
         instructions += MOVE(Register1, secondOp)
-        /* TODO: Division by 0 check */
+        newState = newState.putMessageIfAbsent(overflowMessage)
         instructions += BRANCHLINK("__aeabi_idiv")
         instructions += MOVE(resultReg, Register0)
+        newState = newState.copy(p_throw_runtime_error = true)
+
       case Modulo() =>
         instructions += MOVE(Register0, firstOp)
         instructions += MOVE(Register1, secondOp)
-        /* TODO: Division by 0 check */
+        newState = newState.putMessageIfAbsent(overflowMessage)
         instructions += BRANCHLINK("__aeabi_idivmod")
         instructions += MOVE(resultReg, Register1)
+        newState = newState.copy(p_throw_runtime_error = true)
 
       /* Boolean operations */
       case And() =>
@@ -592,13 +605,15 @@ case class Identifier(identifier: String)(position: (Int, Int)) extends Expressi
 
 /* Represents an integer (e.g. 1234 or -100) */
 case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit])(position: (Int, Int)) extends Expression {
+  var value = 0
+
   override def toString: String = (sign match {
     case None       => ""
     case Some(sign) => sign.toString
   }) + digits.mkString
 
   def toInt: Int = {
-    val res: Int = digits.mkString.toInt
+    val res: Int = value
     sign match {
       case Some(IntegerSign('-')) => -res
       case _                      => res
@@ -634,6 +649,8 @@ case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit])(position
         return
       }
     }
+
+    this.value = value.asInstanceOf[Int]
   }
 }
 

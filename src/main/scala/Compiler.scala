@@ -1,4 +1,20 @@
-import com.wacc.{AsciiDirective, AssemblerState, BRANCHLINK, DataDirective, Error, ImmediateNumber, Instruction, LOAD, MOVE, MessageLoad, PopPC, Register0, StringLabel, SymbolTable, WordDirective}
+import com.wacc.{
+  AsciiDirective,
+  AssemblerState,
+  BRANCHLINK,
+  DataDirective,
+  Error,
+  ImmediateNumber,
+  Instruction,
+  LOAD,
+  MOVE,
+  MessageLoad,
+  PopPC,
+  Register0,
+  StringLabel,
+  SymbolTable,
+  WordDirective
+}
 import parsley.{Failure, Success}
 
 import java.io.{File, FileWriter}
@@ -54,7 +70,7 @@ object Compiler {
     }
     if (state.p_throw_runtime_error) {
       footer += StringLabel("p_throw_runtime_error")
-      // TODO: BL p_print_string - print the string
+      footer += BRANCHLINK("printf")
       footer += MOVE(Register0, ImmediateNumber(-1))
       footer += BRANCHLINK("exit")
     }
@@ -135,10 +151,12 @@ object Compiler {
     writeToFile(baseName + ".s", header, instructions, footer)
   }
 
-  def writeToFile(assembledFileName: String,
-                  header: ListBuffer[Instruction],
-                  body: ListBuffer[Instruction],
-                  footer: ListBuffer[Instruction]): Unit = {
+  def writeToFile(
+    assembledFileName: String,
+    header: ListBuffer[Instruction],
+    body: ListBuffer[Instruction],
+    footer: ListBuffer[Instruction]
+  ): Unit = {
     val file = new File(assembledFileName)
     val writer = new FileWriter(file)
 

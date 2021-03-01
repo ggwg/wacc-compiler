@@ -154,6 +154,10 @@ case class ADD(dest: Register, src: Register, op2: Operand2) extends Instruction
   override def toString: String = s"\tADD $dest, $src, $op2"
 }
 
+case class ADDS(dest: Register, src: Register, op2: Operand2) extends Instruction {
+  override def toString: String = s"\tADDS $dest, $src, $op2"
+}
+
 case class ADDLSL(dest: Register, src: Register, op2: Operand2, shift: ImmediateValue) extends Instruction {
   override def toString: String = s"\tADD $dest, $src, $op2, LSL $shift"
 }
@@ -202,6 +206,10 @@ case class BRANCHLINK(label: String) extends Instruction {
 
 case class BLVS(label: String) extends Instruction {
   override def toString: String = "\tBLVS " + label
+}
+
+case class BLNE(label: String) extends Instruction {
+  override def toString: String = "\tBLNE " + label
 }
 
 case class COMPARE(src: Register, op2: Operand2) extends Instruction {
