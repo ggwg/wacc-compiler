@@ -592,21 +592,16 @@ case class Identifier(identifier: String)(position: (Int, Int)) extends Expressi
 
 /* Represents an integer (e.g. 1234 or -100) */
 case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit])(position: (Int, Int)) extends Expression {
+  var amount = 0
+
   override def toString: String = (sign match {
     case None       => ""
     case Some(sign) => sign.toString
   }) + digits.mkString
 
-  def toInt: Int = {
-    val res: Int = digits.mkString.toInt
-    sign match {
-      case Some(IntegerSign('-')) => -res
-      case _                      => res
-    }
-  }
 
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
-    instructions += LOAD(state.getResultRegister, ImmediateLoad(toInt))
+    instructions += LOAD(state.getResultRegister, ImmediateLoad(amount))
     state.copy(freeRegs = state.freeRegs.tail)
   }
 
@@ -634,6 +629,8 @@ case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit])(position
         return
       }
     }
+
+    amount = value.toInt
   }
 }
 
