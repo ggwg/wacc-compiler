@@ -1,4 +1,20 @@
-import com.wacc.{AsciiDirective, AssemblerState, BRANCHLINK, DataDirective, Error, ImmediateNumber, Instruction, LOAD, MOVE, MessageLoad, PopPC, Register0, StringLabel, SymbolTable, WordDirective}
+import com.wacc.{
+  AsciiDirective,
+  AssemblerState,
+  BRANCHLINK,
+  DataDirective,
+  Error,
+  ImmediateNumber,
+  Instruction,
+  LOAD,
+  MOVE,
+  MessageLoad,
+  PopPC,
+  Register0,
+  StringLabel,
+  SymbolTable,
+  WordDirective
+}
 import parsley.{Failure, Success}
 
 import java.io.{File, FileWriter}
@@ -46,15 +62,16 @@ object Compiler {
 
   def generateFooter(state: AssemblerState): ListBuffer[Instruction] = {
     var footer: ListBuffer[Instruction] = ListBuffer.empty
+    val overflowMessage = "OverflowError: the result is too small/large to store in a 4-byte signed-integer."
 
     if (state.p_throw_overflow_error) {
       footer += StringLabel("p_throw_overflow_error")
-      // TODO: LOAD MESSAGE INTO R0
+      footer += LOAD(Register0, MessageLoad(state.getMessageID(overflowMessage)))
       footer += BRANCHLINK("p_throw_runtime_error")
     }
     if (state.p_throw_runtime_error) {
       footer += StringLabel("p_throw_runtime_error")
-      // TODO: BL p_print_string - print the string
+      footer += BRANCHLINK("p_print_string")
       footer += MOVE(Register0, ImmediateNumber(-1))
       footer += BRANCHLINK("exit")
     }
@@ -135,10 +152,12 @@ object Compiler {
     writeToFile(baseName + ".s", header, instructions, footer)
   }
 
-  def writeToFile(assembledFileName: String,
-                  header: ListBuffer[Instruction],
-                  body: ListBuffer[Instruction],
-                  footer: ListBuffer[Instruction]): Unit = {
+  def writeToFile(
+    assembledFileName: String,
+    header: ListBuffer[Instruction],
+    body: ListBuffer[Instruction],
+    footer: ListBuffer[Instruction]
+  ): Unit = {
     val file = new File(assembledFileName)
     val writer = new FileWriter(file)
 
