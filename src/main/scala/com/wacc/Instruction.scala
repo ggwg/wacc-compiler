@@ -154,6 +154,10 @@ case class ADD(dest: Register, src: Register, op2: Operand2) extends Instruction
   override def toString: String = s"\tADD $dest, $src, $op2"
 }
 
+case class ADDS(dest: Register, src: Register, op2: Operand2) extends Instruction {
+  override def toString: String = s"\tADDS $dest, $src, $op2"
+}
+
 case class ADDLSL(dest: Register, src: Register, op2: Operand2, shift: ImmediateValue) extends Instruction {
   override def toString: String = s"\tADD $dest, $src, $op2, LSL $shift"
 }
