@@ -655,7 +655,7 @@ case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit])(position
       }
     }
 
-    this.value = value.asInstanceOf[Int]
+    this.value = value.toInt
   }
 }
 
