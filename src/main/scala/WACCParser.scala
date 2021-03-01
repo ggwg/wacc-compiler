@@ -170,10 +170,8 @@ object WACCParser {
       (">".label("a binary operator") <* skipWhitespace) #> binaryFunctionGenerator(">"),
       ("<".label("a binary operator") <* skipWhitespace) #> binaryFunctionGenerator("<")
     ),
-    Ops(InfixL)(
-      ("&&".label("a binary operator") <* skipWhitespace) #> binaryFunctionGenerator("&&"),
-      ("||".label("a binary operator") <* skipWhitespace) #> binaryFunctionGenerator("||")
-    )
+    Ops(InfixL)(("&&".label("a binary operator") <* skipWhitespace) #> binaryFunctionGenerator("&&")),
+    Ops(InfixL)(("||".label("a binary operator") <* skipWhitespace) #> binaryFunctionGenerator("||"))
   ) <* skipWhitespace).label("an expression")
 
   /*〈expr〉::=〈int-liter〉
