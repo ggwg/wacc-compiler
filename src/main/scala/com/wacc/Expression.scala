@@ -390,8 +390,7 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
         /* TODO: Overflow check */
         instructions += ADD(resultReg, firstOp, secondOp)
         instructions += BLVS("p_throw_overflow_error")
-//        newState = newState.copy(p_throw_overflow_error = true,
-//          p_throw_runtime_error = true)
+        newState = newState.copy(p_throw_overflow_error = true, p_throw_runtime_error = true)
 
       case Subtract() =>
         /* TODO: Overflow check */
