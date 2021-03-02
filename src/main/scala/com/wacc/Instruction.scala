@@ -174,6 +174,10 @@ case class ReverseSUB(dest: Register, src: Register, op2: Operand2) extends Inst
   override def toString: String = s"\tRSB $dest, $src, $op2"
 }
 
+case class ReverseSUBS(dest: Register, src: Register, op2: Operand2) extends Instruction {
+  override def toString: String = s"\tRSBS $dest, $src, $op2"
+}
+
 case class AND(dest: Register, src: Register, op2: Operand2) extends Instruction {
   override def toString: String = s"\tAND $dest, $src, $op2"
 }
