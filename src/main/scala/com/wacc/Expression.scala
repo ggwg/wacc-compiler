@@ -388,22 +388,22 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
       newState = rightOperand.compile(newState)
     }
 
-    val message = "OverflowError: the result is too small/large to store in a 4-byte signed-integer."
+    // val message = "OverflowError: the result is too small/large to store in a 4-byte signed-integer."
     /* Apply the specified operation */
     operator match {
       /* Integer operations */
       case Add() =>
-        newState = newState.putMessageIfAbsent(message)
+        newState = newState.putMessageIfAbsent(newState.getOverflowMessage())
         instructions += ADDS(resultReg, firstOp, secondOp)
         instructions += BLVS("p_throw_overflow_error")
         newState = newState.copy(p_throw_overflow_error = true, p_throw_runtime_error = true)
 
       case Subtract() =>
-        /* TODO: Overflow check */
-        newState = newState.putMessageIfAbsent(message)
+        newState = newState.putMessageIfAbsent(newState.getOverflowMessage())
         instructions += SUBS(resultReg, firstOp, secondOp)
         instructions += BLVS("p_throw_overflow_error")
         newState = newState.copy(p_throw_overflow_error = true, p_throw_runtime_error = true)
+
       case Multiply() =>
         /* TODO: Overflow check */
         instructions += MUL(resultReg, secondOp, firstOp)

@@ -63,6 +63,9 @@ case class AssemblerState(
     this.messageDic(message)
   }
 
+  // TODO: Refactor default error messages into separate static class
+  def getOverflowMessage(): String = "OverflowError: the result is too small/large to store in a 4-byte signed-integer."
+
   /* Creates a new scope state from the initial state */
   def newScopeState: AssemblerState = this.copy(declaredSize = 0)
 
