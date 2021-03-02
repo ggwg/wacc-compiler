@@ -198,6 +198,10 @@ case class MULS(dest: Register, multiplier: Register, src: Register) extends Ins
   override def toString: String = s"\tMULS $dest, $multiplier, $src"
 }
 
+case class SMULL(RdLo: Register, RdHi: Register, Rn: Register, Rm: Register) extends Instruction {
+  override def toString: String = s"\tSMULL $RdLo, $RdHi, $RdLo, $RdHi"
+}
+
 case class LOAD(dest: Register, src: AddressAccess, isByte: Boolean = false, cond: Option[Condition] = Option.empty)
     extends Instruction {
   override def toString: String = s"\tLDR${cond.map(_.toString).getOrElse("")}${if (isByte) "SB" else ""} $dest, $src"
@@ -222,6 +226,10 @@ case class BLVS(label: String) extends Instruction {
 
 case class COMPARE(src: Register, op2: Operand2) extends Instruction {
   override def toString: String = s"\tCMP $src, $op2"
+}
+
+case class COMPAREASR(src: Register, op2: Operand2) extends Instruction {
+  override def toString: String = s"\tCMP $src, $op2, ASR #31"
 }
 
 case class MOVE(dest: Register, op2: Operand2, cond: Option[Condition] = Option.empty) extends Instruction {
