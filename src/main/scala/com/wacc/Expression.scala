@@ -403,16 +403,12 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
         newState = newState.copy(p_throw_overflow_error = true, p_throw_runtime_error = true)
 
       case Multiply() =>
-        /* TODO: Check MULS vs SMULL (Signed 64 bit multiplication)
-        *   Edit: Need to change MULS to SMULL! */
         var tempResultReg = newState.getResultRegister
         newState = newState.putMessageIfAbsent(newState.getOverflowMessage())
         instructions += SMULL(resultReg, tempResultReg, firstOp, secondOp)
         instructions += COMPAREASR(tempResultReg, resultReg)
-        instructions += BLVS("p_throw_overflow_error")
+        instructions += BLNE("p_throw_overflow_error")
         newState = newState.copy(p_throw_overflow_error = true, p_throw_runtime_error = true)
-        // -----------------------------------
-
 
       case Divide() =>
         instructions += MOVE(Register0, firstOp)
