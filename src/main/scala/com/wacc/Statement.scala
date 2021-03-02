@@ -214,25 +214,10 @@ case class Free(expression: Expression)(position: (Int, Int)) extends Statement 
         instructions += MOVE(Register0, resultReg)
         instructions += BRANCHLINK("free")
       case PairType(_, _) =>
+        newState = newState.putMessageIfAbsent(newState.getNullReferenceMessage())
         instructions += MOVE(Register0, resultReg)
-
-        /* Save the pair pointer on the stack */
-        instructions += PUSH(Register0)
-
-        /* Free the first pointer */
-        instructions += LOAD(Register0, RegisterLoad(Register0))
-        instructions += BRANCHLINK("free")
-
-        /* Retrieve the pair pointer */
-        instructions += LOAD(Register0, RegisterLoad(RegisterSP))
-
-        /* Free the second pointer */
-        instructions += LOAD(Register0, RegisterOffsetLoad(Register0, ImmediateNumber(4)))
-        instructions += BRANCHLINK("free")
-
-        /* Free the pair pointer */
-        instructions += POP(Register0)
-        instructions += BRANCHLINK("free")
+        instructions += BRANCHLINK("p_free_pair")
+        newState = newState.copy(p_free_pair = true, p_throw_runtime_error = true)
     }
     newState.copy(freeRegs = resultReg :: newState.freeRegs)
   }

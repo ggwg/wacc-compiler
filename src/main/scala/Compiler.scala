@@ -12,10 +12,15 @@ import com.wacc.{
   LOAD,
   MOVE,
   MessageLoad,
+  POP,
+  PUSH,
   PopPC,
   PushLR,
   Register0,
   Register1,
+  RegisterLoad,
+  RegisterOffsetLoad,
+  RegisterSP,
   StringLabel,
   SymbolTable,
   WordDirective
@@ -86,6 +91,30 @@ object Compiler {
       footer += StringLabel("p_throw_overflow_error")
       footer += LOAD(Register0, MessageLoad(state.getMessageID(state.getOverflowMessage())))
       footer += BRANCHLINK("p_throw_runtime_error")
+    }
+    if (state.p_free_pair) {
+      footer += PushLR()
+      footer += COMPARE(Register0, ImmediateNumber(0))
+      footer += LOAD(Register0, MessageLoad(state.getMessageID(state.getNullReferenceMessage())))
+      footer += BRANCHLINK("p_throw_runtime_error", Option(EQ))
+      /* Save the pair pointer on the stack */
+      footer += PUSH(Register0)
+
+      /* Free the first pointer */
+      footer += LOAD(Register0, RegisterLoad(Register0))
+      footer += BRANCHLINK("free")
+
+      /* Retrieve the pair pointer */
+      footer += LOAD(Register0, RegisterLoad(RegisterSP))
+
+      /* Free the second pointer */
+      footer += LOAD(Register0, RegisterOffsetLoad(Register0, ImmediateNumber(4)))
+      footer += BRANCHLINK("free")
+
+      /* Free the pair pointer */
+      footer += POP(Register0)
+      footer += BRANCHLINK("free")
+      footer += PopPC()
     }
     if (state.p_throw_runtime_error) {
       footer += StringLabel("p_throw_runtime_error")
