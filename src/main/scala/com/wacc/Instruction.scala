@@ -224,6 +224,10 @@ case class BLVS(label: String) extends Instruction {
   override def toString: String = "\tBLVS " + label
 }
 
+case class BLNE(label: String) extends Instruction {
+  override def toString: String = "\tBLNE " + label
+}
+
 case class COMPARE(src: Register, op2: Operand2) extends Instruction {
   override def toString: String = s"\tCMP $src, $op2"
 }

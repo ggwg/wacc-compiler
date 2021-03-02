@@ -407,7 +407,7 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
         newState = newState.putMessageIfAbsent(newState.getOverflowMessage())
         instructions += SMULL(resultReg, tempResultReg, firstOp, secondOp)
         instructions += COMPAREASR(tempResultReg, resultReg)
-        instructions += BLVS("p_throw_overflow_error")
+        instructions += BLNE("p_throw_overflow_error")
         newState = newState.copy(p_throw_overflow_error = true, p_throw_runtime_error = true)
 
       case Divide() =>
