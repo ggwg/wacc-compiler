@@ -134,6 +134,11 @@ case object GT extends Condition {
   override def toString: String = "GT"
 }
 
+/* ... */
+case object CS extends Condition {
+  override def toString: String = "CS"
+}
+
 case class PushLR() extends Instruction {
   override def toString: String = "\tPUSH {LR}"
 }

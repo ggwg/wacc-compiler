@@ -29,7 +29,8 @@ case class AssemblerState(
   p_throw_runtime_error: Boolean,
   p_check_divide_by_zero: Boolean,
   p_free_pair: Boolean,
-  p_check_null_pointer: Boolean
+  p_check_null_pointer: Boolean,
+  p_check_array_bounds: Boolean
 ) {
   /* Returns the register in which an expression's result will be stored */
   def getResultRegister: Register = freeRegs.head
@@ -70,6 +71,8 @@ case class AssemblerState(
   def getOverflowMessage(): String = "OverflowError: the result is too small/large to store in a 4-byte signed-integer."
   def getDivideByZeroMessage(): String = "DivideByZeroError: divide or modulo by zero."
   def getNullReferenceMessage(): String = "NullReferenceError: dereference a null reference."
+  def getArrayNegativeIndexMessage(): String = "ArrayIndexOutOfBoundsError: negative index."
+  def getArrayIndexTooLargeMessage(): String = "ArrayIndexOutOfBoundsError: index too large."
 
   /* Creates a new scope state from the initial state */
   def newScopeState: AssemblerState = this.copy(declaredSize = 0)
@@ -94,6 +97,7 @@ object AssemblerState {
       p_throw_runtime_error = false,
       p_check_divide_by_zero = false,
       p_free_pair = false,
-      p_check_null_pointer = false
+      p_check_null_pointer = false,
+      p_check_array_bounds = false
     )
 }

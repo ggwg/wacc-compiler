@@ -4,12 +4,14 @@ import com.wacc.{
   BRANCH,
   BRANCHLINK,
   COMPARE,
+  CS,
   DataDirective,
   EQ,
   Error,
   ImmediateNumber,
   Instruction,
   LOAD,
+  LT,
   MOVE,
   MessageLoad,
   POP,
@@ -127,6 +129,28 @@ object Compiler {
       /* Free the pair pointer */
       footer += POP(Register0)
       footer += BRANCHLINK("free")
+      footer += PopPC()
+    }
+    if (state.p_check_array_bounds) {
+      footer += StringLabel("p_check_array_bounds")
+      footer += PushLR()
+      footer += COMPARE(Register0, ImmediateNumber(0))
+      footer += LOAD(
+        Register0,
+        MessageLoad(state.getMessageID(state.getArrayNegativeIndexMessage())),
+        isByte = false,
+        Option(LT)
+      )
+      footer += BRANCHLINK("p_throw_runtime_error", Option(LT))
+      footer += LOAD(Register1, RegisterLoad(Register1))
+      footer += COMPARE(Register0, Register1)
+      footer += LOAD(
+        Register0,
+        MessageLoad(state.getMessageID(state.getArrayIndexTooLargeMessage())),
+        isByte = false,
+        Option(CS)
+      )
+      footer += BRANCHLINK("p_throw_runtime_error", Option(CS))
       footer += PopPC()
     }
     if (state.p_throw_runtime_error) {
