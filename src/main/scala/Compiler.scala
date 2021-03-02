@@ -110,7 +110,12 @@ object Compiler {
       footer += StringLabel("p_free_pair")
       footer += PushLR()
       footer += COMPARE(Register0, ImmediateNumber(0))
-      footer += LOAD(Register0, MessageLoad(state.getMessageID(state.getNullReferenceMessage())))
+      footer += LOAD(
+        Register0,
+        MessageLoad(state.getMessageID(state.getNullReferenceMessage())),
+        isByte = false,
+        Option(EQ)
+      )
       footer += BRANCHLINK("p_throw_runtime_error", Option(EQ))
       /* Save the pair pointer on the stack */
       footer += PUSH(Register0)
