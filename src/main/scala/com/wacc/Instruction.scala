@@ -212,8 +212,8 @@ case class BRANCH(cond: Option[Condition], label: String) extends Instruction {
   override def toString: String = s"\tB${cond.map(_.toString).getOrElse("")} $label"
 }
 
-case class BRANCHLINK(label: String) extends Instruction {
-  override def toString: String = "\tBL " + label
+case class BRANCHLINK(label: String, cond: Option[Condition] = Option.empty) extends Instruction {
+  override def toString: String = s"\tBL${cond.map(_.toString).getOrElse("")} $label"
 }
 
 case class BLVS(label: String) extends Instruction {
