@@ -199,7 +199,7 @@ case class MULS(dest: Register, multiplier: Register, src: Register) extends Ins
 }
 
 case class SMULL(RdLo: Register, RdHi: Register, Rn: Register, Rm: Register) extends Instruction {
-  override def toString: String = s"\tSMULL $RdLo, $RdHi, $RdLo, $RdHi"
+  override def toString: String = s"\tSMULL $RdLo, $RdHi, $Rn, $Rm"
 }
 
 case class LOAD(dest: Register, src: AddressAccess, isByte: Boolean = false, cond: Option[Condition] = Option.empty)

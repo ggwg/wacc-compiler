@@ -407,7 +407,7 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
         *   Edit: Need to change MULS to SMULL! */
         var tempResultReg = newState.getResultRegister
         newState = newState.putMessageIfAbsent(newState.getOverflowMessage())
-        instructions += SMULL(resultReg, tempResultReg, secondOp, firstOp)
+        instructions += SMULL(resultReg, tempResultReg, firstOp, secondOp)
         instructions += COMPAREASR(tempResultReg, resultReg)
         instructions += BLVS("p_throw_overflow_error")
         newState = newState.copy(p_throw_overflow_error = true, p_throw_runtime_error = true)
