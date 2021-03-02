@@ -206,7 +206,8 @@ object Compiler {
     }
 
     instructions.flatMap {
-      case ADD(_, _, ImmediateNumber(0)) => List.empty
+      case ADD(dst, src, ImmediateNumber(0)) =>
+        if (src == dst) List.empty else List(MOVE(dst, src))
       case ADD(dst, src, ImmediateNumber(n)) =>
         var remaining = n
         var result: ListBuffer[Instruction] = ListBuffer.empty
@@ -220,7 +221,8 @@ object Compiler {
         }
         result += ADD(dst, src, ImmediateNumber(remaining))
         result.toList
-      case SUB(_, _, ImmediateNumber(0)) => List.empty
+      case SUB(dst, src, ImmediateNumber(0)) =>
+        if (src == dst) List.empty else List(MOVE(dst, src))
       case SUB(dst, src, ImmediateNumber(n)) =>
         var remaining = n
         var result: ListBuffer[Instruction] = ListBuffer.empty
