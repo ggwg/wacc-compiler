@@ -420,11 +420,13 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
         newState = newState.copy(p_check_divide_by_zero = true, p_throw_runtime_error = true)
 
       case Modulo() =>
+        newState = newState.putMessageIfAbsent(newState.getDivideByZeroMessage())
         instructions += MOVE(Register0, firstOp)
         instructions += MOVE(Register1, secondOp)
-        /* TODO: Division by 0 check */
+        instructions += BRANCHLINK("p_check_divide_by_zero")
         instructions += BRANCHLINK("__aeabi_idivmod")
         instructions += MOVE(resultReg, Register1)
+        newState = newState.copy(p_check_divide_by_zero = true, p_throw_runtime_error = true)
 
       /* Boolean operations */
       case And() =>
