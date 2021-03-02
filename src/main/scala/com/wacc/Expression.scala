@@ -859,14 +859,15 @@ case class PairElement(expression: Expression, isFirst: Boolean)(position: (Int,
     var newState = expression.compile(state)
     val offset = if (isFirst) 0 else 4
 
-    /* Access the first or second pointer */
-    instructions += LOAD(resultReg, RegisterOffsetLoad(resultReg, ImmediateNumber(offset)))
-
     /* Check for null pointer */
     newState = newState.putMessageIfAbsent(newState.getNullReferenceMessage())
     instructions += MOVE(Register0, resultReg)
     instructions += BRANCHLINK("p_check_null_pointer")
-    newState.copy(p_check_null_pointer = true, p_throw_runtime_error = true)
+    newState = newState.copy(p_check_null_pointer = true, p_throw_runtime_error = true)
+
+    /* Access the first or second pointer */
+    instructions += LOAD(resultReg, RegisterOffsetLoad(resultReg, ImmediateNumber(offset)))
+    newState
   }
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
