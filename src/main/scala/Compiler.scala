@@ -74,6 +74,7 @@ object Compiler {
     var footer: ListBuffer[Instruction] = ListBuffer.empty
     // val overflowMessage = "OverflowError: the result is too small/large to store in a 4-byte signed-integer."
     if (state.p_check_null_pointer) {
+      footer += StringLabel("p_check_null_pointer")
       footer += PushLR()
       footer += COMPARE(Register0, ImmediateNumber(0))
       footer += LOAD(
