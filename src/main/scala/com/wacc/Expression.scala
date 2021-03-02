@@ -844,7 +844,7 @@ case class PairElement(expression: Expression, isFirst: Boolean)(position: (Int,
     val resultReg = state.getResultRegister
 
     /* Find the address of the pair element */
-    val newState = compileReference(state)
+    var newState = compileReference(state)
 
     /* Access it */
     instructions += LOAD(resultReg, RegisterLoad(resultReg))
@@ -856,12 +856,17 @@ case class PairElement(expression: Expression, isFirst: Boolean)(position: (Int,
   )(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     /* Evaluate the expression */
     val resultReg = state.getResultRegister
-    val newState = expression.compile(state)
+    var newState = expression.compile(state)
     val offset = if (isFirst) 0 else 4
 
     /* Access the first or second pointer */
     instructions += LOAD(resultReg, RegisterOffsetLoad(resultReg, ImmediateNumber(offset)))
-    newState
+
+    /* Check for null pointer */
+    newState = newState.putMessageIfAbsent(newState.getNullReferenceMessage())
+    instructions += MOVE(Register0, resultReg)
+    instructions += BRANCHLINK("p_check_null_pointer")
+    newState.copy(p_check_null_pointer = true, p_throw_runtime_error = true)
   }
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {

@@ -206,7 +206,6 @@ case class Free(expression: Expression)(position: (Int, Int)) extends Statement 
     /* Compile the expression */
     val resultReg = state.getResultRegister
     var newState = expression.compile(state)
-    /* TODO: Null check */
 
     expression.getExpressionType match {
       case ArrayType(_) =>
