@@ -374,6 +374,11 @@ case class Read(assignmentLeft: AssignmentLeft)(position: (Int, Int)) extends St
     var newState = assignmentLeft.compileReference(state)
     instructions += MOVE(Register1, pointerReg)
 
+    /* Check for derefence of a null pair: */
+    newState = newState.putMessageIfAbsent(newState.getNullReferenceMessage())
+    instructions += BRANCHLINK("p_check_null_pointer")
+    newState = newState.copy(p_check_null_pointer = true, p_throw_runtime_error = true)
+
     /* Decide if we read an int or a char */
     val format = assignmentLeft.getLeftType match {
       case IntType()       => " %d"
