@@ -369,15 +369,15 @@ case class Print(expression: Expression, isNewLine: Boolean)(position: (Int, Int
  */
 case class Read(assignmentLeft: AssignmentLeft)(position: (Int, Int)) extends Statement {
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
-    /* Check for derefence of a null pair by reading an element into it: */
-    var newState = state.putMessageIfAbsent(state.getNullReferenceMessage())
-    instructions += BRANCHLINK("p_check_null_pointer")
-    newState = newState.copy(p_check_null_pointer = true, p_throw_runtime_error = true)
-
     /* Find the reference to what we want to read and put in in r1 */
     val pointerReg = state.getResultRegister
-    newState = assignmentLeft.compileReference(newState)
+    var newState = assignmentLeft.compileReference(state)
     instructions += MOVE(Register1, pointerReg)
+
+    /* Check for derefence of a null pair: */
+    newState = newState.putMessageIfAbsent(newState.getNullReferenceMessage())
+    instructions += BRANCHLINK("p_check_null_pointer")
+    newState = newState.copy(p_check_null_pointer = true, p_throw_runtime_error = true)
 
     /* Decide if we read an int or a char */
     val format = assignmentLeft.getLeftType match {

@@ -10,5 +10,6 @@
 
 begin
 	pair(int, int) p = null ;
+	println 5 ;
 	read fst p
 end
