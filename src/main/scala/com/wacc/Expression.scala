@@ -411,16 +411,22 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
         newState = newState.copy(p_throw_overflow_error = true, p_throw_runtime_error = true)
 
       case Divide() =>
-        newState = newState.putMessageIfAbsent(newState.getDivideByZeroMessage())
         instructions += MOVE(Register0, firstOp)
         instructions += MOVE(Register1, secondOp)
-
-        /* Division by 0 check */
-        instructions += BRANCHLINK("p_throw_runtime_error")
-        newState = newState.copy(p_check_divide_by_zero = true, p_throw_runtime_error = true)
-
+        /* TODO: Division by 0 check */
         instructions += BRANCHLINK("__aeabi_idiv")
         instructions += MOVE(resultReg, Register0)
+
+      //        newState = newState.putMessageIfAbsent(newState.getDivideByZeroMessage())
+//        instructions += MOVE(Register0, firstOp)
+//        instructions += MOVE(Register1, secondOp)
+//
+//        /* Division by 0 check */
+//        instructions += BRANCHLINK("p_throw_runtime_error")
+//        newState = newState.copy(p_check_divide_by_zero = true, p_throw_runtime_error = true)
+//
+//        instructions += BRANCHLINK("__aeabi_idiv")
+//        instructions += MOVE(resultReg, Register0)
       case Modulo() =>
         instructions += MOVE(Register0, firstOp)
         instructions += MOVE(Register1, secondOp)
