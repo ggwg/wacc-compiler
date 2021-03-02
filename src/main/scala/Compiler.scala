@@ -1,19 +1,31 @@
 import com.wacc.{
+  ADD,
+  ADDLSL,
+  ADDS,
+  AND,
   AsciiDirective,
   AssemblerState,
+  BLNE,
+  BLVS,
   BRANCH,
   BRANCHLINK,
   COMPARE,
+  COMPAREASR,
   CS,
   DataDirective,
+  Directive,
   EQ,
   Error,
   ImmediateNumber,
   Instruction,
   LOAD,
   LT,
+  Label,
   MOVE,
+  MUL,
+  MULS,
   MessageLoad,
+  OR,
   POP,
   PUSH,
   PopPC,
@@ -23,9 +35,16 @@ import com.wacc.{
   RegisterLoad,
   RegisterOffsetLoad,
   RegisterSP,
+  ReverseSUB,
+  ReverseSUBS,
+  SMULL,
+  STORE,
+  SUB,
+  SUBS,
   StringLabel,
   SymbolTable,
-  WordDirective
+  WordDirective,
+  XOR
 }
 import parsley.{Failure, Success}
 
@@ -181,6 +200,44 @@ object Compiler {
     footer
   }
 
+  def curateInstructions(instructions: List[Instruction]): List[Instruction] = {
+    if (instructions.isEmpty) {
+      return List.empty
+    }
+
+    instructions.flatMap {
+      case ADD(_, _, ImmediateNumber(0)) => List.empty
+      case ADD(dst, src, ImmediateNumber(n)) =>
+        var remaining = n
+        var result: ListBuffer[Instruction] = ListBuffer.empty
+        while (remaining >= 1024) {
+          result += ADD(dst, src, ImmediateNumber(1024))
+          remaining -= 1024
+        }
+        while (remaining < -1024) {
+          result += SUB(dst, src, ImmediateNumber(1024))
+          remaining += 1024
+        }
+        result += ADD(dst, src, ImmediateNumber(remaining))
+        result.toList
+      case SUB(_, _, ImmediateNumber(0)) => List.empty
+      case SUB(dst, src, ImmediateNumber(n)) =>
+        var remaining = n
+        var result: ListBuffer[Instruction] = ListBuffer.empty
+        while (remaining >= 1024) {
+          result += SUB(dst, src, ImmediateNumber(1024))
+          remaining -= 1024
+        }
+        while (remaining < -1024) {
+          result += ADD(dst, src, ImmediateNumber(1024))
+          remaining += 1024
+        }
+        result += SUB(dst, src, ImmediateNumber(remaining))
+        result.toList
+      case i => List(i)
+    }
+  }
+
   def main(args: Array[String]): Unit = {
     if (args.length != 1) {
       println("Usage: ./compile <path_to_file>")
@@ -245,16 +302,16 @@ object Compiler {
     /* Add the program footers. Program footers include error labels */
     val footer: ListBuffer[Instruction] = generateFooter(state)
 
-    /* TODO: Split add and sub operations which use more than #1024 */
+    val curatedInstructions: List[Instruction] = curateInstructions(instructions.toList)
 
     /* Write to an assembly file */
-    writeToFile(baseName + ".s", header, instructions, footer)
+    writeToFile(baseName + ".s", header, curatedInstructions, footer)
   }
 
   def writeToFile(
     assembledFileName: String,
     header: ListBuffer[Instruction],
-    body: ListBuffer[Instruction],
+    body: List[Instruction],
     footer: ListBuffer[Instruction]
   ): Unit = {
     val file = new File(assembledFileName)

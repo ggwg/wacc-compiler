@@ -33,13 +33,7 @@ sealed trait Statement extends ASTNodeVoid {
     scopeState = this.compile(scopeState)
 
     /* Reset the SP to where we were initially */
-    var scopeStateDeclaredSize = scopeState.declaredSize
-    while (scopeStateDeclaredSize > 1024) {
-      instructions += ADD(RegisterSP, RegisterSP, ImmediateNumber(1024))
-      scopeStateDeclaredSize -= 1024
-    }
-    instructions += ADD(RegisterSP, RegisterSP, ImmediateNumber(scopeStateDeclaredSize))
-
+    instructions += ADD(RegisterSP, RegisterSP, ImmediateNumber(scopeState.declaredSize))
 
     /* Restore the state to hold the correct fields */
     scopeState.fromScopeToInitialState(state)
