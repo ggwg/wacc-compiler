@@ -116,7 +116,7 @@ object Compiler {
         isByte = false,
         Option(EQ)
       )
-      footer += BRANCHLINK("p_throw_runtime_error", Option(EQ))
+      footer += BRANCH(Option(EQ), "p_throw_runtime_error")
       /* Save the pair pointer on the stack */
       footer += PUSH(Register0)
 
