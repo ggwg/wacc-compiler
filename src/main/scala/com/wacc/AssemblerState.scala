@@ -30,7 +30,8 @@ case class AssemblerState(
   p_check_divide_by_zero: Boolean,
   p_free_pair: Boolean,
   p_check_null_pointer: Boolean,
-  p_check_array_bounds: Boolean
+  p_check_array_bounds: Boolean,
+  p_free_array: Boolean
 ) {
   /* Returns the register in which an expression's result will be stored */
   def getResultRegister: Register = freeRegs.head
@@ -98,6 +99,7 @@ object AssemblerState {
       p_check_divide_by_zero = false,
       p_free_pair = false,
       p_check_null_pointer = false,
-      p_check_array_bounds = false
+      p_check_array_bounds = false,
+      p_free_array = false
     )
 }

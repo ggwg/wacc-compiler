@@ -136,6 +136,20 @@ object Compiler {
       footer += BRANCHLINK("free")
       footer += PopPC()
     }
+    if (state.p_free_array) {
+      footer += StringLabel("p_free_array")
+      footer += PushLR()
+      footer += COMPARE(Register0, ImmediateNumber(0))
+      footer += LOAD(
+        Register0,
+        MessageLoad(state.getMessageID(state.getNullReferenceMessage())),
+        isByte = false,
+        Option(EQ)
+      )
+      footer += BRANCH(Option(EQ), "p_throw_runtime_error")
+      footer += BRANCHLINK("free")
+      footer += PopPC()
+    }
     if (state.p_check_array_bounds) {
       footer += StringLabel("p_check_array_bounds")
       footer += PushLR()

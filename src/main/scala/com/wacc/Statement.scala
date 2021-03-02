@@ -207,19 +207,19 @@ case class Free(expression: Expression)(position: (Int, Int)) extends Statement 
     val resultReg = state.getResultRegister
     var newState = expression.compile(state)
 
+    newState = newState.putMessageIfAbsent(newState.getNullReferenceMessage())
+    instructions += MOVE(Register0, resultReg)
+
     expression.getExpressionType match {
       case ArrayType(_) =>
         /* Free the array memory */
-        instructions += MOVE(Register0, resultReg)
-        instructions += BRANCHLINK("free")
+        instructions += BRANCHLINK("p_free_array")
       case PairType(_, _) =>
-        newState = newState.putMessageIfAbsent(newState.getNullReferenceMessage())
-        instructions += MOVE(Register0, resultReg)
         instructions += BRANCHLINK("p_free_pair")
-        newState = newState.copy(p_free_pair = true, p_throw_runtime_error = true)
     }
-    newState.copy(freeRegs = resultReg :: newState.freeRegs)
+    newState.copy(p_free_pair = true, p_throw_runtime_error = true, freeRegs = resultReg :: newState.freeRegs)
   }
+
   override def toString: String = "free " + expression.toString + "\n"
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
