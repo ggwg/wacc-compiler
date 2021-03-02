@@ -403,8 +403,12 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
         newState = newState.copy(p_throw_overflow_error = true, p_throw_runtime_error = true)
 
       case Multiply() =>
-        /* TODO: Overflow check */
-        instructions += MUL(resultReg, secondOp, firstOp)
+        /* TODO: Check MULS vs SMULL (Signed 64 bit multiplication) */
+        newState = newState.putMessageIfAbsent(newState.getOverflowMessage())
+        instructions += MULS(resultReg, secondOp, firstOp)
+        instructions += BLVS("p_throw_overflow_error")
+        newState = newState.copy(p_throw_overflow_error = true, p_throw_runtime_error = true)
+
       case Divide() =>
         instructions += MOVE(Register0, firstOp)
         instructions += MOVE(Register1, secondOp)
