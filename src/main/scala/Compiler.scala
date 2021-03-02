@@ -69,17 +69,6 @@ object Compiler {
     var footer: ListBuffer[Instruction] = ListBuffer.empty
     // val overflowMessage = "OverflowError: the result is too small/large to store in a 4-byte signed-integer."
 
-    if (state.p_throw_overflow_error) {
-      footer += StringLabel("p_throw_overflow_error")
-      footer += LOAD(Register0, MessageLoad(state.getMessageID(state.getOverflowMessage())))
-      footer += BRANCHLINK("p_throw_runtime_error")
-    }
-    if (state.p_throw_runtime_error) {
-      footer += StringLabel("p_throw_runtime_error")
-      footer += BRANCHLINK("printf")
-      footer += MOVE(Register0, ImmediateNumber(-1))
-      footer += BRANCHLINK("exit")
-    }
     if (state.p_check_divide_by_zero) {
       footer += StringLabel("p_check_divide_by_zero")
       footer += PushLR()
@@ -92,6 +81,17 @@ object Compiler {
       )
       footer += BRANCHLINK("p_throw_runtime_error", Option(EQ))
       footer += PopPC()
+    }
+    if (state.p_throw_overflow_error) {
+      footer += StringLabel("p_throw_overflow_error")
+      footer += LOAD(Register0, MessageLoad(state.getMessageID(state.getOverflowMessage())))
+      footer += BRANCHLINK("p_throw_runtime_error")
+    }
+    if (state.p_throw_runtime_error) {
+      footer += StringLabel("p_throw_runtime_error")
+      footer += BRANCHLINK("printf")
+      footer += MOVE(Register0, ImmediateNumber(-1))
+      footer += BRANCHLINK("exit")
     }
     footer
   }
