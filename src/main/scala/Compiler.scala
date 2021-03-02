@@ -78,7 +78,7 @@ object Compiler {
     if (state.p_check_null_pointer) {
       footer += StringLabel("p_check_null_pointer")
       footer += PushLR()
-      footer += COMPARE(Register1, ImmediateNumber(0))
+      footer += COMPARE(Register0, ImmediateNumber(0))
       footer += LOAD(
         Register0,
         MessageLoad(state.getMessageID(state.getNullReferenceMessage())),
