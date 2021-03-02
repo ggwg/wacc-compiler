@@ -403,34 +403,22 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
         newState = newState.copy(p_throw_overflow_error = true, p_throw_runtime_error = true)
 
       case Multiply() =>
-        /* TODO: Check MULS vs SMULL (Signed 64 bit multiplication)
-        *   Edit: Need to change MULS to SMULL! */
-        var tempResultReg = newState.getResultRegister
+        val tempResultReg = newState.getResultRegister
         newState = newState.putMessageIfAbsent(newState.getOverflowMessage())
         instructions += SMULL(resultReg, tempResultReg, firstOp, secondOp)
         instructions += COMPAREASR(tempResultReg, resultReg)
         instructions += BLVS("p_throw_overflow_error")
         newState = newState.copy(p_throw_overflow_error = true, p_throw_runtime_error = true)
-        // -----------------------------------
-
 
       case Divide() =>
+        newState = newState.putMessageIfAbsent(newState.getDivideByZeroMessage())
         instructions += MOVE(Register0, firstOp)
         instructions += MOVE(Register1, secondOp)
-        /* TODO: Division by 0 check */
+        instructions += BRANCHLINK("p_check_divide_by_zero")
         instructions += BRANCHLINK("__aeabi_idiv")
         instructions += MOVE(resultReg, Register0)
+        newState = newState.copy(p_check_divide_by_zero = true, p_throw_runtime_error = true)
 
-      //        newState = newState.putMessageIfAbsent(newState.getDivideByZeroMessage())
-//        instructions += MOVE(Register0, firstOp)
-//        instructions += MOVE(Register1, secondOp)
-//
-//        /* Division by 0 check */
-//        instructions += BRANCHLINK("p_throw_runtime_error")
-//        newState = newState.copy(p_check_divide_by_zero = true, p_throw_runtime_error = true)
-//
-//        instructions += BRANCHLINK("__aeabi_idiv")
-//        instructions += MOVE(resultReg, Register0)
       case Modulo() =>
         instructions += MOVE(Register0, firstOp)
         instructions += MOVE(Register1, secondOp)

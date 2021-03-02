@@ -1,4 +1,25 @@
-import com.wacc.{AsciiDirective, AssemblerState, BRANCH, BRANCHLINK, COMPARE, DataDirective, EQ, Error, ImmediateNumber, Instruction, LOAD, MOVE, MessageLoad, PopPC, PushLR, Register0, Register1, StringLabel, SymbolTable, WordDirective}
+import com.wacc.{
+  AsciiDirective,
+  AssemblerState,
+  BRANCH,
+  BRANCHLINK,
+  COMPARE,
+  DataDirective,
+  EQ,
+  Error,
+  ImmediateNumber,
+  Instruction,
+  LOAD,
+  MOVE,
+  MessageLoad,
+  PopPC,
+  PushLR,
+  Register0,
+  Register1,
+  StringLabel,
+  SymbolTable,
+  WordDirective
+}
 import parsley.{Failure, Success}
 
 import java.io.{File, FileWriter}
@@ -63,7 +84,12 @@ object Compiler {
       footer += StringLabel("p_check_divide_by_zero")
       footer += PushLR()
       footer += COMPARE(Register1, ImmediateNumber(0))
-      footer += LOAD(Register0, MessageLoad(state.getMessageID(state.getDivideByZeroMessage())))
+      footer += LOAD(
+        Register0,
+        MessageLoad(state.getMessageID(state.getDivideByZeroMessage())),
+        isByte = false,
+        Option(EQ)
+      )
       footer += BRANCHLINK("p_throw_runtime_error", Option(EQ))
       footer += PopPC()
     }
