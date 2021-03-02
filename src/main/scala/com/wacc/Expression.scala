@@ -291,7 +291,12 @@ case class ArrayElement(name: Identifier, expressions: List[Expression])(positio
 
       /* Move to the array we were pointing at */
       instructions += LOAD(arrayReg, RegisterLoad(arrayReg))
-      /* TODO: Bound check if we want */
+      newState = newState.putMessageIfAbsent(newState.getArrayNegativeIndexMessage())
+      newState = newState.putMessageIfAbsent(newState.getArrayIndexTooLargeMessage())
+      instructions += MOVE(Register0, indexReg)
+      instructions += MOVE(Register1, arrayReg)
+      instructions += BRANCHLINK("p_check_array_bounds")
+      newState = newState.copy(p_check_array_bounds = true, p_throw_runtime_error = true)
 
       /* Skip over the array size */
       instructions += ADD(arrayReg, arrayReg, ImmediateNumber(4))
