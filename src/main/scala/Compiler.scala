@@ -104,6 +104,7 @@ object Compiler {
       footer += BRANCHLINK("p_throw_runtime_error")
     }
     if (state.p_free_pair) {
+      footer += StringLabel("p_free_pair")
       footer += PushLR()
       footer += COMPARE(Register0, ImmediateNumber(0))
       footer += LOAD(Register0, MessageLoad(state.getMessageID(state.getNullReferenceMessage())))
