@@ -237,10 +237,7 @@ object Compiler {
 
     /* Compile the program */
     val instructions: ListBuffer[Instruction] = ListBuffer.empty
-    var state = AST.compile(AssemblerState.initialState)(instructions)
-
-    /* TODO: Add footers for the program */
-    // TODO code goes here
+    val state = AST.compile(AssemblerState.initialState)(instructions)
 
     /* Add the program headers. Program headers include messages */
     val header: ListBuffer[Instruction] = generateHeader(state)
@@ -251,7 +248,6 @@ object Compiler {
     /* TODO: Split add and sub operations which use more than #1024 */
 
     /* Write to an assembly file */
-    // TODO: Footer
     writeToFile(baseName + ".s", header, instructions, footer)
   }
 

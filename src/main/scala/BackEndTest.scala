@@ -27,7 +27,7 @@ object BackEndTest {
    */
 
   def main(args: Array[String]): Unit = {
-    val inputDir  = "src/main/resources/valid_examples/runtimeErr"
+    val inputDir = "src/main/resources/valid_examples/runtimeErr"
     val outputDir = "src/main/out/valid_examples/runtimeErr"
 
     val resources = new File(inputDir)
@@ -64,7 +64,6 @@ object BackEndTest {
 
     val fileNameWithoutDirectory = (baseName splitAt (baseName lastIndexOf '\\'))._2
     val output = outputDir + fileNameWithoutDirectory + ".s"
-
 
     /* Read the file into the input string */
     var input = ""
@@ -137,8 +136,6 @@ object BackEndTest {
       header += AsciiDirective(message)
     }
 
-    /* TODO: Add footers for the program */
-
     /* Write to an assembly file */
     val assembledFileName = output
     val file = new File(assembledFileName)
@@ -149,4 +146,3 @@ object BackEndTest {
     writer.close()
   }
 }
-
