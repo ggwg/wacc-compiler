@@ -200,7 +200,7 @@ object Compiler {
     val baseName = split(0).split('/').last
 
     /* Parse the input */
-    val parseResult = WACCParser.programParser.parseFromFile(new File(fileName))
+    val parseResult = Parser.programParser.parseFromFile(new File(fileName))
 
     parseResult match {
       case Failure(msg) =>

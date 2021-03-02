@@ -8,7 +8,7 @@ import parsley.expr._
 import parsley.implicits.{voidImplicitly => _, _}
 import parsley.{Parsley, combinator}
 
-object WACCParser {
+object Parser {
   /* 〈program〉::=  ‘begin’〈func〉*〈stat〉‘end’ */
   lazy val programParser: Parsley[Program] =
     Program(

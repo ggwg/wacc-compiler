@@ -1,5 +1,5 @@
 import org.scalatest.flatspec.AnyFlatSpec
-import WACCParser._
+import Parser._
 import com.wacc.operator._
 import com.wacc._
 import org.scalatest.matchers.should.Matchers.{a, an, convertToAnyShouldWrapper}
@@ -9,7 +9,7 @@ import java.io.File
 import scala.collection.mutable.ListBuffer
 import scala.io.Source
 
-class WACCParserSpec extends AnyFlatSpec {
+class ParserSpec extends AnyFlatSpec {
 
   def testAllFiles(dir: File, shouldSucceed: Boolean): List[String] = {
     var files: List[String] = List.empty
