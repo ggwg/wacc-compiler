@@ -1,12 +1,18 @@
 package com.wacc
 
-case class Error(message: String, position: (Int, Int), code: Int = 200) {
+case class Error(message: String, position: (Int, Int) = (0, 0), code: Int = 200) {
+  val getMessage: String = {
+    code match {
+      case 200 | 201 =>
+        Error.formatRed(
+          "(Error Code " + code + ")"
+        ) + " Semantic error on line " + position._1 + ", column " + position._2 + ":\n\t- " + message
+      case _ => Error.formatRed("(Runtime Error)" + ":\n\t- " + message)
+    }
+  }
+
   def throwError(): Unit = {
-    Console.out.println(
-      Error.formatRed(
-        "(Error Code " + code + ")"
-      ) + " Semantic error on line " + position._1 + ", column " + position._2 + ":\n\t- " + message
-    )
+    Console.out.println(getMessage)
   }
 }
 
@@ -96,6 +102,56 @@ case object PairElementError {
       Error.formatYellow(actual)
     Error(message, position, code)
   }
+}
+
+sealed trait RuntimeErrorTrait {
+  val code = 202
+  val label: String
+  val message: String
+  def errorMessage: String = Error(message, code = code).getMessage
+}
+
+case object RunTimeError extends RuntimeErrorTrait {
+  val label = "p_throw_runtime_error"
+  val message = ""
+}
+
+case object OverflowError extends RuntimeErrorTrait {
+  val message = "Trying to store too small/large result in a 4-byte signed-integer"
+  val label = "p_throw_overflow_error"
+}
+
+case object DivideByZeroError extends RuntimeErrorTrait {
+  val message = "Trying to divide or modulo by zero"
+  val label = "p_check_divide_by_zero"
+}
+
+case object NullDereferenceError extends RuntimeErrorTrait {
+  val message = "Trying to dereference a null reference"
+  val label = "p_check_null_pointer"
+}
+
+case object FreeNullPairError extends RuntimeErrorTrait {
+  val message = "Trying to free a null reference in pair context"
+  val label = "p_free_pair"
+}
+
+case object FreeNullArrayError extends RuntimeErrorTrait {
+  val message = "Trying to free a null reference in array context"
+  val label = "p_free_array"
+}
+
+case class ArrayIndexError() extends RuntimeErrorTrait {
+  val label = "p_check_array_bounds"
+  val message: String = ""
+}
+
+case object ArrayIndexNegativeError extends ArrayIndexError {
+  override val message = "Trying to access a negative index"
+}
+
+case object ArrayIndexBounds extends ArrayIndexError {
+  override val message = "Trying to access an index out of array bounds"
 }
 
 object Error {
