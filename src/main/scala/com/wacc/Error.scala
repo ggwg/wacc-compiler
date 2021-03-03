@@ -1,23 +1,41 @@
 package com.wacc
 
-case class Error(message: String, position: (Int, Int) = (0, 0), code: Int = 200) {
-  val getMessage: String = {
+case class Error(message: String, position: (Int, Int) = Error.defaultPosition, code: Int = Error.semanticCode) {
+  val getMessage: String =
     code match {
-      case 200 | 201 =>
+      case Error.semanticCode | Error.syntaxCode =>
         Error.formatRed(
           "(Error Code " + code + ")"
         ) + " Semantic error on line " + position._1 + ", column " + position._2 + ":\n\t- " + message
       case _ => Error.formatRed("(Runtime Error)" + ":\n\t- " + message)
     }
-  }
 
   def throwError(): Unit = {
     Console.out.println(getMessage)
   }
 }
 
+object Error {
+  /* Error Codes & Misc. Constants */
+  val defaultPosition: (Int, Int) = (0, 0)
+  val semanticCode = 200
+  val syntaxCode = 201
+  val runtimeCode = 202
+
+  /* Message Formatter Functions */
+  def formatYellow(message: String): String = Console.YELLOW + message + Console.RESET
+  def formatRed(message: String): String = Console.RED + message + Console.RESET
+}
+
+/* Syntax & Semantic Error Handlers */
 case object UnaryOperatorError {
-  def expectation(operator: String, expected: String, actual: String, position: (Int, Int), code: Int = 200): Error = {
+  def expectation(
+    operator: String,
+    expected: String,
+    actual: String,
+    position: (Int, Int),
+    code: Int = Error.semanticCode
+  ): Error = {
     val message = "Pre-defined function " + operator + " expected " + Error.formatYellow(expected) +
       ", but found " + Error.formatYellow(actual)
     Error(message, position, code)
@@ -31,14 +49,20 @@ case object BinaryOperatorError {
     actual: String,
     position: (Int, Int),
     side: String,
-    code: Int = 200
+    code: Int = Error.semanticCode
   ): Error = {
     val message = "Pre-defined function " + operator + " expected " + Error.formatYellow(expected) + " for " + side +
       " operand, but found " + Error.formatYellow(actual)
     Error(message, position, code)
   }
 
-  def comparison(operator: String, leftType: String, rightType: String, position: (Int, Int), code: Int = 200): Error =
+  def comparison(
+    operator: String,
+    leftType: String,
+    rightType: String,
+    position: (Int, Int),
+    code: Int = Error.semanticCode
+  ): Error =
     Error(
       "Cannot compare " + Error.formatYellow(leftType) + " and " + Error.formatYellow(rightType) +
         " using pre-defined function " + operator,
@@ -48,19 +72,25 @@ case object BinaryOperatorError {
 }
 
 case object FunctionCallError {
-  def expectation(name: String, expected: String, actual: String, position: (Int, Int), code: Int = 200): Error = {
+  def expectation(
+    name: String,
+    expected: String,
+    actual: String,
+    position: (Int, Int),
+    code: Int = Error.semanticCode
+  ): Error = {
     val message = "Type mismatch in function call for user-defined function \"" + name +
       "\":\n\t  Function expected call type " + Error.formatYellow(expected) + ", but found " +
       Error.formatYellow(actual)
     Error(message, position, code)
   }
 
-  def undefined(name: String, position: (Int, Int), code: Int = 200): Error = {
+  def undefined(name: String, position: (Int, Int), code: Int = Error.semanticCode): Error = {
     val message = "Invalid function call to undefined function " + Error.formatYellow(name)
     Error(message, position, code)
   }
 
-  def invalid(name: String, actual: String, position: (Int, Int), code: Int = 200): Error = {
+  def invalid(name: String, actual: String, position: (Int, Int), code: Int = Error.semanticCode): Error = {
     val message = "Invalid function call to alleged user-defined function \"" + name +
       "\":\n\t  Actual type of " + name + " is " + Error.formatYellow(actual)
     Error(message, position, code)
@@ -68,7 +98,13 @@ case object FunctionCallError {
 }
 
 case object ArrayElementError {
-  def expectation(name: String, expected: String, actual: String, position: (Int, Int), code: Int = 200): Error = {
+  def expectation(
+    name: String,
+    expected: String,
+    actual: String,
+    position: (Int, Int),
+    code: Int = Error.semanticCode
+  ): Error = {
     val message = "Invalid index in attempt to access element of array \"" + name +
       "\":\n\t  Array index expected type " + Error.formatYellow(expected) + ", but found " + Error.formatYellow(actual)
     Error(message, position, code)
@@ -81,14 +117,14 @@ case object ArrayElementError {
 }
 
 case object IdentifierError {
-  def undefined(name: String, position: (Int, Int), code: Int = 200): Error = {
+  def undefined(name: String, position: (Int, Int), code: Int = Error.semanticCode): Error = {
     val message = "Undefined identifier \"" + name + "\""
     Error(message, position, code)
   }
 }
 
 case object ArrayLiterError {
-  def expectation(expected: String, actual: String, position: (Int, Int), code: Int = 200): Error = {
+  def expectation(expected: String, actual: String, position: (Int, Int), code: Int = Error.semanticCode): Error = {
     val message = "Type mismatch in array assignment:\n\t  Array elements must be of type " +
       Error.formatYellow(expected) + ", but found " + Error.formatYellow(actual)
     Error(message, position, code)
@@ -96,7 +132,13 @@ case object ArrayLiterError {
 }
 
 case object PairElementError {
-  def expectation(expected: String, actual: String, isFirst: Boolean, position: (Int, Int), code: Int = 200): Error = {
+  def expectation(
+    expected: String,
+    actual: String,
+    isFirst: Boolean,
+    position: (Int, Int),
+    code: Int = Error.semanticCode
+  ): Error = {
     val function = if (isFirst) "fst" else "snd"
     val message = "Pre-defined function " + function + " expected " + Error.formatYellow(expected) + ", but found " +
       Error.formatYellow(actual)
@@ -104,16 +146,16 @@ case object PairElementError {
   }
 }
 
+/* Runtime Error Handlers */
 sealed trait RuntimeErrorTrait {
-  val code = 202
   val label: String
   val message: String
-  def errorMessage: String = Error(message, code = code).getMessage
+  def errorMessage: String = Error(message, code = Error.runtimeCode).getMessage
 }
 
 case object RunTimeError extends RuntimeErrorTrait {
-  val label = "p_throw_runtime_error"
   val message = ""
+  val label = "p_throw_runtime_error"
 }
 
 case object OverflowError extends RuntimeErrorTrait {
@@ -152,9 +194,4 @@ case object ArrayIndexNegativeError extends ArrayIndexError {
 
 case object ArrayIndexBounds extends ArrayIndexError {
   override val message = "Trying to access an index out of array bounds"
-}
-
-object Error {
-  def formatYellow(message: String): String = Console.YELLOW + message + Console.RESET
-  def formatRed(message: String): String = Console.RED + message + Console.RESET
 }
