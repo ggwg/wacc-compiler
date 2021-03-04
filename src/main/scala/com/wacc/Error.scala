@@ -122,8 +122,9 @@ sealed trait RuntimeErrorTrait {
   val message: String
   def errorMessage: String = Error(message, code = Error.runtimeCode).getMessage
 }
+sealed trait ArrayIndexErrorTrait extends RuntimeErrorTrait
 
-case object RunTimeError extends RuntimeErrorTrait {
+case object RuntimeError extends RuntimeErrorTrait {
   val message = ""
   val label = "p_throw_runtime_error"
 }
@@ -153,15 +154,17 @@ case object FreeNullArrayError extends RuntimeErrorTrait {
   val label = "p_free_array"
 }
 
-case class ArrayIndexError() extends RuntimeErrorTrait {
+case object ArrayIndexError extends ArrayIndexErrorTrait {
+  val message = ""
   val label = "p_check_array_bounds"
-  val message: String = ""
 }
 
-case object ArrayIndexNegativeError extends ArrayIndexError {
-  override val message = "Trying to access a negative index"
+case object ArrayIndexNegativeError extends ArrayIndexErrorTrait {
+  val message = "Trying to access a negative index"
+  val label: String = ArrayIndexError.label
 }
 
-case object ArrayIndexBounds extends ArrayIndexError {
-  override val message = "Trying to access an index out of array bounds"
+case object ArrayIndexBoundsError extends ArrayIndexErrorTrait {
+  val message = "Trying to access an index out of array bounds"
+  val label: String = ArrayIndexError.label
 }
