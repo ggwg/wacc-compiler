@@ -1,14 +1,13 @@
 package com.wacc
 
 import parsley.Parsley
-import parsley.Parsley.{pos, select}
+import parsley.Parsley.{label, pos, select}
 import parsley.implicits.{voidImplicitly => _, _}
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 sealed trait Statement extends ASTNodeVoid {
-
   /* Returns true if the statement ends with a return or exit no matter what 'branches' it takes,
      false otherwise. */
   def exitable(): Boolean = {
@@ -26,21 +25,15 @@ sealed trait Statement extends ASTNodeVoid {
   /* Given the 'parent' state, this function compiles the scope statement with a scope state, then
      ensures the compilation can proceed after exiting the scope statement. */
   def compileNewScope(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
-    /* Create a new state for the new scope */
+    /* Create a new state for the new scope, compile the body with the new scope, reset the SP to where we were
+       initially and restore the state to hold the correct fields.  */
     var scopeState = state.newScopeState
-
-    /* Compile the body with the new scope */
     scopeState = this.compile(scopeState)
-
-    /* Reset the SP to where we were initially */
     instructions += ADD(RegisterSP, RegisterSP, ImmediateNumber(scopeState.declaredSize))
-
-    /* Restore the state to hold the correct fields */
     scopeState.fromScopeToInitialState(state)
   }
 }
 
-/* ✅ Check done - ⚠️ Compile done */
 case class IdentifierDeclaration(identType: Type, name: Identifier, assignmentRight: AssignmentRight)(
   position: (Int, Int)
 ) extends Statement {
@@ -51,8 +44,10 @@ case class IdentifierDeclaration(identType: Type, name: Identifier, assignmentRi
 
     /* Store the identifier on the stack */
     val size = identType.getSize
-    instructions += SUB(RegisterSP, RegisterSP, ImmediateNumber(size))
-    instructions += STORE(resultReg, RegisterLoad(RegisterSP), size == 1)
+    instructions ++= List(
+      SUB(RegisterSP, RegisterSP, ImmediateNumber(size)),
+      STORE(resultReg, RegisterLoad(RegisterSP), size == 1)
+    )
 
     /* Update the state to reflect the change */
     val newSPOffset = newState.spOffset + size
@@ -100,7 +95,6 @@ case class IdentifierDeclaration(identType: Type, name: Identifier, assignmentRi
   override def getPos(): (Int, Int) = position
 }
 
-/* ✅ Check done - ⚠️ Compile done */
 case class Assignment(assignmentLeft: AssignmentLeft, assignmentRight: AssignmentRight)(position: (Int, Int))
     extends Statement {
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
@@ -108,11 +102,9 @@ case class Assignment(assignmentLeft: AssignmentLeft, assignmentRight: Assignmen
     val assignmentRegister = state.getResultRegister
     var newState = assignmentRight.compile(state)
 
-    /* Compile the value to be assigned to the left side */
+    /* Compile the value to be assigned to the left side and assign the value */
     val assignPointer = newState.getResultRegister
     newState = assignmentLeft.compileReference(newState)
-
-    /* Assign the value */
     instructions += STORE(assignmentRegister, RegisterLoad(assignPointer), assignmentLeft.getLeftType.getSize == 1)
 
     /* Mark the registers as being usable */
@@ -142,10 +134,10 @@ case class Assignment(assignmentLeft: AssignmentLeft, assignmentRight: Assignmen
     assignmentLeft.check(symbolTable)
     assignmentRight.check(symbolTable)
   }
+
   override def getPos(): (Int, Int) = position
 }
 
-/* ✅ Check done - ✅ Compile done */
 case class BeginEnd(statement: Statement)(position: (Int, Int)) extends Statement {
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     statement.compileNewScope(state)
@@ -154,28 +146,20 @@ case class BeginEnd(statement: Statement)(position: (Int, Int)) extends Statemen
   override def toString: String = "begin\n" + statement.toString + "end\n"
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
-    // Create new scope for Symbol Table
+    /* Create new scope for Symbol Table and recursively call check */
     val beginEndSymbolTable = new SymbolTable(symbolTable)
-
-    // Recursively call check.
     statement.check(beginEndSymbolTable)
   }
 
   override def getPos(): (Int, Int) = position
 }
 
-/* ✅ Check done - ⚠️ Compile Pending */
 case class Exit(expression: Expression)(position: (Int, Int)) extends Statement {
-
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
-
-    /* Compile the expression and store it in r0 */
+    /* Compile the expression and store it in r0; then call the exit function */
     val resultReg = state.getResultRegister
     val newState = expression.compile(state)
-    instructions += MOVE(Register0, resultReg)
-
-    /* Call the exit function */
-    instructions += BRANCHLINK("exit")
+    instructions ++= List(MOVE(Register0, resultReg), BRANCHLINK("exit"))
 
     /* Mark the result register as usable */
     newState.copy(freeRegs = resultReg :: newState.freeRegs)
@@ -199,23 +183,23 @@ case class Exit(expression: Expression)(position: (Int, Int)) extends Statement 
    (for some T, T1, T2). The expression must evaluate to a valid reference to a pair or array, otherwise a segmentation
    fault will occur at runtime. If the reference is valid, then the memory for each element of the pair/array is freed,
    so long as the element is not a reference to another pair or another array (i.e. free is not recursive). Then the
-   memory that stores the pair/array itself is also freed.
-   ✅ Check done - ⚠️ Compile Pending */
+   memory that stores the pair/array itself is also freed. */
 case class Free(expression: Expression)(position: (Int, Int)) extends Statement {
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     /* Compile the expression */
     val resultReg = state.getResultRegister
     var newState = expression.compile(state)
 
-    newState = newState.putMessageIfAbsent(newState.getNullReferenceMessage())
     instructions += MOVE(Register0, resultReg)
-
     expression.getExpressionType match {
       case ArrayType(_) =>
         /* Free the array memory */
-        instructions += BRANCHLINK("p_free_array")
+        newState = newState.putMessageIfAbsent(FreeNullArrayError.errorMessage)
+        instructions += BRANCHLINK(FreeNullArrayError.label)
       case PairType(_, _) =>
-        instructions += BRANCHLINK("p_free_pair")
+        /* Free the pair memory */
+        newState = newState.putMessageIfAbsent(FreeNullPairError.errorMessage)
+        instructions += BRANCHLINK(FreeNullPairError.label)
     }
     newState.copy(p_free_pair = true, p_throw_runtime_error = true, freeRegs = resultReg :: newState.freeRegs)
   }
@@ -234,10 +218,13 @@ case class Free(expression: Expression)(position: (Int, Int)) extends Statement 
   override def getPos(): (Int, Int) = position
 }
 
-/* ✅ Check done - ✅️ Compile Done */
 case class If(condition: Expression, trueStatement: Statement, falseStatement: Statement)(position: (Int, Int))
     extends Statement {
+  override def toString: String =
+    "if " + condition + " then\n" + trueStatement.toString + "else\n" + falseStatement + "fi\n"
+
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
+    val labelPrefix = "L"
 
     /* Compile the if condition */
     val conditionReg = state.getResultRegister
@@ -247,31 +234,21 @@ case class If(condition: Expression, trueStatement: Statement, falseStatement: S
     val falseID = newState.nextID
     val continueID = newState.nextID
 
-    /* Compare the condition with false (i.e. 0) */
-    instructions += COMPARE(conditionReg, ImmediateNumber(0))
-
-    /* Mark the condition register as available to use */
+    /* Compare the condition with false (i.e. 0), mark the condition register as available to use and if condition is
+       false, go to the false branch  */
+    instructions ++= List(COMPARE(conditionReg, ImmediateNumber(0)), BRANCH(Option(EQ), labelPrefix + falseID))
     newState = newState.copy(freeRegs = conditionReg :: newState.freeRegs)
-
-    /* If condition is false, go to the false branch */
-    instructions += BRANCH(Option(EQ), "L" + falseID)
 
     /* Compile the true statement with a new scope */
     newState = trueStatement.compileNewScope(newState)
-
-    /* We finished executing the branch. Jump to the end. */
-    instructions += BRANCH(None, "L" + continueID)
-
-    /* Compile the false branch with a new scope */
-    instructions += NumberLabel(falseID)
+    /* We finished executing the branch - jump to the end. Compile the false branch with a new scope */
+    instructions ++= List(BRANCH(None, labelPrefix + continueID), NumberLabel(falseID))
     newState = falseStatement.compileNewScope(newState)
 
     /* End of the if */
     instructions += NumberLabel(continueID)
     newState
   }
-  override def toString: String =
-    "if " + condition + " then\n" + trueStatement.toString + "else\n" + falseStatement + "fi\n"
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     if (condition.getType(symbolTable).unifies(BooleanType())) {
@@ -294,7 +271,6 @@ case class If(condition: Expression, trueStatement: Statement, falseStatement: S
   override def getPos(): (Int, Int) = position
 }
 
-/* ✅ Check done - ⚠️ Compile done */
 case class Print(expression: Expression, isNewLine: Boolean)(position: (Int, Int)) extends Statement {
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     /* Compile the expression */
@@ -303,39 +279,36 @@ case class Print(expression: Expression, isNewLine: Boolean)(position: (Int, Int
 
     /* Find the message format based on the expression's type */
     val format = (expression.getExpressionType match {
-      case IntType() =>
-        "%d"
-      case CharacterType() =>
-        "%c"
-      case StringType() | BooleanType() | ArrayType(CharacterType()) =>
-        "%s"
-      case _ =>
-        "%p"
+      case IntType()                                                 => "%d"
+      case CharacterType()                                           => "%c"
+      case StringType() | BooleanType() | ArrayType(CharacterType()) => "%s"
+      case _                                                         => "%p"
     }) + (if (isNewLine) "\\n" else "")
 
     /* Get the format ID from the state */
     newState = newState.putMessageIfAbsent(format)
     val formatID = newState.getMessageID(format)
 
-    /* printf first argument, the format */
-    instructions += LOAD(Register0, MessageLoad(formatID))
-    instructions += ADD(Register0, Register0, ImmediateNumber(4))
-
-    /* printf second argument, the thing to be printed */
-    instructions += MOVE(Register1, resultReg)
+    /* printf first argument, the format; then printf second argument, the thing to be printed. */
+    instructions ++= List(
+      LOAD(Register0, MessageLoad(formatID)),
+      ADD(Register0, Register0, ImmediateNumber(4)),
+      MOVE(Register1, resultReg)
+    )
 
     /* If a boolean, replace it with true or false */
     if (expression.getExpressionType == BooleanType()) {
-
       /* True and false IDs */
       newState = newState.putMessageIfAbsent("true")
       newState = newState.putMessageIfAbsent("false")
       val trueID = newState.getMessageID("true")
       val falseID = newState.getMessageID("false")
 
-      instructions += COMPARE(Register1, ImmediateNumber(0))
-      instructions += LOAD(Register1, MessageLoad(falseID), cond = Some(EQ))
-      instructions += LOAD(Register1, MessageLoad(trueID), cond = Some(NE))
+      instructions ++= List(
+        COMPARE(Register1, ImmediateNumber(0)),
+        LOAD(Register1, MessageLoad(falseID), cond = Some(EQ)),
+        LOAD(Register1, MessageLoad(trueID), cond = Some(NE))
+      )
     }
 
     expression.getExpressionType match {
@@ -350,12 +323,10 @@ case class Print(expression: Expression, isNewLine: Boolean)(position: (Int, Int
     /* Mark the result register as usable */
     newState.copy(freeRegs = resultReg :: newState.freeRegs)
   }
+
   override def toString: String = "print" + (if (isNewLine) "ln " else " ") + expression.toString + "\n"
-
-  override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
+  override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit =
     expression.check(symbolTable)
-  }
-
   override def getPos(): (Int, Int) = position
 }
 
@@ -363,43 +334,36 @@ case class Print(expression: Expression, isNewLine: Boolean)(position: (Int, Int
    to its argument. Just like a general assignment statement, a read statement can target a program variable, an array
    element or a pair element. However, the read statement can only handle character or integer input. The read statement
    determines how it will interpret the value from the standard input based on the type of the target. For example, if
-   the target is a variable of type ‘int’ then it will convert the input string into an integer.
-   ✅ Check done - ⚠️ Compile Pending
- */
+   the target is a variable of type ‘int’ then it will convert the input string into an integer. */
 case class Read(assignmentLeft: AssignmentLeft)(position: (Int, Int)) extends Statement {
+  override def toString: String = "read " + assignmentLeft.toString + "\n"
+
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     /* Find the reference to what we want to read and put in in r1 */
     val pointerReg = state.getResultRegister
     var newState = assignmentLeft.compileReference(state)
     instructions += MOVE(Register1, pointerReg)
 
-//    /* Check for derefence of a null pair: */
-//    newState = newState.putMessageIfAbsent(newState.getNullReferenceMessage())
-//    instructions += MOVE(Register0, pointerReg)
-//    instructions += BRANCHLINK("p_check_null_pointer")
-//    newState = newState.copy(p_check_null_pointer = true, p_throw_runtime_error = true)
-
     /* Decide if we read an int or a char */
     val format = assignmentLeft.getLeftType match {
       case IntType()       => " %d"
       case CharacterType() => " %c"
     }
+
     /* Get the format string ID */
     newState = newState.putMessageIfAbsent(format)
     val formatID = newState.getMessageID(format)
 
-    /* Put the format in register 0 */
-    instructions += LOAD(Register0, MessageLoad(formatID))
-    instructions += ADD(Register0, Register0, ImmediateNumber(4))
-
-    /* Call scanf */
-    instructions += BRANCHLINK("scanf")
+    /* Put the format in register 0 and call scanf */
+    instructions ++= List(
+      LOAD(Register0, MessageLoad(formatID)),
+      ADD(Register0, Register0, ImmediateNumber(4)),
+      BRANCHLINK("scanf")
+    )
 
     /* Mark the pointer register as free */
     newState.copy(freeRegs = pointerReg :: newState.freeRegs)
   }
-
-  override def toString: String = "read " + assignmentLeft.toString + "\n"
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     val assignmentLeftType = assignmentLeft.getType(symbolTable)
@@ -416,19 +380,19 @@ case class Read(assignmentLeft: AssignmentLeft)(position: (Int, Int)) extends St
   override def getPos(): (Int, Int) = position
 }
 
-/* ✅ Check done - ⚠️ Compile done */
 case class Return(expression: Expression)(position: (Int, Int)) extends Statement {
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
-
     /* Compile the expression and store it in r0 */
     val resultReg = state.getResultRegister
     val newState = expression.compile(state)
     val functionDeclaredSize = newState.spOffset - newState.getOffset(Function.initSP)
-    instructions += MOVE(Register0, resultReg)
 
     /* Return */
-    instructions += ADD(RegisterSP, RegisterSP, ImmediateNumber(functionDeclaredSize))
-    instructions += PopPC()
+    instructions ++= List(
+      MOVE(Register0, resultReg),
+      ADD(RegisterSP, RegisterSP, ImmediateNumber(functionDeclaredSize)),
+      PopPC()
+    )
 
     /* Mark the result register as usable */
     newState.copy(spOffset = newState.getOffset(Function.initSP), freeRegs = resultReg :: newState.freeRegs)
@@ -455,26 +419,20 @@ case class Return(expression: Expression)(position: (Int, Int)) extends Statemen
   override def getPos(): (Int, Int) = position
 }
 
-/* ✅ Check done - ✅ Compile done */
 case class SkipStatement()(position: (Int, Int)) extends Statement {
-
-  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
-    state
-  }
-
   override def toString: String = "skip\n"
-
+  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = state
   override def getPos(): (Int, Int) = position
 }
 
-/* ✅ Check done - ✅ Compile done */
 case class StatementSequence(statement1: Statement, statement2: Statement)(position: (Int, Int)) extends Statement {
+  override def toString: String =
+    statement1.toString.stripSuffix("\n") + ";\n" + statement2.toString
+
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     val nextState = statement1.compile(state)
     statement2.compile(nextState)
   }
-  override def toString: String =
-    statement1.toString.stripSuffix("\n") + ";\n" + statement2.toString
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     statement1.check(symbolTable)
@@ -484,18 +442,18 @@ case class StatementSequence(statement1: Statement, statement2: Statement)(posit
   override def getPos(): (Int, Int) = position
 }
 
-/* ✅ Check done - ✅ Compile done */
 case class While(condition: Expression, statement: Statement)(position: (Int, Int)) extends Statement {
+  override def toString: String = "while " + condition.toString + " do\n" + statement.toString + "done\n"
+
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
+    val labelPrefix = "L"
+
     /* Get the label IDs */
     val conditionID = state.nextID
     val bodyID = state.nextID
 
-    /* Branch to the condition */
-    instructions += BRANCH(None, "L" + conditionID)
-
-    /* Compile the while body with a new scope */
-    instructions += NumberLabel(bodyID)
+    /* Branch to the condition and compile the while body with a new scope */
+    instructions ++= List(BRANCH(None, labelPrefix + conditionID), NumberLabel(bodyID))
     var newState = statement.compileNewScope(state)
 
     /* Compile the condition */
@@ -510,13 +468,9 @@ case class While(condition: Expression, statement: Statement)(position: (Int, In
     newState = newState.copy(freeRegs = conditionReg :: newState.freeRegs)
 
     /* Jump to the body if it is true */
-    instructions += BRANCH(Option(EQ), "L" + bodyID)
-
+    instructions += BRANCH(Option(EQ), labelPrefix + bodyID)
     newState
   }
-
-  override def toString: String =
-    "while " + condition.toString + " do\n" + statement.toString + "done\n"
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     val conditionType = condition.getType(symbolTable)
