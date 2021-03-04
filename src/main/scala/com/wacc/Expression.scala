@@ -279,8 +279,8 @@ case class ArrayElement(name: Identifier, expressions: List[Expression])(positio
       /* Move to the array we were pointing at */
       instructions += LOAD(arrayReg, RegisterLoad(arrayReg))
       newState = newState.putMessageIfAbsent(ArrayIndexNegativeError.errorMessage)
-      newState = newState.putMessageIfAbsent(ArrayIndexBounds.errorMessage)
-      instructions ++= List(MOVE(Register0, indexReg), MOVE(Register1, arrayReg), BRANCHLINK(ArrayIndexError().label))
+      newState = newState.putMessageIfAbsent(ArrayIndexBoundsError.errorMessage)
+      instructions ++= List(MOVE(Register0, indexReg), MOVE(Register1, arrayReg), BRANCHLINK(ArrayIndexError.label))
       newState = newState.copy(p_check_array_bounds = true, p_throw_runtime_error = true)
 
       /* Skip over the array size */
