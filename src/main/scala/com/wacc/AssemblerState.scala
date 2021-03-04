@@ -1,7 +1,6 @@
 package com.wacc
 
 import scala.collection.immutable
-import scala.collection.mutable.ListBuffer
 
 /* This class represents the state of the compiler while it is converting
    the code into assembly */
@@ -41,7 +40,7 @@ case class AssemblerState(
 
   /* Returns the offset of a given variable name. Since our semantic analysis was successful,
      we are guaranteed to have a mapping for the variable in our varDic */
-  def getOffset(ident: String): Int = varDic.getOrElse(ident, (0))
+  def getOffset(ident: String): Int = varDic.getOrElse(ident, 0)
 
   /* Returns the next free label ID */
   def nextID: Int = nextLabelID.next
@@ -54,26 +53,16 @@ case class AssemblerState(
 
   /* Adds a message to the message dictionary if it is not already in there */
   def putMessageIfAbsent(message: String): AssemblerState = {
-    /* Check if we already created the message */
-    if (!this.containsMessage(message)) {
-      val messageID = this.getNextMessageID
-      this.copy(messageDic = this.messageDic + (message -> messageID))
-    } else {
-      this
+    if (!containsMessage(message)) {
+      return this.copy(messageDic = messageDic + (message -> getNextMessageID))
     }
+    this
   }
 
   /* Retrieves the ID of a message */
   def getMessageID(message: String): Int = {
     this.messageDic(message)
   }
-
-  // TODO: Refactor default error messages into separate static class
-  def getOverflowMessage(): String = "OverflowError: the result is too small/large to store in a 4-byte signed-integer."
-  def getDivideByZeroMessage(): String = "DivideByZeroError: divide or modulo by zero."
-  def getNullReferenceMessage(): String = "NullReferenceError: dereference a null reference."
-  def getArrayNegativeIndexMessage(): String = "ArrayIndexOutOfBoundsError: negative index."
-  def getArrayIndexTooLargeMessage(): String = "ArrayIndexOutOfBoundsError: index too large."
 
   /* Creates a new scope state from the initial state */
   def newScopeState: AssemblerState = this.copy(declaredSize = 0)
