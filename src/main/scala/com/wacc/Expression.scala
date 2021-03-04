@@ -9,21 +9,22 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 sealed trait Expression extends AssignmentRight {
-
   /* Returns the size of an expression */
   def getSize: Int = this.getExpressionType.getSize
 
-  /* Returns the type of an expression. If the type depends on identifiers, it was
-     precalculated during the semantic check and statically stored in each node */
+  /* Returns the type of an expression. If the type depends on identifiers, it was precalculated during the semantic
+     check and statically stored in each node */
   def getExpressionType: Type
 }
-sealed trait AssignmentRight extends ASTNodeVoid {}
+
+sealed trait AssignmentRight extends ASTNodeVoid
+
 sealed trait AssignmentLeft extends ASTNodeVoid {
   /* Compile the reference of a left assignment and store it in the first free register. */
   def compileReference(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState
 
-  /* Returns the type of the left assignment. If the type couldn't be automatically inferred, it was
-     precalculated during the semantic check and statically stored in each node */
+  /* Returns the type of the left assignment. If the type couldn't be automatically inferred, it was precalculated
+     during the semantic check and statically stored in each node */
   def getLeftType: Type
 }
 
@@ -42,54 +43,47 @@ case class UnaryOperatorApplication(operator: UnaryOperator, operand: Expression
       case Length() =>
         instructions += LOAD(resultReg, RegisterLoad(resultReg))
       case Negate() =>
-        nextState = nextState.putMessageIfAbsent(nextState.getOverflowMessage())
-        instructions += ReverseSUBS(resultReg, resultReg, ImmediateNumber(0))
-        instructions += BLVS("p_throw_overflow_error")
+        nextState = nextState.putMessageIfAbsent(OverflowError.errorMessage)
+        instructions ++= List(ReverseSUBS(resultReg, resultReg, ImmediateNumber(0)), BLVS(OverflowError.label))
         nextState = nextState.copy(p_throw_overflow_error = true, p_throw_runtime_error = true)
       case Not() =>
         instructions += XOR(resultReg, resultReg, ImmediateNumber(1))
-      case Chr() | Ord() => ()
+      case _ => ()
     }
 
     nextState
   }
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
-
     /* Get the operand type */
     val operandType = operand.getType(symbolTable)
 
     /* Error generation process */
     operator match {
-
       /* Chr accepts an integer parameter */
       case Chr() =>
         if (!operandType.unifies(IntType())) {
           errors += UnaryOperatorError.expectation("chr", "int", operandType.toString, operand.getPos())
           return
         }
-
       /* Negate accepts an integer parameter */
       case Negate() =>
         if (!operandType.unifies(IntType())) {
           errors += UnaryOperatorError.expectation("(-) (i.e. negate)", "int", operandType.toString, operand.getPos())
           return
         }
-
       /* Not accepts a boolean parameter */
       case Not() =>
         if (!operandType.unifies(BooleanType())) {
           errors += UnaryOperatorError.expectation("not", "boolean", operandType.toString, operand.getPos())
           return
         }
-
       /* Ord accepts a character parameter */
       case Ord() =>
         if (!operandType.unifies(CharacterType())) {
           errors += UnaryOperatorError.expectation("ord", "char", operandType.toString, operand.getPos())
           return
         }
-
       /* Length accepts an array */
       case Length() =>
         operandType match {
@@ -118,6 +112,7 @@ case class UnaryOperatorApplication(operator: UnaryOperator, operand: Expression
 /* Represents a function call (e.g. call fun(1)) */
 case class FunctionCall(name: Identifier, arguments: Option[ArgumentList])(position: (Int, Int))
     extends AssignmentRight {
+  val labelPrefix = "f_"
 
   override def toString: String =
     "call " + name + "(" + (arguments match {
@@ -132,19 +127,18 @@ case class FunctionCall(name: Identifier, arguments: Option[ArgumentList])(posit
     /* Total size of the arguments */
     val declaredSize = arguments.map(_.expressions.map(_.getSize).sum).getOrElse(0)
 
-    /* If we have arguments */
     if (arguments.isDefined) {
+      /* Arguments are compiled if present */
       newState = arguments.get.compile(newState)
     }
 
-    /* Jump to the function */
-    instructions += BRANCHLINK("f_" + name.identifier)
+    /* Jump to the function, reset the stack pointer, and move the result */
+    instructions ++= List(
+      BRANCHLINK(labelPrefix + name.identifier),
+      ADD(RegisterSP, RegisterSP, ImmediateNumber(declaredSize)),
+      MOVE(resultReg, Register0)
+    )
 
-    /* Reset the stack pointer */
-    instructions += ADD(RegisterSP, RegisterSP, ImmediateNumber(declaredSize))
-
-    /* Move the result */
-    instructions += MOVE(resultReg, Register0)
     newState.copy(spOffset = newState.spOffset - declaredSize, freeRegs = newState.freeRegs.tail)
   }
 
@@ -216,17 +210,16 @@ case class ArgumentList(expressions: List[Expression]) extends ASTNodeVoid {
 
     /* Process the arguments */
     for (expr <- expressions) {
-      /* Argument size */
+      /* Get the size of the argument and compile */
       val size = expr.getSize
-
-      /* Compile the expression */
       newState = expr.compile(newState)
 
       /* Store the result on the stack */
-      instructions += SUB(RegisterSP, RegisterSP, ImmediateNumber(size))
-      instructions += STORE(resultReg, RegisterLoad(RegisterSP), size == 1)
+      instructions ++= List(
+        SUB(RegisterSP, RegisterSP, ImmediateNumber(size)),
+        STORE(resultReg, RegisterLoad(RegisterSP), size == 1)
+      )
 
-      /* Update the state */
       newState = newState.copy(spOffset = newState.spOffset + size, freeRegs = resultReg :: newState.freeRegs)
     }
 
@@ -248,7 +241,6 @@ case class ArrayElement(name: Identifier, expressions: List[Expression])(positio
   override def toString: String = name.toString + expressions.map("[" + _.toString + "]").mkString
 
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
-
     /* Compile the reference of the specified index, then retrieve the value pointed by it */
     val arrayReg = state.getResultRegister
     val newState = compileReference(state)
@@ -268,20 +260,15 @@ case class ArrayElement(name: Identifier, expressions: List[Expression])(positio
       val expr = expressions(i)
       /* Compute the expression and store it in an available register */
       val indexReg = newState.getResultRegister
+
       if (newState.freeRegs.length == 1) {
         newState = newState.copy(freeRegs = arrayReg :: newState.freeRegs)
 
-        /* Store the array pointer on the stack */
+        /* Store the array pointer on the stack and compile the expression with both registers. Move the result into the
+           index register and restore the array. Then reset the SP to where it originally was */
         instructions += PUSH(arrayReg)
-
-        /* Compile the expression with both registers */
         newState = expr.compile(newState.copy(spOffset = newState.spOffset + 4))
-
-        /* Move the result into the index register and restore the array */
-        instructions += POP(arrayReg)
-
-        /* Reset the SP to where it originally was */
-        instructions += ADD(RegisterSP, RegisterSP, ImmediateNumber(4))
+        instructions ++= List(POP(arrayReg), ADD(RegisterSP, RegisterSP, ImmediateNumber(4)))
 
         /* Mark the index register as in use */
         newState = newState.copy(spOffset = newState.spOffset - 4, freeRegs = newState.freeRegs.tail)
@@ -291,21 +278,16 @@ case class ArrayElement(name: Identifier, expressions: List[Expression])(positio
 
       /* Move to the array we were pointing at */
       instructions += LOAD(arrayReg, RegisterLoad(arrayReg))
-      newState = newState.putMessageIfAbsent(newState.getArrayNegativeIndexMessage())
-      newState = newState.putMessageIfAbsent(newState.getArrayIndexTooLargeMessage())
-      instructions += MOVE(Register0, indexReg)
-      instructions += MOVE(Register1, arrayReg)
-      instructions += BRANCHLINK("p_check_array_bounds")
+      newState = newState.putMessageIfAbsent(ArrayIndexNegativeError.errorMessage)
+      newState = newState.putMessageIfAbsent(ArrayIndexBounds.errorMessage)
+      instructions ++= List(MOVE(Register0, indexReg), MOVE(Register1, arrayReg), BRANCHLINK(ArrayIndexError().label))
       newState = newState.copy(p_check_array_bounds = true, p_throw_runtime_error = true)
 
       /* Skip over the array size */
       instructions += ADD(arrayReg, arrayReg, ImmediateNumber(4))
 
       /* Move to the specified location in the array */
-      var shift = 2
-      if (i == expressions.length - 1 && expressionType.getSize == 1) {
-        shift = 0
-      }
+      val shift = if (i == expressions.length - 1 && expressionType.getSize == 1) 2 else 0
       instructions += ADDLSL(arrayReg, arrayReg, indexReg, ImmediateNumber(shift))
 
       /* Add index register back to the free registers list */
@@ -375,15 +357,11 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
     if (newState.freeRegs.length == 1) {
       newState = newState.copy(freeRegs = firstOp :: newState.freeRegs)
 
-      /* Store the array pointer on the stack */
+      /* Store the array pointer on the stack, compile the expression with both registers, and move the result into the
+         second operand and restore the first operand */
       instructions += PUSH(firstOp)
-
-      /* Compile the expression with both registers */
       newState = rightOperand.compile(newState.copy(spOffset = newState.spOffset + 4))
-
-      /* Move the result into the second operand and restore the first operand */
-      instructions += MOVE(secondOp, firstOp)
-      instructions += POP(firstOp)
+      instructions ++= List(MOVE(secondOp, firstOp), POP(firstOp))
 
       /* Mark the second operand register as unavailable */
       newState = newState.copy(spOffset = newState.spOffset - 4, freeRegs = newState.freeRegs.tail)
@@ -391,46 +369,49 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
       newState = rightOperand.compile(newState)
     }
 
-    // val message = "OverflowError: the result is too small/large to store in a 4-byte signed-integer."
     /* Apply the specified operation */
     operator match {
       /* Integer operations */
       case Add() =>
-        newState = newState.putMessageIfAbsent(newState.getOverflowMessage())
-        instructions += ADDS(resultReg, firstOp, secondOp)
-        instructions += BLVS("p_throw_overflow_error")
+        newState = newState.putMessageIfAbsent(OverflowError.errorMessage)
+        instructions ++= List(ADDS(resultReg, firstOp, secondOp), BLVS(OverflowError.label))
         newState = newState.copy(p_throw_overflow_error = true, p_throw_runtime_error = true)
 
       case Subtract() =>
-        newState = newState.putMessageIfAbsent(newState.getOverflowMessage())
-        instructions += SUBS(resultReg, firstOp, secondOp)
-        instructions += BLVS("p_throw_overflow_error")
+        newState = newState.putMessageIfAbsent(OverflowError.errorMessage)
+        instructions ++= List(SUBS(resultReg, firstOp, secondOp), BLVS(OverflowError.label))
         newState = newState.copy(p_throw_overflow_error = true, p_throw_runtime_error = true)
 
       case Multiply() =>
         val tempResultReg = newState.getResultRegister
-        newState = newState.putMessageIfAbsent(newState.getOverflowMessage())
-        instructions += SMULL(resultReg, tempResultReg, firstOp, secondOp)
-        instructions += COMPAREASR(tempResultReg, resultReg)
-        instructions += BLNE("p_throw_overflow_error")
+        newState = newState.putMessageIfAbsent(OverflowError.errorMessage)
+        instructions ++= List(
+          SMULL(resultReg, tempResultReg, firstOp, secondOp),
+          COMPAREASR(tempResultReg, resultReg),
+          BLNE(OverflowError.label)
+        )
         newState = newState.copy(p_throw_overflow_error = true, p_throw_runtime_error = true)
 
       case Divide() =>
-        newState = newState.putMessageIfAbsent(newState.getDivideByZeroMessage())
-        instructions += MOVE(Register0, firstOp)
-        instructions += MOVE(Register1, secondOp)
-        instructions += BRANCHLINK("p_check_divide_by_zero")
-        instructions += BRANCHLINK("__aeabi_idiv")
-        instructions += MOVE(resultReg, Register0)
+        newState = newState.putMessageIfAbsent(DivideByZeroError.errorMessage)
+        instructions ++= List(
+          MOVE(Register0, firstOp),
+          MOVE(Register1, secondOp),
+          BRANCHLINK(DivideByZeroError.label),
+          BRANCHLINK("__aeabi_idiv"),
+          MOVE(resultReg, Register0)
+        )
         newState = newState.copy(p_check_divide_by_zero = true, p_throw_runtime_error = true)
 
       case Modulo() =>
-        newState = newState.putMessageIfAbsent(newState.getDivideByZeroMessage())
-        instructions += MOVE(Register0, firstOp)
-        instructions += MOVE(Register1, secondOp)
-        instructions += BRANCHLINK("p_check_divide_by_zero")
-        instructions += BRANCHLINK("__aeabi_idivmod")
-        instructions += MOVE(resultReg, Register1)
+        newState = newState.putMessageIfAbsent(DivideByZeroError.errorMessage)
+        instructions ++= List(
+          MOVE(Register0, firstOp),
+          MOVE(Register1, secondOp),
+          BRANCHLINK(DivideByZeroError.label),
+          BRANCHLINK("__aeabi_idivmod"),
+          MOVE(resultReg, Register1)
+        )
         newState = newState.copy(p_check_divide_by_zero = true, p_throw_runtime_error = true)
 
       /* Boolean operations */
@@ -441,31 +422,43 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
 
       /* Comparison operations */
       case Equals() =>
-        instructions += COMPARE(firstOp, secondOp)
-        instructions += MOVE(resultReg, ImmediateNumber(1), Some(EQ))
-        instructions += MOVE(resultReg, ImmediateNumber(0), Some(NE))
+        instructions ++= List(
+          COMPARE(firstOp, secondOp),
+          MOVE(resultReg, ImmediateNumber(1), Some(EQ)),
+          MOVE(resultReg, ImmediateNumber(0), Some(NE))
+        )
       case NotEquals() =>
-        instructions += COMPARE(firstOp, secondOp)
-        instructions += MOVE(resultReg, ImmediateNumber(1), Some(NE))
-        instructions += MOVE(resultReg, ImmediateNumber(0), Some(EQ))
+        instructions ++= List(
+          COMPARE(firstOp, secondOp),
+          MOVE(resultReg, ImmediateNumber(1), Some(NE)),
+          MOVE(resultReg, ImmediateNumber(0), Some(EQ))
+        )
 
       case GreaterThan() =>
-        instructions += COMPARE(firstOp, secondOp)
-        instructions += MOVE(resultReg, ImmediateNumber(1), Some(GT))
-        instructions += MOVE(resultReg, ImmediateNumber(0), Some(LE))
+        instructions ++= List(
+          COMPARE(firstOp, secondOp),
+          MOVE(resultReg, ImmediateNumber(1), Some(GT)),
+          MOVE(resultReg, ImmediateNumber(0), Some(LE))
+        )
       case SmallerEqualThan() =>
-        instructions += COMPARE(firstOp, secondOp)
-        instructions += MOVE(resultReg, ImmediateNumber(1), Some(LE))
-        instructions += MOVE(resultReg, ImmediateNumber(0), Some(GT))
+        instructions ++= List(
+          COMPARE(firstOp, secondOp),
+          MOVE(resultReg, ImmediateNumber(1), Some(LE)),
+          MOVE(resultReg, ImmediateNumber(0), Some(GT))
+        )
 
       case SmallerThan() =>
-        instructions += COMPARE(firstOp, secondOp)
-        instructions += MOVE(resultReg, ImmediateNumber(1), Some(LT))
-        instructions += MOVE(resultReg, ImmediateNumber(0), Some(GE))
+        instructions ++= List(
+          COMPARE(firstOp, secondOp),
+          MOVE(resultReg, ImmediateNumber(1), Some(LT)),
+          MOVE(resultReg, ImmediateNumber(0), Some(GE))
+        )
       case GreaterEqualThan() =>
-        instructions += COMPARE(firstOp, secondOp)
-        instructions += MOVE(resultReg, ImmediateNumber(1), Some(GE))
-        instructions += MOVE(resultReg, ImmediateNumber(0), Some(LT))
+        instructions ++= List(
+          COMPARE(firstOp, secondOp),
+          MOVE(resultReg, ImmediateNumber(1), Some(GE)),
+          MOVE(resultReg, ImmediateNumber(0), Some(LT))
+        )
     }
 
     /* Mark the second operand register as free */
@@ -473,6 +466,8 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
   }
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
+    val left = "left"
+    val right = "right"
 
     /* Extract the operand types */
     val leftType = leftOperand.getType(symbolTable)
@@ -481,43 +476,39 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
 
     /* Error generation process */
     operator match {
-
       /* Integer operations expect integer parameters */
       case Add() | Divide() | Modulo() | Multiply() | Subtract() =>
         if (!leftType.unifies(IntType())) {
-          errors += BinaryOperatorError.expectation(op, IntType.toString(), leftType.toString, getPos(), "left")
+          errors += BinaryOperatorError.expectation(op, IntType.toString(), leftType.toString, getPos(), left)
           return
         } else if (!rightType.unifies(IntType())) {
-          errors += BinaryOperatorError.expectation(op, IntType.toString(), rightType.toString, getPos(), "right")
+          errors += BinaryOperatorError.expectation(op, IntType.toString(), rightType.toString, getPos(), right)
           return
         }
-
       /* Comparison operations expect integers or characters */
       case GreaterThan() | GreaterEqualThan() | SmallerThan() | SmallerEqualThan() =>
         val expected = IntType.toString() + " or " + CharacterType.toString()
 
         if (!(leftType.unifies(IntType()) || leftType.unifies(CharacterType()))) {
-          errors += BinaryOperatorError.expectation(op, expected, leftType.toString, getPos(), "left")
+          errors += BinaryOperatorError.expectation(op, expected, leftType.toString, getPos(), left)
           return
         } else if (!(rightType.unifies(IntType()) || rightType.unifies(CharacterType()))) {
-          errors += BinaryOperatorError.expectation(op, expected, rightType.toString, getPos(), "right")
+          errors += BinaryOperatorError.expectation(op, expected, rightType.toString, getPos(), right)
           return
         }
-
       /* Equal operations expect any same types */
       case Equals() | NotEquals() =>
         if (!leftType.unifies(rightType)) {
           errors += BinaryOperatorError.comparison(op, leftType.toString, rightType.toString, getPos())
           return
         }
-
       /* Boolean operations expect boolean types */
       case And() | Or() =>
         if (!leftType.unifies(BooleanType())) {
-          errors += BinaryOperatorError.expectation(op, BooleanType.toString(), leftType.toString, getPos(), "left")
+          errors += BinaryOperatorError.expectation(op, BooleanType.toString(), leftType.toString, getPos(), left)
           return
         } else if (!rightType.unifies(BooleanType())) {
-          errors += BinaryOperatorError.expectation(op, BooleanType.toString(), rightType.toString, getPos(), "right")
+          errors += BinaryOperatorError.expectation(op, BooleanType.toString(), rightType.toString, getPos(), right)
           return
         }
     }
@@ -547,6 +538,7 @@ case class BooleanLiter(boolean: Boolean)(position: (Int, Int)) extends Expressi
     instructions += MOVE(state.getResultRegister, ImmediateNumber(n))
     state.copy(freeRegs = state.freeRegs.tail)
   }
+
   override def getPos(): (Int, Int) = position
   override def getType(symbolTable: SymbolTable): Type = BooleanType()
   override def getExpressionType: Type = BooleanType()
@@ -560,9 +552,9 @@ case class CharacterLiter(char: Char)(position: (Int, Int)) extends Expression {
     instructions += MOVE(state.getResultRegister, ImmediateChar(char))
     state.copy(freeRegs = state.freeRegs.tail)
   }
+
   override def getPos(): (Int, Int) = position
   override def getType(symbolTable: SymbolTable): Type = CharacterType()
-
   override def getExpressionType: Type = CharacterType()
 }
 
@@ -574,10 +566,9 @@ case class Identifier(identifier: String)(position: (Int, Int)) extends Expressi
 
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     val resultReg = state.getResultRegister
-    /* Find the position of the identifier in the stack */
-    val newState = compileReference(state)
 
-    /* Access it */
+    /* Find the position of the identifier in the stack and access it*/
+    val newState = compileReference(state)
     instructions += LOAD(resultReg, RegisterLoad(resultReg), expressionType.getSize == 1)
     newState
   }
@@ -592,7 +583,6 @@ case class Identifier(identifier: String)(position: (Int, Int)) extends Expressi
   }
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
-
     if (getType(symbolTable) == VoidType()) {
       /* Identifier was a void type - indicating that it hasn't been defined yet */
       errors += IdentifierError.undefined(identifier, getPos())
@@ -606,9 +596,7 @@ case class Identifier(identifier: String)(position: (Int, Int)) extends Expressi
     symbolTable.lookupAll(identifier).getOrElse((VoidType(), null))._1
 
   override def getExpressionType: Type = expressionType
-
   override def getLeftType: Type = expressionType
-
   override def getPos(): (Int, Int) = position
 }
 
@@ -626,10 +614,6 @@ case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit])(position
     state.copy(freeRegs = state.freeRegs.tail)
   }
 
-  override def getPos(): (Int, Int) = position
-  override def getType(symbolTable: SymbolTable): Type = IntType()
-
-  override def getExpressionType: Type = IntType()
   override def check(symbolTable: SymbolTable)(implicit errors: ListBuffer[Error]): Unit = {
     /* Map the characters to digits */
     val intDigits = digits.map(_.digit - '0')
@@ -643,16 +627,20 @@ case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit])(position
     for (i <- intDigits) {
       value = (value * 10) + signValue * i
       if (value > Integer.MAX_VALUE) {
-        errors += Error("Maximum value bound of type " + Error.formatYellow("int") + " exceeded!", getPos(), 100)
+        errors += BoundError.exceed(IntType.toString(), getPos(), isMinimum = false)
         return
       } else if (value < Integer.MIN_VALUE) {
-        errors += Error("Minimum value bound of type " + Error.formatYellow("int") + " exceeded!", getPos(), 100)
+        errors += BoundError.exceed(IntType.toString(), getPos(), isMinimum = true)
         return
       }
     }
 
     amount = value.toInt
   }
+
+  override def getPos(): (Int, Int) = position
+  override def getType(symbolTable: SymbolTable): Type = IntType()
+  override def getExpressionType: Type = IntType()
 }
 
 /* Represents a string (e.g. "Hello, World!") */
@@ -662,20 +650,16 @@ case class StringLiter(string: String)(position: (Int, Int)) extends Expression 
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     var newState = state
 
-    /* Check if we already created the message */
+    /* Check if we already created the message, retrieve the message ID, and load it into the result register */
     newState = newState.putMessageIfAbsent(string)
-
-    /* Retrieve the message ID */
     val messageID = newState.getMessageID(string)
-
-    /* Load the message into the result register */
     instructions += LOAD(newState.getResultRegister, MessageLoad(messageID))
 
     newState.copy(freeRegs = newState.freeRegs.tail)
   }
+
   override def getPos(): (Int, Int) = position
   override def getType(symbolTable: SymbolTable): Type = StringType()
-
   override def getExpressionType: Type = StringType()
 }
 
@@ -690,19 +674,18 @@ case class ArrayLiter(expressions: List[Expression])(position: (Int, Int)) exten
     val size = if (expressions.isEmpty) 0 else expressions.head.getSize
 
     /* Allocate memory for the array */
-    instructions += LOAD(Register0, ImmediateLoad(4 + size * expressions.length))
-    instructions += BRANCHLINK("malloc")
+    instructions ++= List(LOAD(Register0, ImmediateLoad(4 + size * expressions.length)), BRANCHLINK("malloc"))
 
     var newState = state.copy(freeRegs = state.freeRegs.tail)
     val arrayReg: Register = state.getResultRegister
     val valueReg: Register = newState.getResultRegister
 
-    /* Initialize the array size */
-    instructions += MOVE(valueReg, ImmediateNumber(expressions.length))
-    instructions += STORE(valueReg, RegisterLoad(Register0))
-
-    /* Free up r0 by moving it in the result register */
-    instructions += MOVE(arrayReg, Register0)
+    /* Initialize the array size; then free up r0 by moving it in the result register*/
+    instructions ++= List(
+      MOVE(valueReg, ImmediateNumber(expressions.length)),
+      STORE(valueReg, RegisterLoad(Register0)),
+      MOVE(arrayReg, Register0)
+    )
 
     /* For each expression, add it to the corresponding place in the array */
     for (index <- expressions.indices) {
@@ -756,9 +739,9 @@ case class PairLiter()(position: (Int, Int)) extends Expression {
     instructions += LOAD(state.getResultRegister, ImmediateLoad(0))
     state.copy(freeRegs = state.freeRegs.tail)
   }
+
   override def getPos(): (Int, Int) = position
   override def getType(symbolTable: SymbolTable): Type = NullType()
-
   override def getExpressionType: Type = NullType()
 }
 
@@ -770,9 +753,7 @@ case class NewPair(first: Expression, second: Expression)(position: (Int, Int)) 
     /* Allocate memory for the 2 pointers inside the pair */
     val pairReg: Register = state.getResultRegister
     val valueReg: Register = state.getHelperRegister
-    instructions += LOAD(Register0, ImmediateLoad(8))
-    instructions += BRANCHLINK("malloc")
-    instructions += MOVE(pairReg, Register0)
+    instructions ++= List(LOAD(Register0, ImmediateLoad(8)), BRANCHLINK("malloc"), MOVE(pairReg, Register0))
 
     /* Evaluate the two expressions */
     var newState = state.copy(freeRegs = state.freeRegs.tail)
@@ -784,12 +765,13 @@ case class NewPair(first: Expression, second: Expression)(position: (Int, Int)) 
 
       /* Allocate memory for the pointer */
       val size = expr.getSize
-      instructions += LOAD(Register0, ImmediateLoad(size))
-      instructions += BRANCHLINK("malloc")
+      instructions ++= List(LOAD(Register0, ImmediateLoad(size)), BRANCHLINK("malloc"))
 
       /* Link the data together */
-      instructions += STORE(valueReg, RegisterLoad(Register0), size == 1)
-      instructions += STORE(Register0, RegisterOffsetLoad(pairReg, ImmediateNumber(offset)))
+      instructions ++= List(
+        STORE(valueReg, RegisterLoad(Register0), size == 1),
+        STORE(Register0, RegisterOffsetLoad(pairReg, ImmediateNumber(offset)))
+      )
       newState = newState.copy(freeRegs = valueReg :: newState.freeRegs)
     }
     newState
@@ -843,10 +825,8 @@ case class PairElement(expression: Expression, isFirst: Boolean)(position: (Int,
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     val resultReg = state.getResultRegister
 
-    /* Find the address of the pair element */
-    var newState = compileReference(state)
-
-    /* Access it */
+    /* Find the address of the pair element and access it */
+    val newState = compileReference(state)
     instructions += LOAD(resultReg, RegisterLoad(resultReg))
     newState
   }
@@ -860,9 +840,9 @@ case class PairElement(expression: Expression, isFirst: Boolean)(position: (Int,
     val offset = if (isFirst) 0 else 4
 
     /* Check for null pointer */
-    newState = newState.putMessageIfAbsent(newState.getNullReferenceMessage())
+    newState = newState.putMessageIfAbsent(NullDereferenceError.errorMessage)
     instructions += MOVE(Register0, resultReg)
-    instructions += BRANCHLINK("p_check_null_pointer")
+    instructions += BRANCHLINK(NullDereferenceError.label)
     newState = newState.copy(p_check_null_pointer = true, p_throw_runtime_error = true)
 
     /* Access the first or second pointer */
@@ -871,7 +851,6 @@ case class PairElement(expression: Expression, isFirst: Boolean)(position: (Int,
   }
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
-
     /* The expression must be a pair */
     val getExpressionType = expression.getType(symbolTable)
     getExpressionType match {
@@ -889,12 +868,10 @@ case class PairElement(expression: Expression, isFirst: Boolean)(position: (Int,
 
   override def getType(symbolTable: SymbolTable): Type = {
     expression.getType(symbolTable) match {
-
       /* Expression is a pair */
       case PairType(fstType, sndType) =>
         if (isFirst) fstType.getType(symbolTable)
         else sndType.getType(symbolTable)
-
       /* Otherwise, it is invalid */
       case _ => VoidType()
     }
