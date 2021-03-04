@@ -141,7 +141,7 @@ case object FreeNullArrayError extends RuntimeErrorTrait {
   val label = "p_free_array"
 }
 
-case class ArrayIndexError() extends RuntimeErrorTrait {
+class ArrayIndexError() extends RuntimeErrorTrait {
   val label = "p_check_array_bounds"
   val message: String = ""
 }
