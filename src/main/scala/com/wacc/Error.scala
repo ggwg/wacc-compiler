@@ -27,7 +27,17 @@ object Error {
   def formatRed(message: String): String = Console.RED + message + Console.RESET
 }
 
-/* Syntax & Semantic Error Handlers */
+/* Syntax Error Handlers */
+
+case object BoundError {
+  def exceed(_type: String, position: (Int, Int), isMinimum: Boolean): Error = {
+    val side = if (isMinimum) "Minimum" else "Maximum"
+    val message = side + " value of bound of type " + Error.formatYellow(_type) + " exceeded!"
+    Error(message, position, Error.syntaxCode)
+  }
+}
+
+/* Semantic Error Handlers */
 case object UnaryOperatorError {
   def expectation(
     operator: String,
