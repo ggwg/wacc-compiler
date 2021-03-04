@@ -1,31 +1,28 @@
 import com.wacc.{
   ADD,
-  ADDLSL,
-  ADDS,
-  AND,
+  ArrayIndexBoundsError,
+  ArrayIndexError,
+  ArrayIndexNegativeError,
   AsciiDirective,
   AssemblerState,
-  BLNE,
-  BLVS,
   BRANCH,
   BRANCHLINK,
   COMPARE,
-  COMPAREASR,
   CS,
   DataDirective,
-  Directive,
+  DivideByZeroError,
   EQ,
   Error,
+  FreeNullArrayError,
+  FreeNullPairError,
   ImmediateNumber,
   Instruction,
   LOAD,
   LT,
-  Label,
   MOVE,
-  MUL,
-  MULS,
   MessageLoad,
-  OR,
+  NullDereferenceError,
+  OverflowError,
   POP,
   PUSH,
   PopPC,
@@ -35,16 +32,11 @@ import com.wacc.{
   RegisterLoad,
   RegisterOffsetLoad,
   RegisterSP,
-  ReverseSUB,
-  ReverseSUBS,
-  SMULL,
-  STORE,
+  RuntimeError,
   SUB,
-  SUBS,
   StringLabel,
   SymbolTable,
-  WordDirective,
-  XOR
+  WordDirective
 }
 import parsley.{Failure, Success}
 
@@ -53,7 +45,6 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 object Compiler {
-
   /* Compute the effective message length, taking escaped chars into account*/
   def getMessageLength(message: String): Int = {
     var length = 0
@@ -73,13 +64,14 @@ object Compiler {
 
   def generateHeader(state: AssemblerState): ListBuffer[Instruction] = {
     var header: ListBuffer[Instruction] = ListBuffer.empty
+    val labelPrefix = "msg_"
 
     /* Data directive */
     header += DataDirective()
 
     /* Add all the messages */
     for ((message, id) <- state.messageDic) {
-      header += StringLabel("msg_" + id)
+      header += StringLabel(labelPrefix + id)
 
       /* Message length */
       val length = getMessageLength(message)
@@ -93,109 +85,99 @@ object Compiler {
 
   def generateFooter(state: AssemblerState): ListBuffer[Instruction] = {
     var footer: ListBuffer[Instruction] = ListBuffer.empty
-    // val overflowMessage = "OverflowError: the result is too small/large to store in a 4-byte signed-integer."
+
     if (state.p_check_null_pointer) {
-      footer += StringLabel("p_check_null_pointer")
-      footer += PushLR()
-      footer += COMPARE(Register0, ImmediateNumber(0))
-      footer += LOAD(
-        Register0,
-        MessageLoad(state.getMessageID(state.getNullReferenceMessage())),
-        isByte = false,
-        Option(EQ)
+      footer ++= List(
+        StringLabel(NullDereferenceError.label),
+        PushLR(),
+        COMPARE(Register0, ImmediateNumber(0)),
+        LOAD(Register0, MessageLoad(state.getMessageID(NullDereferenceError.errorMessage)), isByte = false, Option(EQ)),
+        BRANCHLINK(RuntimeError.label, Option(EQ)),
+        PopPC()
       )
-      footer += BRANCHLINK("p_throw_runtime_error", Option(EQ))
-      footer += PopPC()
     }
     if (state.p_check_divide_by_zero) {
-      footer += StringLabel("p_check_divide_by_zero")
-      footer += PushLR()
-      footer += COMPARE(Register1, ImmediateNumber(0))
-      footer += LOAD(
-        Register0,
-        MessageLoad(state.getMessageID(state.getDivideByZeroMessage())),
-        isByte = false,
-        Option(EQ)
+      footer ++= List(
+        StringLabel(DivideByZeroError.label),
+        PushLR(),
+        COMPARE(Register1, ImmediateNumber(0)),
+        LOAD(Register0, MessageLoad(state.getMessageID(DivideByZeroError.errorMessage)), isByte = false, Option(EQ)),
+        BRANCHLINK(RuntimeError.label, Option(EQ)),
+        PopPC()
       )
-      footer += BRANCHLINK("p_throw_runtime_error", Option(EQ))
-      footer += PopPC()
     }
     if (state.p_throw_overflow_error) {
-      footer += StringLabel("p_throw_overflow_error")
-      footer += LOAD(Register0, MessageLoad(state.getMessageID(state.getOverflowMessage())))
-      footer += BRANCHLINK("p_throw_runtime_error")
+      footer ++= List(
+        StringLabel(OverflowError.label),
+        LOAD(Register0, MessageLoad(state.getMessageID(OverflowError.errorMessage))),
+        BRANCHLINK(RuntimeError.label)
+      )
     }
     if (state.p_free_pair) {
-      footer += StringLabel("p_free_pair")
-      footer += PushLR()
-      footer += COMPARE(Register0, ImmediateNumber(0))
-      footer += LOAD(
-        Register0,
-        MessageLoad(state.getMessageID(state.getNullReferenceMessage())),
-        isByte = false,
-        Option(EQ)
+      footer ++= List(
+        StringLabel(FreeNullPairError.label),
+        PushLR(),
+        COMPARE(Register0, ImmediateNumber(0)),
+        LOAD(Register0, MessageLoad(state.getMessageID(FreeNullPairError.errorMessage)), isByte = false, Option(EQ)),
+        BRANCH(Option(EQ), RuntimeError.errorMessage),
+        /* Save the pair pointer on the stack */
+        PUSH(Register0),
+        /* Free the first pointer */
+        LOAD(Register0, RegisterLoad(Register0)),
+        BRANCHLINK("free"),
+        /* Retrieve the pair pointer */
+        LOAD(Register0, RegisterLoad(RegisterSP)),
+        /* Free the second pointer */
+        LOAD(Register0, RegisterOffsetLoad(Register0, ImmediateNumber(4))),
+        BRANCHLINK("free"),
+        /* Free the pair pointer */
+        POP(Register0),
+        BRANCHLINK("free"),
+        PopPC()
       )
-      footer += BRANCH(Option(EQ), "p_throw_runtime_error")
-      /* Save the pair pointer on the stack */
-      footer += PUSH(Register0)
-
-      /* Free the first pointer */
-      footer += LOAD(Register0, RegisterLoad(Register0))
-      footer += BRANCHLINK("free")
-
-      /* Retrieve the pair pointer */
-      footer += LOAD(Register0, RegisterLoad(RegisterSP))
-
-      /* Free the second pointer */
-      footer += LOAD(Register0, RegisterOffsetLoad(Register0, ImmediateNumber(4)))
-      footer += BRANCHLINK("free")
-
-      /* Free the pair pointer */
-      footer += POP(Register0)
-      footer += BRANCHLINK("free")
-      footer += PopPC()
     }
     if (state.p_free_array) {
-      footer += StringLabel("p_free_array")
-      footer += PushLR()
-      footer += COMPARE(Register0, ImmediateNumber(0))
-      footer += LOAD(
-        Register0,
-        MessageLoad(state.getMessageID(state.getNullReferenceMessage())),
-        isByte = false,
-        Option(EQ)
+      footer ++= List(
+        StringLabel(FreeNullArrayError.label),
+        PushLR(),
+        COMPARE(Register0, ImmediateNumber(0)),
+        LOAD(Register0, MessageLoad(state.getMessageID(FreeNullArrayError.errorMessage)), isByte = false, Option(EQ)),
+        BRANCH(Option(EQ), RuntimeError.label),
+        BRANCHLINK("free"),
+        PopPC()
       )
-      footer += BRANCH(Option(EQ), "p_throw_runtime_error")
-      footer += BRANCHLINK("free")
-      footer += PopPC()
     }
     if (state.p_check_array_bounds) {
-      footer += StringLabel("p_check_array_bounds")
-      footer += PushLR()
-      footer += COMPARE(Register0, ImmediateNumber(0))
-      footer += LOAD(
-        Register0,
-        MessageLoad(state.getMessageID(state.getArrayNegativeIndexMessage())),
-        isByte = false,
-        Option(LT)
+      footer ++= List(
+        StringLabel(ArrayIndexError.label),
+        PushLR(),
+        COMPARE(Register0, ImmediateNumber(0)),
+        LOAD(
+          Register0,
+          MessageLoad(state.getMessageID(ArrayIndexNegativeError.errorMessage)),
+          isByte = false,
+          Option(LT)
+        ),
+        BRANCHLINK(RuntimeError.label, Option(LT)),
+        LOAD(Register1, RegisterLoad(Register1)),
+        COMPARE(Register0, Register1),
+        LOAD(
+          Register0,
+          MessageLoad(state.getMessageID(ArrayIndexBoundsError.errorMessage)),
+          isByte = false,
+          Option(CS)
+        ),
+        BRANCHLINK(RuntimeError.label, Option(CS)),
+        PopPC()
       )
-      footer += BRANCHLINK("p_throw_runtime_error", Option(LT))
-      footer += LOAD(Register1, RegisterLoad(Register1))
-      footer += COMPARE(Register0, Register1)
-      footer += LOAD(
-        Register0,
-        MessageLoad(state.getMessageID(state.getArrayIndexTooLargeMessage())),
-        isByte = false,
-        Option(CS)
-      )
-      footer += BRANCHLINK("p_throw_runtime_error", Option(CS))
-      footer += PopPC()
     }
     if (state.p_throw_runtime_error) {
-      footer += StringLabel("p_throw_runtime_error")
-      footer += BRANCHLINK("printf")
-      footer += MOVE(Register0, ImmediateNumber(-1))
-      footer += BRANCHLINK("exit")
+      footer ++= List(
+        StringLabel(RuntimeError.label),
+        BRANCHLINK("printf"),
+        MOVE(Register0, ImmediateNumber(-1)),
+        BRANCHLINK("exit")
+      )
     }
     footer
   }
@@ -268,15 +250,14 @@ object Compiler {
       case Success(_) => ()
     }
 
-    /* Semantic Analysis
-    Initialize top level Symbol Table */
+    /* Semantic Analysis:
+       Initialize top level Symbol Table */
     val topST: SymbolTable = new SymbolTable()
 
     val AST = parseResult.get
     implicit val semanticErrors: mutable.ListBuffer[Error] = mutable.ListBuffer.empty
 
-    /* Traverse the AST to identify any semantic errors and a few
-       syntactic ones */
+    /* Traverse the AST to identify any semantic errors and a few syntactic ones */
     AST.check(topST)(semanticErrors)
 
     /* Check for any syntax errors */
