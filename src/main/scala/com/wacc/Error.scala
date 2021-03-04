@@ -28,7 +28,6 @@ object Error {
 }
 
 /* Syntax Error Handlers */
-
 case object BoundError {
   def exceed(_type: String, position: (Int, Int), isMinimum: Boolean): Error = {
     val side = if (isMinimum) "Minimum" else "Maximum"
@@ -39,120 +38,81 @@ case object BoundError {
 
 /* Semantic Error Handlers */
 case object UnaryOperatorError {
-  def expectation(
-    operator: String,
-    expected: String,
-    actual: String,
-    position: (Int, Int),
-    code: Int = Error.semanticCode
-  ): Error = {
+  def expectation(operator: String, expected: String, actual: String, position: (Int, Int)): Error = {
     val message = "Pre-defined function " + operator + " expected " + Error.formatYellow(expected) +
       ", but found " + Error.formatYellow(actual)
-    Error(message, position, code)
+    Error(message, position)
   }
 }
 
 case object BinaryOperatorError {
-  def expectation(
-    operator: String,
-    expected: String,
-    actual: String,
-    position: (Int, Int),
-    side: String,
-    code: Int = Error.semanticCode
-  ): Error = {
+  def expectation(operator: String, expected: String, actual: String, position: (Int, Int), side: String): Error = {
     val message = "Pre-defined function " + operator + " expected " + Error.formatYellow(expected) + " for " + side +
       " operand, but found " + Error.formatYellow(actual)
-    Error(message, position, code)
+    Error(message, position)
   }
 
-  def comparison(
-    operator: String,
-    leftType: String,
-    rightType: String,
-    position: (Int, Int),
-    code: Int = Error.semanticCode
-  ): Error =
-    Error(
-      "Cannot compare " + Error.formatYellow(leftType) + " and " + Error.formatYellow(rightType) +
-        " using pre-defined function " + operator,
-      position,
-      code
-    )
+  def comparison(operator: String, leftType: String, rightType: String, position: (Int, Int)): Error = {
+    val message = "Cannot compare " + Error.formatYellow(leftType) + " and " + Error.formatYellow(rightType) +
+      " using pre-defined function " + operator
+    Error(message, position)
+  }
 }
 
 case object FunctionCallError {
-  def expectation(
-    name: String,
-    expected: String,
-    actual: String,
-    position: (Int, Int),
-    code: Int = Error.semanticCode
-  ): Error = {
+  def expectation(name: String, expected: String, actual: String, position: (Int, Int)): Error = {
     val message = "Type mismatch in function call for user-defined function \"" + name +
       "\":\n\t  Function expected call type " + Error.formatYellow(expected) + ", but found " +
       Error.formatYellow(actual)
-    Error(message, position, code)
+    Error(message, position)
   }
 
-  def undefined(name: String, position: (Int, Int), code: Int = Error.semanticCode): Error = {
+  def undefined(name: String, position: (Int, Int)): Error = {
     val message = "Invalid function call to undefined function " + Error.formatYellow(name)
-    Error(message, position, code)
+    Error(message, position)
   }
 
-  def invalid(name: String, actual: String, position: (Int, Int), code: Int = Error.semanticCode): Error = {
+  def invalid(name: String, actual: String, position: (Int, Int)): Error = {
     val message = "Invalid function call to alleged user-defined function \"" + name +
       "\":\n\t  Actual type of " + name + " is " + Error.formatYellow(actual)
-    Error(message, position, code)
+    Error(message, position)
   }
 }
 
 case object ArrayElementError {
-  def expectation(
-    name: String,
-    expected: String,
-    actual: String,
-    position: (Int, Int),
-    code: Int = Error.semanticCode
-  ): Error = {
+  def expectation(name: String, expected: String, actual: String, position: (Int, Int)): Error = {
     val message = "Invalid index in attempt to access element of array \"" + name +
       "\":\n\t  Array index expected type " + Error.formatYellow(expected) + ", but found " + Error.formatYellow(actual)
-    Error(message, position, code)
+    Error(message, position)
   }
 
-  def missing(name: String, position: (Int, Int), code: Int = 200): Error = {
+  def missing(name: String, position: (Int, Int)): Error = {
     val message = "Array index not specified in attempt to access array " + name
-    Error(message, position, code)
+    Error(message, position)
   }
 }
 
 case object IdentifierError {
-  def undefined(name: String, position: (Int, Int), code: Int = Error.semanticCode): Error = {
+  def undefined(name: String, position: (Int, Int)): Error = {
     val message = "Undefined identifier \"" + name + "\""
-    Error(message, position, code)
+    Error(message, position)
   }
 }
 
 case object ArrayLiterError {
-  def expectation(expected: String, actual: String, position: (Int, Int), code: Int = Error.semanticCode): Error = {
+  def expectation(expected: String, actual: String, position: (Int, Int)): Error = {
     val message = "Type mismatch in array assignment:\n\t  Array elements must be of type " +
       Error.formatYellow(expected) + ", but found " + Error.formatYellow(actual)
-    Error(message, position, code)
+    Error(message, position)
   }
 }
 
 case object PairElementError {
-  def expectation(
-    expected: String,
-    actual: String,
-    isFirst: Boolean,
-    position: (Int, Int),
-    code: Int = Error.semanticCode
-  ): Error = {
+  def expectation(expected: String, actual: String, isFirst: Boolean, position: (Int, Int)): Error = {
     val function = if (isFirst) "fst" else "snd"
     val message = "Pre-defined function " + function + " expected " + Error.formatYellow(expected) + ", but found " +
       Error.formatYellow(actual)
-    Error(message, position, code)
+    Error(message, position)
   }
 }
 
