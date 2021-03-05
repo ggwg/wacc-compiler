@@ -277,17 +277,21 @@ case class ArrayElement(name: Identifier, expressions: List[Expression])(positio
       }
 
       /* Move to the array we were pointing at */
-      instructions += LOAD(arrayReg, RegisterLoad(arrayReg))
       newState = newState.putMessageIfAbsent(ArrayIndexNegativeError.errorMessage)
       newState = newState.putMessageIfAbsent(ArrayIndexBoundsError.errorMessage)
-      instructions ++= List(MOVE(Register0, indexReg), MOVE(Register1, arrayReg), BRANCHLINK(ArrayIndexError.label))
+      instructions ++= List(
+        LOAD(arrayReg, RegisterLoad(arrayReg)),
+        MOVE(Register0, indexReg),
+        MOVE(Register1, arrayReg),
+        BRANCHLINK(ArrayIndexError.label)
+      )
       newState = newState.copy(p_check_array_bounds = true, p_throw_runtime_error = true)
 
       /* Skip over the array size */
       instructions += ADD(arrayReg, arrayReg, ImmediateNumber(4))
 
       /* Move to the specified location in the array */
-      val shift = if (i == expressions.length - 1 && expressionType.getSize == 1) 2 else 0
+      val shift = if (i == expressions.length - 1 && expressionType.getSize == 1) 0 else 2
       instructions += ADDLSL(arrayReg, arrayReg, indexReg, ImmediateNumber(shift))
 
       /* Add index register back to the free registers list */

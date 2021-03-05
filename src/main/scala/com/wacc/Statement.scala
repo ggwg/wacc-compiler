@@ -201,7 +201,12 @@ case class Free(expression: Expression)(position: (Int, Int)) extends Statement 
         newState = newState.putMessageIfAbsent(FreeNullPairError.errorMessage)
         instructions += BRANCHLINK(FreeNullPairError.label)
     }
-    newState.copy(p_free_pair = true, p_throw_runtime_error = true, freeRegs = resultReg :: newState.freeRegs)
+    newState.copy(
+      p_free_pair = true,
+      p_free_array = true,
+      p_throw_runtime_error = true,
+      freeRegs = resultReg :: newState.freeRegs
+    )
   }
 
   override def toString: String = "free " + expression.toString + "\n"
