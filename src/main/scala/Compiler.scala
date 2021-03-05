@@ -173,7 +173,7 @@ object Compiler {
       footer ++= List(
         StringLabel(RuntimeError.label),
         BRANCHLINK("printf"),
-        MOVE(Register0, ImmediateNumber(-1)),
+        MOVE(Register0, ImmediateNumber(Error.runtimeCode)),
         BRANCHLINK("exit")
       )
     }

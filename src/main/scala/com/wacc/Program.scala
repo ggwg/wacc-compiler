@@ -88,7 +88,7 @@ case class Function(returnType: Type, name: Identifier, parameters: Option[Param
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     /* Check that the function returns: */
     if (!body.exitable()) {
-      errors += Error("Function " + name.identifier + " may terminate without return", getPos(), 100)
+      errors += Error("Function " + name.identifier + " may terminate without return", getPos(), Error.syntaxCode)
     }
 
     val functionSymbolTable = new SymbolTable(symbolTable, true, returnType)
