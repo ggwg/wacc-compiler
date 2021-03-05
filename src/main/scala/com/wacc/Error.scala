@@ -7,7 +7,7 @@ case class Error(message: String, position: (Int, Int) = Error.defaultPosition, 
         Error.formatRed(
           "(Error Code " + code + ")"
         ) + " Semantic error on line " + position._1 + ", column " + position._2 + ":\n\t- " + message
-      case _ => Error.formatRed("(Runtime Error)" + ":\n\t- " + message)
+      case _ => Error.formatRed("(Runtime Error)" + ": " + message)
     }
 
   def throwError(): Unit = {
