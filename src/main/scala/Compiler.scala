@@ -77,8 +77,7 @@ object Compiler {
       val length = getMessageLength(message)
 
       /* Add the message's length and content, \0 included*/
-      header += WordDirective(length + 1)
-      header += AsciiDirective(message + "\\0")
+      header ++= List(WordDirective(length + 1), AsciiDirective(message + "\\0"))
     }
     header
   }
@@ -246,7 +245,7 @@ object Compiler {
     parseResult match {
       case Failure(msg) =>
         println("#syntax_error#\n" + msg)
-        sys.exit(100)
+        sys.exit(Error.syntaxCode)
       case Success(_) => ()
     }
 
@@ -261,18 +260,18 @@ object Compiler {
     AST.check(topST)(semanticErrors)
 
     /* Check for any syntax errors */
-    val syntaxError = semanticErrors.find(error => error.code == 100)
+    val syntaxError = semanticErrors.find(error => error.code == Error.syntaxCode)
     syntaxError match {
       case Some(err) =>
         err.throwError()
-        sys.exit(100)
+        sys.exit(Error.syntaxCode)
       case None => ()
     }
 
     /* Check for semantic errors */
     semanticErrors.foreach(_.throwError())
     if (semanticErrors.nonEmpty) {
-      sys.exit(200)
+      sys.exit(Error.semanticCode)
     }
 
     /* Compile the program */

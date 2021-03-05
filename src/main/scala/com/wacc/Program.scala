@@ -22,27 +22,16 @@ case class Program(functions: List[Function], body: Statement)(position: (Int, I
       newState = function.compile(newState)
     }
 
-    /* Add the main label */
-    instructions += StringLabel("main")
-
-    /* Push the LR */
-    instructions += PushLR()
+    /* Add the main label and push the LR */
+    instructions ++= List(StringLabel("main"), PushLR())
     newState = newState.copy(spOffset = newState.spOffset + 4)
 
     /* Compile the program body */
     newState = body.compileNewScope(newState)
 
-    /* Set the exit code to 0 */
-    instructions += LOAD(Register0, ImmediateLoad(0))
-
-    /* Pop the PC */
-    instructions += PopPC()
-    newState = newState.copy(spOffset = newState.spOffset - 4)
-
-    /* Add the ltorg directive */
-    instructions += LtorgDirective()
-
-    newState
+    /* Set the exit code to 0, pop the PC, and add the ltorg directive */
+    instructions ++= List(LOAD(Register0, ImmediateLoad(0)), PopPC(), LtorgDirective())
+    newState.copy(spOffset = newState.spOffset - 4)
   }
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
@@ -81,11 +70,8 @@ case class Function(returnType: Type, name: Identifier, parameters: Option[Param
       newState = parameters.get.compile(newState)
     }
 
-    /* Add the function label */
-    instructions += StringLabel("f_" + name.identifier)
-
-    /* Push the LR */
-    instructions += PushLR()
+    /* Add the function label and push the LR */
+    instructions ++= List(StringLabel("f_" + name.identifier), PushLR())
     newState = newState.copy(spOffset = newState.spOffset + 4)
 
     /* Compile the function body. We add a special entry in the dictionary so that when we
@@ -94,18 +80,12 @@ case class Function(returnType: Type, name: Identifier, parameters: Option[Param
     newState = body.compileNewScope(newState)
     newState = newState.copy(varDic = newState.varDic - initSP)
 
-    /* Pop the PC */
-    instructions += PopPC()
-    newState = newState.copy(spOffset = newState.spOffset - 4)
-
-    /* Add the ltorg directive */
-    instructions += LtorgDirective()
-
-    newState
+    /* Pop the PC and add the ltorg directive */
+    instructions ++= List(PopPC(), LtorgDirective())
+    newState.copy(spOffset = newState.spOffset - 4)
   }
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
-
     /* Check that the function returns: */
     if (!body.exitable()) {
       errors += Error("Function " + name.identifier + " may terminate without return", getPos(), 100)
@@ -118,7 +98,6 @@ case class Function(returnType: Type, name: Identifier, parameters: Option[Param
     }
 
     body.check(functionSymbolTable)
-
   }
 
   override def getPos(): (Int, Int) = position
@@ -152,8 +131,7 @@ case class ParameterList(parameters: List[Parameter])(position: (Int, Int)) exte
 }
 
 case class Parameter(parameterType: Type, identifier: Identifier)(position: (Int, Int)) extends ASTNodeVoid {
-  override def toString: String =
-    parameterType.toString + " " + identifier.toString
+  override def toString: String = parameterType.toString + " " + identifier.toString
 
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     /* Parameter size */
