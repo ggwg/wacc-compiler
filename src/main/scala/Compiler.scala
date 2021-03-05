@@ -117,7 +117,7 @@ object Compiler {
         PushLR(),
         COMPARE(Register0, ImmediateNumber(0)),
         LOAD(Register0, MessageLoad(state.getMessageID(FreeNullPairError.errorMessage)), isByte = false, Option(EQ)),
-        BRANCH(Option(EQ), RuntimeError.errorMessage),
+        BRANCH(Option(EQ), RuntimeError.label),
         /* Save the pair pointer on the stack */
         PUSH(Register0),
         /* Free the first pointer */
