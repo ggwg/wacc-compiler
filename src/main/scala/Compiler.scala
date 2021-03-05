@@ -84,7 +84,6 @@ object Compiler {
 
   def generateFooter(state: AssemblerState): ListBuffer[Instruction] = {
     var footer: ListBuffer[Instruction] = ListBuffer.empty
-
     if (state.p_check_null_pointer) {
       footer ++= List(
         StringLabel(NullDereferenceError.label),

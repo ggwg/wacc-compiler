@@ -196,12 +196,12 @@ case class Free(expression: Expression)(position: (Int, Int)) extends Statement 
         /* Free the array memory */
         newState = newState.putMessageIfAbsent(FreeNullArrayError.errorMessage)
         instructions += BRANCHLINK(FreeNullArrayError.label)
-        newState.copy(p_free_array = true, p_throw_runtime_error = true, freeRegs = resultReg :: newState.freeRegs)
+        newState = newState.copy(p_free_array = true, p_throw_runtime_error = true, freeRegs = resultReg :: newState.freeRegs)
       case PairType(_, _) =>
         /* Free the pair memory */
         newState = newState.putMessageIfAbsent(FreeNullPairError.errorMessage)
         instructions += BRANCHLINK(FreeNullPairError.label)
-        newState.copy(p_free_pair = true, p_throw_runtime_error = true, freeRegs = resultReg :: newState.freeRegs)
+        newState = newState.copy(p_free_pair = true, p_throw_runtime_error = true, freeRegs = resultReg :: newState.freeRegs)
     }
     newState
   }
