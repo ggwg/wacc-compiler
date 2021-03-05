@@ -19,8 +19,8 @@ object Error {
   /* Error Codes & Misc. Constants */
   val defaultPosition: (Int, Int) = (0, 0)
   val semanticCode = 200
-  val syntaxCode = 201
-  val runtimeCode = 202
+  val syntaxCode = 100
+  val runtimeCode = 255
 
   /* Message Formatter Functions */
   def formatYellow(message: String): String = Console.YELLOW + message + Console.RESET
