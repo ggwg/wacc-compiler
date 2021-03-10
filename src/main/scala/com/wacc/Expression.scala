@@ -154,15 +154,9 @@ case class FunctionCall(name: Identifier, arguments: Option[ArgumentList])(posit
     }
 
     func.get._2 match {
-      case Function(returnType: Type, name: Identifier, params: Option[ParameterList], _: Statement) =>
+      case f @ Function(returnType: Type, name: Identifier, params: Option[ParameterList], _: Statement) =>
         /* Extract the expected parameter types from the function signature */
-        val expectedParams = {
-          params match {
-            case Some(list: ParameterList) => Some(list.parameters.map(parameter => parameter.parameterType))
-            case None                      => None
-          }
-        }
-        val expectedSignature = FunctionType(returnType, expectedParams)
+        val expectedSignature = f.getType(symbolTable)
 
         /* Extract the supplied parameter types from the function call */
         val calledParams = {

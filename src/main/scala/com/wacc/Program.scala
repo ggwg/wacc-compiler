@@ -37,12 +37,18 @@ case class Program(functions: List[Function], body: Statement)(position: (Int, I
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     functions.foreach { func =>
       val F = symbolTable.lookup(func.name.identifier)
-      if (F.isDefined) {
-        errors +=
-          Error("Function " + func.name.identifier + " conflicts with another variable in the current scope.", getPos())
-      }
-
-      symbolTable.add(func.name.identifier, func.returnType, func)
+      // TODO: Create functionType object for function
+      val functionType = func.getType(symbolTable)
+      symbolTable.addFunction(func.name.identifier, )
+//      if (F.isDefined) {
+//        /* TODO: ALLOW FUNCTION OVERLOADING! */
+//        symbolTable.add(func.name.identifier, func.returnType, func)
+////        errors +=
+////          Error("Function " + func.name.identifier + " conflicts with another variable in the current scope.", getPos())
+//      } else {
+//        /* TODO: FUNCTION OVERLOADING (DEFAULT CASE) */
+//        symbolTable.add(func.name.identifier, func.returnType, func)
+//      }
     }
     functions.foreach { func =>
       func.check(symbolTable)
@@ -98,6 +104,16 @@ case class Function(returnType: Type, name: Identifier, parameters: Option[Param
     }
 
     body.check(functionSymbolTable)
+  }
+
+  override def getType(symbolTable: SymbolTable): Type = {
+    val expectedParams = {
+      parameters match {
+        case Some(list: ParameterList) => Some(list.parameters.map(parameter => parameter.parameterType))
+        case None                      => None
+      }
+    }
+    FunctionType(returnType, expectedParams)
   }
 
   override def getPos(): (Int, Int) = position

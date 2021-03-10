@@ -1,6 +1,8 @@
 package com.wacc
 
-import scala.collection.mutable
+import scala.::
+import scala.collection.mutable.ListBuffer
+import scala.collection.{immutable, mutable}
 
 class SymbolTable(parentSymbolTable: SymbolTable, isFunctionSymbolTable: Boolean, functionReturnType: Type) {
   // default parameter to null
@@ -16,6 +18,18 @@ class SymbolTable(parentSymbolTable: SymbolTable, isFunctionSymbolTable: Boolean
   /* The symbol table contains a mapping from the name of the variable to a tuple
      containing its type and corresponding AST node. */
   var dictionary: mutable.Map[String, (Type, ASTNode)] = mutable.Map[String, (Type, ASTNode)]()
+
+  var functionDic: mutable.Map[String, List[FunctionType]] = mutable.Map.empty
+
+  def addFunction(functionName: String, functionType: FunctionType): Unit = {
+    /* TODO: Refactor this to use list buffer - increased efficiency. */
+    functionDic.get(functionName) match {
+      case Some(value) =>
+        functionDic += (functionName -> List.concat(value, List(functionType)))
+      case None =>
+        functionDic += (functionName -> List(functionType))
+    }
+  }
 
   /* Add a variable, along with it's type and corresponding AST node, to the symbol table */
   def add(varName: String, varType: Type, varObj: ASTNode): Unit = {

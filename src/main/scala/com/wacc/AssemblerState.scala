@@ -23,6 +23,8 @@ case class AssemblerState(
   /* How much space on the stack the current code compilation is using for variables.
      Useful when exiting scopes to reset the stack pointer to the original value */
   declaredSize: Int,
+  /* TODO: Add a function to the dictionary whenever */
+  functionDic: immutable.Map[String, List[Type]],
   /* Whether functions are set */
   p_throw_overflow_error: Boolean,
   p_throw_runtime_error: Boolean,
@@ -83,6 +85,7 @@ object AssemblerState {
       freeRegs = Register.usableRegisters,
       declaredSize = 0,
       messageDic = Map.empty,
+      functionDic = Map.empty,
       p_throw_overflow_error = false,
       p_throw_runtime_error = false,
       p_check_divide_by_zero = false,
