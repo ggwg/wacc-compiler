@@ -72,6 +72,11 @@ case class VoidType() extends PairElementType {
   override def unifies(otherType: Type): Boolean = false
 }
 
+case class AnyType() extends Type {
+  override def toString: String = "Any Type (Undefined)"
+  override def unifies(otherType: Type): Boolean = true
+}
+
 /* This type represents the type of a function (e.g. int fun(int, char)) */
 case class FunctionType(returnType: Type, parameters: Option[List[Type]]) extends Type {
   override def toString: String = "(" +

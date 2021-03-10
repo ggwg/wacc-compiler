@@ -21,14 +21,40 @@ class SymbolTable(parentSymbolTable: SymbolTable, isFunctionSymbolTable: Boolean
 
   var functionDic: mutable.Map[String, List[FunctionType]] = mutable.Map.empty
 
-  def addFunction(functionName: String, functionType: FunctionType): Unit = {
-    /* TODO: Refactor this to use list buffer - increased efficiency. */
-    functionDic.get(functionName) match {
-      case Some(value) =>
-        functionDic += (functionName -> List.concat(value, List(functionType)))
-      case None =>
-        functionDic += (functionName -> List(functionType))
+  def addFunction(functionName: String, t: Type): Unit = {
+    /* If the type specified is not a function type, do not add it to the function dictionary */
+    t match {
+      case functionType @ FunctionType(returnType, parameters) =>
+        /* TODO: Refactor this to use list buffer - increased efficiency. */
+        functionDic.get(functionName) match {
+          case Some(value) =>
+            functionDic += (functionName -> List.concat(value, List(functionType)))
+          case None =>
+            functionDic += (functionName -> List(functionType))
+        }
+      case _ => ()
     }
+
+  }
+
+  /* Looks up all the symbol tables */
+  def lookupAllFunction(funcName: String, functionType: FunctionType): Boolean = {
+    var current = Option(this)
+    while (current.isDefined) {
+      current.get.functionDic.get(funcName) match {
+        case Some(expectedFunctionTypes) =>
+          // TODO: Refactor to use "Reduce"
+          for (expectedFunctionType <- expectedFunctionTypes) {
+            if (functionType.unifies(expectedFunctionType)) {
+              return true
+            }
+          }
+        case None =>
+          current = current.get.parent
+      }
+      current = current.get.parent
+    }
+    false
   }
 
   /* Add a variable, along with it's type and corresponding AST node, to the symbol table */

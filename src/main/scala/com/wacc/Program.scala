@@ -36,10 +36,11 @@ case class Program(functions: List[Function], body: Statement)(position: (Int, I
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     functions.foreach { func =>
-      val F = symbolTable.lookup(func.name.identifier)
+
       // TODO: Create functionType object for function
-      val functionType = func.getType(symbolTable)
-      symbolTable.addFunction(func.name.identifier, )
+      symbolTable.addFunction(func.name.identifier, func.getType(symbolTable))
+
+//      val F = symbolTable.lookup(func.name.identifier)
 //      if (F.isDefined) {
 //        /* TODO: ALLOW FUNCTION OVERLOADING! */
 //        symbolTable.add(func.name.identifier, func.returnType, func)
@@ -49,6 +50,7 @@ case class Program(functions: List[Function], body: Statement)(position: (Int, I
 //        /* TODO: FUNCTION OVERLOADING (DEFAULT CASE) */
 //        symbolTable.add(func.name.identifier, func.returnType, func)
 //      }
+
     }
     functions.foreach { func =>
       func.check(symbolTable)
