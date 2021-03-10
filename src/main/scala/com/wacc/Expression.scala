@@ -156,61 +156,29 @@ case class FunctionCall(name: Identifier, arguments: Option[ArgumentList])(posit
     // 2. Using this functionType, look it up to see if there is a matching function in the symbol table
     val foundFunction = symbolTable.lookupAllFunction(name.identifier, calledFunctionType)
     // 3. If lookUpAllFunction returns true then success.
-    if (foundFunction) {
+    if (!foundFunction.unifies(VoidType())) {
       /* Check correctness of all arguments */
       arguments.foreach(_.check(symbolTable))
     } else {
       /* Invalid function call with an identifier that's not a function */
       errors += FunctionCallError.invalid(name.identifier, name.identifier, getPos())
     }
-//
-//    /* Lookup the function's type using it's name across the entire symbol table hierarchy */
-//    val func: Option[(Type, ASTNode)] = symbolTable.lookupAll(name.identifier)
-//
-//    if (func.isEmpty) {
-//      /* Invalid call to a function that's undefined */
-//      errors += FunctionCallError.undefined(name.identifier, name.getPos())
-//      return
-//    }
-//
-//    func.get._2 match {
-//      case f @ Function(returnType: Type, name: Identifier, params: Option[ParameterList], _: Statement) =>
-//        /* Extract the expected parameter types from the function signature */
-//        val expectedSignature = f.getType(symbolTable)
-//
-//        /* Extract the supplied parameter types from the function call */
-//        val calledParams = {
-//          arguments match {
-//            case Some(list: ArgumentList) => Some(list.expressions.map(expression => expression.getType(symbolTable)))
-//            case None                     => None
-//          }
-//        }
-//        val calledSignature = FunctionType(returnType, calledParams)
-//
-//        /* Check that the supplied parameters match the signature */
-//        if (!expectedSignature.unifies(calledSignature)) {
-//          /* The signatures of the functions don't match - type mismatch in the caller arguments or return type */
-//          errors += FunctionCallError.expectation(
-//            name.identifier,
-//            expectedSignature.toString,
-//            calledSignature.toString,
-//            getPos()
-//          )
-//          return
-//        }
-//
-//        /* Check correctness of all arguments */
-//        arguments.foreach(_.check(symbolTable))
-//      case _ =>
-//        /* Invalid function call with an identifier that's not a function */
-//        errors += FunctionCallError.invalid(name.identifier, func.get._1.toString, getPos())
-//    }
   }
 
   override def getPos(): (Int, Int) = position
 
   override def getType(symbolTable: SymbolTable): Type = {
-    symbolTable.lookupAll(name.identifier).getOrElse((VoidType(), null))._1
+    val calledParams = {
+      arguments match {
+        case Some(list: ArgumentList) => Some(list.expressions.map(expression => expression.getType(symbolTable)))
+        case None                     => None
+      }
+    }
+    val calledFunctionType = FunctionType(AnyType(), calledParams)
+    val retType = symbolTable.lookupAllFunction(name.identifier, calledFunctionType)
+    println(retType)
+    retType
+//    symbolTable.lookupAll(name.identifier).getOrElse((VoidType(), null))._1
   }
 }
 

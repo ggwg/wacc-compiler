@@ -34,11 +34,10 @@ class SymbolTable(parentSymbolTable: SymbolTable, isFunctionSymbolTable: Boolean
         }
       case _ => ()
     }
-
   }
 
   /* Looks up all the symbol tables */
-  def lookupAllFunction(funcName: String, functionType: FunctionType): Boolean = {
+  def lookupAllFunction(funcName: String, functionType: FunctionType): Type = {
     var current = Option(this)
     while (current.isDefined) {
       current.get.functionDic.get(funcName) match {
@@ -46,15 +45,16 @@ class SymbolTable(parentSymbolTable: SymbolTable, isFunctionSymbolTable: Boolean
           // TODO: Refactor to use "Reduce"
           for (expectedFunctionType <- expectedFunctionTypes) {
             if (functionType.unifies(expectedFunctionType)) {
-              return true
+              return expectedFunctionType.returnType
             }
           }
+          current = current.get.parent
         case None =>
           current = current.get.parent
       }
-      current = current.get.parent
     }
-    false
+    /* If no function is found, return voidType to indicate failure */
+    VoidType()
   }
 
   /* Add a variable, along with it's type and corresponding AST node, to the symbol table */
