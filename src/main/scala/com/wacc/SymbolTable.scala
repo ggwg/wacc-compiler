@@ -21,19 +21,28 @@ class SymbolTable(parentSymbolTable: SymbolTable, isFunctionSymbolTable: Boolean
 
   var functionDic: mutable.Map[String, List[FunctionType]] = mutable.Map.empty
 
-  def addFunction(functionName: String, t: Type): Unit = {
+  /* Adds function to the symbol table. Returns boolean success code.
+     Returns false if overloaded function is already defined */
+  def addFunction(functionName: String, t: Type): Boolean = {
     /* If the type specified is not a function type, do not add it to the function dictionary */
     t match {
       case functionType @ FunctionType(returnType, parameters) =>
         /* TODO: Refactor this to use list buffer - increased efficiency. */
         functionDic.get(functionName) match {
-          case Some(value) =>
-            functionDic += (functionName -> List.concat(value, List(functionType)))
+          case Some(values) =>
+            // Check first that the function type is no already the dictionary:
+            for (value <- values) {
+              if (FunctionType(AnyType(), parameters).unifies(value)) {
+                return false
+              }
+            }
+            functionDic += (functionName -> List.concat(values, List(functionType)))
           case None =>
             functionDic += (functionName -> List(functionType))
         }
       case _ => ()
     }
+    return true
   }
 
   /* Looks up all the symbol tables */
@@ -45,7 +54,7 @@ class SymbolTable(parentSymbolTable: SymbolTable, isFunctionSymbolTable: Boolean
           // TODO: Refactor to use "Reduce"
           for (expectedFunctionType <- expectedFunctionTypes) {
             if (functionType.unifies(expectedFunctionType)) {
-              return expectedFunctionType.returnType
+              return expectedFunctionType
             }
           }
           current = current.get.parent

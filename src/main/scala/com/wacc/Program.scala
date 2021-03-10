@@ -38,7 +38,10 @@ case class Program(functions: List[Function], body: Statement)(position: (Int, I
     functions.foreach { func =>
 
       // TODO: Create functionType object for function
-      symbolTable.addFunction(func.name.identifier, func.getType(symbolTable))
+      val functionAdded = symbolTable.addFunction(func.name.identifier, func.getType(symbolTable))
+      if (!functionAdded) {
+        errors += Error("ERROR", getPos(), Error.semanticCode)
+      }
 
 //      val F = symbolTable.lookup(func.name.identifier)
 //      if (F.isDefined) {
@@ -81,12 +84,13 @@ case class Function(returnType: Type, name: Identifier, parameters: Option[Param
       newState = parameters.get.compile(newState)
     }
 
-    /* Add the function label and push the LR */
-    /* TODO: Replace name.identifier with generated function name */
-    // 1. Add function to assembler state
+    /* Overloaded Functions: Get the generated label for all functions */
+    /* Add function to assembler state */
     newState = newState.putFunction(name.identifier, thisFunctionType)
-    // 2. Call getFunctionLabel to get the string label.
+    /* Call getFunctionLabel to get the string label. */
     val functionLabel = newState.getFunctionLabel(name.identifier, thisFunctionType)
+
+    /* Add the function label and push the LR */
     instructions ++= List(StringLabel("f_" + functionLabel), PushLR())
     newState = newState.copy(spOffset = newState.spOffset + 4)
 

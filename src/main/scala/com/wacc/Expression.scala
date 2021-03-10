@@ -113,6 +113,7 @@ case class UnaryOperatorApplication(operator: UnaryOperator, operand: Expression
 case class FunctionCall(name: Identifier, arguments: Option[ArgumentList])(position: (Int, Int))
     extends AssignmentRight {
   val labelPrefix = "f_"
+  var thisFunctionType: Type = VoidType()
 
   override def toString: String =
     "call " + name + "(" + (arguments match {
@@ -132,9 +133,13 @@ case class FunctionCall(name: Identifier, arguments: Option[ArgumentList])(posit
       newState = arguments.get.compile(newState)
     }
 
+    /* For overloaded functions, get the name of the label to be branched to first: */
+    println(name.identifier)
+    println(thisFunctionType)
+    val functionLabel = newState.getFunctionLabel(name.identifier, thisFunctionType)
     /* Jump to the function, reset the stack pointer, and move the result */
     instructions ++= List(
-      BRANCHLINK(labelPrefix + name.identifier),
+      BRANCHLINK(labelPrefix + functionLabel),
       ADD(RegisterSP, RegisterSP, ImmediateNumber(declaredSize)),
       MOVE(resultReg, Register0)
     )
@@ -158,6 +163,7 @@ case class FunctionCall(name: Identifier, arguments: Option[ArgumentList])(posit
     // 3. If lookUpAllFunction returns true then success.
     if (!foundFunction.unifies(VoidType())) {
       /* Check correctness of all arguments */
+      thisFunctionType = foundFunction
       arguments.foreach(_.check(symbolTable))
     } else {
       /* Invalid function call with an identifier that's not a function */
@@ -175,10 +181,11 @@ case class FunctionCall(name: Identifier, arguments: Option[ArgumentList])(posit
       }
     }
     val calledFunctionType = FunctionType(AnyType(), calledParams)
-    val retType = symbolTable.lookupAllFunction(name.identifier, calledFunctionType)
-    println(retType)
-    retType
-//    symbolTable.lookupAll(name.identifier).getOrElse((VoidType(), null))._1
+    symbolTable.lookupAllFunction(name.identifier, calledFunctionType) match {
+      case FunctionType(returnType, _) =>
+        returnType
+      case _ => VoidType()
+    }
   }
 }
 

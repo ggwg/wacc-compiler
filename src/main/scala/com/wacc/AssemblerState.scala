@@ -61,7 +61,7 @@ case class AssemblerState(
     this
   }
 
-
+  // TODO: Check that no 2 functions of the same type can be added to the symbol table.
   /* Add a new function (potentially overloaded) to the list of currently callable functions */
   def putFunction(functionName: String, t: Type): AssemblerState = {
     /* If the type specified is not a function type, do not add it to the function dictionary */
