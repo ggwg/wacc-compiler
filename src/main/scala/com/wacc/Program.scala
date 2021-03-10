@@ -66,6 +66,9 @@ case class Program(functions: List[Function], body: Statement)(position: (Int, I
 case class Function(returnType: Type, name: Identifier, parameters: Option[ParameterList], body: Statement)(
   position: (Int, Int)
 ) extends ASTNodeVoid {
+  /* Stores the function type of the program. The function type will be defined after semantic analysis
+     (.check() call) */
+  var thisFunctionType: Type = VoidType()
   override def toString: String =
     returnType.toString + " " + name.toString + "(" +
       parameters.getOrElse("").toString + ") is\n" + body.toString + "end\n"
@@ -79,7 +82,12 @@ case class Function(returnType: Type, name: Identifier, parameters: Option[Param
     }
 
     /* Add the function label and push the LR */
-    instructions ++= List(StringLabel("f_" + name.identifier), PushLR())
+    /* TODO: Replace name.identifier with generated function name */
+    // 1. Add function to assembler state
+    newState = newState.putFunction(name.identifier, thisFunctionType)
+    // 2. Call getFunctionLabel to get the string label.
+    val functionLabel = newState.getFunctionLabel(name.identifier, thisFunctionType)
+    instructions ++= List(StringLabel("f_" + functionLabel), PushLR())
     newState = newState.copy(spOffset = newState.spOffset + 4)
 
     /* Compile the function body. We add a special entry in the dictionary so that when we
@@ -106,6 +114,7 @@ case class Function(returnType: Type, name: Identifier, parameters: Option[Param
     }
 
     body.check(functionSymbolTable)
+    thisFunctionType = getType(symbolTable)
   }
 
   override def getType(symbolTable: SymbolTable): Type = {
