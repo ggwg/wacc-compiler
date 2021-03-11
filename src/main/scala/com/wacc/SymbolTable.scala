@@ -1,6 +1,8 @@
 package com.wacc
 
-import scala.collection.mutable
+import scala.::
+import scala.collection.mutable.ListBuffer
+import scala.collection.{immutable, mutable}
 
 class SymbolTable(parentSymbolTable: SymbolTable, isFunctionSymbolTable: Boolean, functionReturnType: Type) {
   // default parameter to null
@@ -16,6 +18,53 @@ class SymbolTable(parentSymbolTable: SymbolTable, isFunctionSymbolTable: Boolean
   /* The symbol table contains a mapping from the name of the variable to a tuple
      containing its type and corresponding AST node. */
   var dictionary: mutable.Map[String, (Type, ASTNode)] = mutable.Map[String, (Type, ASTNode)]()
+
+  var functionDic: mutable.Map[String, List[FunctionType]] = mutable.Map.empty
+
+  /* Adds function to the symbol table. Returns boolean success code.
+     Returns false if overloaded function is already defined */
+  def addFunction(functionName: String, t: Type): Boolean = {
+    /* If the type specified is not a function type, do not add it to the function dictionary */
+    t match {
+      case functionType @ FunctionType(returnType, parameters) =>
+        /* TODO: Refactor this to use list buffer - increased efficiency. */
+        functionDic.get(functionName) match {
+          case Some(values) =>
+            // Check first that the function type is no already the dictionary:
+            for (value <- values) {
+              if (FunctionType(AnyType(), parameters).unifies(value)) {
+                return false
+              }
+            }
+            functionDic += (functionName -> List.concat(values, List(functionType)))
+          case None =>
+            functionDic += (functionName -> List(functionType))
+        }
+      case _ => ()
+    }
+    return true
+  }
+
+  /* Looks up all the symbol tables */
+  def lookupAllFunction(funcName: String, functionType: FunctionType): Type = {
+    var current = Option(this)
+    while (current.isDefined) {
+      current.get.functionDic.get(funcName) match {
+        case Some(expectedFunctionTypes) =>
+          // TODO: Refactor to use "Reduce"
+          for (expectedFunctionType <- expectedFunctionTypes) {
+            if (functionType.unifies(expectedFunctionType)) {
+              return expectedFunctionType
+            }
+          }
+          current = current.get.parent
+        case None =>
+          current = current.get.parent
+      }
+    }
+    /* If no function is found, return voidType to indicate failure */
+    VoidType()
+  }
 
   /* Add a variable, along with it's type and corresponding AST node, to the symbol table */
   def add(varName: String, varType: Type, varObj: ASTNode): Unit = {

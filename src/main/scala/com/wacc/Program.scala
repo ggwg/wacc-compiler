@@ -36,13 +36,24 @@ case class Program(functions: List[Function], body: Statement)(position: (Int, I
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     functions.foreach { func =>
-      val F = symbolTable.lookup(func.name.identifier)
-      if (F.isDefined) {
-        errors +=
-          Error("Function " + func.name.identifier + " conflicts with another variable in the current scope.", getPos())
+
+      // TODO: Create functionType object for function
+      val functionAdded = symbolTable.addFunction(func.name.identifier, func.getType(symbolTable))
+      if (!functionAdded) {
+        errors += Error("ERROR", getPos(), Error.semanticCode)
       }
 
-      symbolTable.add(func.name.identifier, func.returnType, func)
+//      val F = symbolTable.lookup(func.name.identifier)
+//      if (F.isDefined) {
+//        /* TODO: ALLOW FUNCTION OVERLOADING! */
+//        symbolTable.add(func.name.identifier, func.returnType, func)
+////        errors +=
+////          Error("Function " + func.name.identifier + " conflicts with another variable in the current scope.", getPos())
+//      } else {
+//        /* TODO: FUNCTION OVERLOADING (DEFAULT CASE) */
+//        symbolTable.add(func.name.identifier, func.returnType, func)
+//      }
+
     }
     functions.foreach { func =>
       func.check(symbolTable)
@@ -58,6 +69,9 @@ case class Program(functions: List[Function], body: Statement)(position: (Int, I
 case class Function(returnType: Type, name: Identifier, parameters: Option[ParameterList], body: Statement)(
   position: (Int, Int)
 ) extends ASTNodeVoid {
+  /* Stores the function type of the program. The function type will be defined after semantic analysis
+     (.check() call) */
+  var thisFunctionType: Type = VoidType()
   override def toString: String =
     returnType.toString + " " + name.toString + "(" +
       parameters.getOrElse("").toString + ") is\n" + body.toString + "end\n"
@@ -70,8 +84,14 @@ case class Function(returnType: Type, name: Identifier, parameters: Option[Param
       newState = parameters.get.compile(newState)
     }
 
+    /* Overloaded Functions: Get the generated label for all functions */
+    /* Add function to assembler state */
+    newState = newState.putFunction(name.identifier, thisFunctionType)
+    /* Call getFunctionLabel to get the string label. */
+    val functionLabel = newState.getFunctionLabel(name.identifier, thisFunctionType)
+
     /* Add the function label and push the LR */
-    instructions ++= List(StringLabel("f_" + name.identifier), PushLR())
+    instructions ++= List(StringLabel("f_" + functionLabel), PushLR())
     newState = newState.copy(spOffset = newState.spOffset + 4)
 
     /* Compile the function body. We add a special entry in the dictionary so that when we
@@ -98,6 +118,17 @@ case class Function(returnType: Type, name: Identifier, parameters: Option[Param
     }
 
     body.check(functionSymbolTable)
+    thisFunctionType = getType(symbolTable)
+  }
+
+  override def getType(symbolTable: SymbolTable): Type = {
+    val expectedParams = {
+      parameters match {
+        case Some(list: ParameterList) => Some(list.parameters.map(parameter => parameter.parameterType))
+        case None                      => None
+      }
+    }
+    FunctionType(returnType, expectedParams)
   }
 
   override def getPos(): (Int, Int) = position
