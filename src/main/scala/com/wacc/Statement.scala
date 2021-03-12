@@ -476,6 +476,7 @@ case class While(condition: Expression, statement: Statement)(position: (Int, In
 
     /* Jump to the body if it is true */
     instructions += BRANCH(Option(EQ), labelPrefix + bodyID)
+
     newState
   }
 
@@ -533,7 +534,7 @@ case class For(
 
     /* Branch to the condition and compile the while body with a new scope */
     instructions ++= List(BRANCH(None, labelPrefix + conditionID), NumberLabel(bodyID))
-    newState = body.compileNewScope(state)
+    newState = body.compileNewScope(newState)
 
     /* Compile the update statements */
     for (update <- updates.getOrElse(List.empty)) {
@@ -565,6 +566,41 @@ case class For(
     newState = newState.fromScopeToInitialState(state)
     newState
   }
+
+  override def check(symbolTable: SymbolTable)(implicit errors: ListBuffer[Error]): Unit = {
+    val forOuterSymbolTable = new SymbolTable(symbolTable)
+
+    /* Check the initialization statemtents */
+    initializations.getOrElse(List.empty).foreach(_.check(forOuterSymbolTable))
+
+    /* Check that the condition is a boolean expression */
+    if (cond.isDefined) {
+      val conditionType = cond.get.getType(forOuterSymbolTable)
+      if (conditionType.unifies(BooleanType())) {
+        cond.get.check(forOuterSymbolTable)
+      } else {
+        errors += Error(
+          "For condition does not evaluate to boolean. Got type: " + conditionType.toString +
+            ", in expression: " + cond.get.toString,
+          position
+        )
+      }
+    }
+
+    /* Check the update statements */
+    updates.getOrElse(List.empty).foreach(_.check(forOuterSymbolTable))
+
+    /* Check the body */
+    val forInnerSymbolTable = new SymbolTable(forOuterSymbolTable)
+    body.check(forInnerSymbolTable)
+  }
+
+  /* initializations: Option[List[Initialization]],
+  cond: Option[Expression],
+  updates: Option[List[Assignment]],
+  body: Statement*/
+
+  override def getPos(): (Int, Int) = position
 }
 
 object Statement {
