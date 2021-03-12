@@ -473,11 +473,11 @@ case class While(condition: Expression, statement: Statement)(position: (Int, In
     val bodyID = state.nextID
     val endID = state.nextID
     var newState =
-      state.copy(breakLabel = NumberLabel(endID).toString, continueLabel = NumberLabel(conditionID).toString)
+      state.copy(breakLabel = labelPrefix + endID, continueLabel = labelPrefix + conditionID)
 
     /* Branch to the condition and compile the while body with a new scope */
     instructions ++= List(BRANCH(None, labelPrefix + conditionID), NumberLabel(bodyID))
-    newState = statement.compileNewScope(state)
+    newState = statement.compileNewScope(newState)
     newState = newState.copy(breakLabel = state.breakLabel, continueLabel = state.continueLabel)
 
     /* Compile the condition */
@@ -554,7 +554,7 @@ case class For(
 
     /* Branch to the condition and compile the while body with a new scope */
     instructions ++= List(BRANCH(None, labelPrefix + conditionID), NumberLabel(bodyID))
-    newState = newState.copy(breakLabel = NumberLabel(endID).toString, continueLabel = NumberLabel(updateID).toString)
+    newState = newState.copy(breakLabel = labelPrefix + endID, continueLabel = labelPrefix + updateID)
     newState = body.compileNewScope(newState)
     newState = newState.copy(breakLabel = state.breakLabel, continueLabel = state.continueLabel)
 
@@ -629,10 +629,27 @@ case class For(
 
 case class Break() extends Statement {
   override def toString: String = "break\n"
+
+  override def check(symbolTable: SymbolTable)(implicit errors: ListBuffer[Error]): Unit = {
+    // TODO: Check inside loop
+  }
+
+  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
+    instructions += BRANCH(None, state.breakLabel)
+    state
+  }
 }
 
 case class Continue() extends Statement {
   override def toString: String = "continue\n"
+  override def check(symbolTable: SymbolTable)(implicit errors: ListBuffer[Error]): Unit = {
+    // TODO: Check inside loop
+  }
+
+  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
+    instructions += BRANCH(None, state.continueLabel)
+    state
+  }
 }
 
 object Statement {
