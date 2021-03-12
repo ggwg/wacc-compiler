@@ -421,6 +421,19 @@ case class Return(expression: Expression)(position: (Int, Int)) extends Statemen
   override def getPos(): (Int, Int) = position
 }
 
+case class StatementFunctionCall(fcall: FunctionCall)(position: (Int, Int)) extends Statement {
+  override def toString: String = fcall.toString
+
+  override def check(symbolTable: SymbolTable)(implicit errors: ListBuffer[Error]): Unit =
+    fcall.check(symbolTable)
+
+  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
+    val resultReg = state.getResultRegister
+    val newState = fcall.compile(state)
+    newState.copy(freeRegs = resultReg :: newState.freeRegs)
+  }
+}
+
 case class SkipStatement()(position: (Int, Int)) extends Statement {
   override def toString: String = "skip\n"
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = state
@@ -545,4 +558,9 @@ object StatementSequence {
 object While {
   def apply(cond: Parsley[Expression], body: Parsley[Statement]): Parsley[While] =
     pos <**> (cond, body).map(While(_, _))
+}
+
+object StatementFunctionCall {
+  def apply(functionCall: Parsley[FunctionCall]): Parsley[StatementFunctionCall] =
+    pos <**> functionCall.map(StatementFunctionCall(_))
 }

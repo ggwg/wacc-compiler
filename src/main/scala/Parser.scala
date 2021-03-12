@@ -59,6 +59,7 @@ object Parser {
         ) <* skipWhitespace,
         expressionParser
       )
+      <\> StatementFunctionCall(functionCallParser) <* skipWhitespace
       <\> If(
         parseKeyword("if") *> skipWhitespace *> expressionParser,
         parseKeyword("then") *> skipWhitespace *> statementParser,
@@ -111,13 +112,16 @@ object Parser {
              | 〈array-type〉
              | 〈pair-type〉 */
   lazy val typeParser: Parsley[Type] =
-    (precedence[Type](pairTypeParser <\> baseTypeParser, Ops(Postfix)("[]" #> toArrayType)) <* skipWhitespace)
+    (precedence[Type](voidTypeParser <\> pairTypeParser <\> baseTypeParser, Ops(Postfix)("[]" #> toArrayType)) <* skipWhitespace)
       .label("a type")
   lazy val toArrayType: Type => ArrayType = ArrayType(_)
   /* 〈base-type〉::= ‘int’
                    | ‘bool’
                    | ‘char’
                    | ‘string’ */
+  lazy val voidTypeParser: Parsley[VoidType] =
+    (VoidType(parseKeyword("void")) <* skipWhitespace)
+      .label("a void type")
   lazy val baseTypeParser: Parsley[BaseType] =
     (BaseType(attemptChoice(BaseType.types.map(parseKeyword(_)): _*)) <* skipWhitespace).label("a base type")
   /*〈array-type〉::=〈type〉‘[’ ‘]’ */

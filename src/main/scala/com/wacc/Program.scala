@@ -71,7 +71,7 @@ case class Function(returnType: Type, name: Identifier, parameters: Option[Param
 ) extends ASTNodeVoid {
   /* Stores the function type of the program. The function type will be defined after semantic analysis
      (.check() call) */
-  var thisFunctionType: Type = VoidType()
+  var thisFunctionType: Type = NotAType()
   override def toString: String =
     returnType.toString + " " + name.toString + "(" +
       parameters.getOrElse("").toString + ") is\n" + body.toString + "end\n"
@@ -106,9 +106,15 @@ case class Function(returnType: Type, name: Identifier, parameters: Option[Param
   }
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
-    /* Check that the function returns: */
-    if (!body.exitable()) {
-      errors += Error("Function " + name.identifier + " may terminate without return", getPos(), Error.syntaxCode)
+    /* Check that the function returns if it does not return a void type: */
+    returnType match {
+      case VoidType() => ()
+        /* No need to check that function returns anything - ignore it */
+      case _ =>
+        /* Check that the function returns: */
+        if (!body.exitable()) {
+          errors += Error("Function " + name.identifier + " may terminate without return", getPos(), Error.syntaxCode)
+        }
     }
 
     val functionSymbolTable = new SymbolTable(symbolTable, true, returnType)

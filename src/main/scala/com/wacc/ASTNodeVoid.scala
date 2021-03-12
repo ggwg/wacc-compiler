@@ -48,5 +48,5 @@ trait ASTNode {
 
 /* Create a new trait that extends ASTNode and defined default void return */
 trait ASTNodeVoid extends ASTNode {
-  override def getType(symbolTable: SymbolTable): Type = VoidType()
+  override def getType(symbolTable: SymbolTable): Type = NotAType()
 }
