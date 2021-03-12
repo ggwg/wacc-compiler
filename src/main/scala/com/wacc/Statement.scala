@@ -471,10 +471,14 @@ case class While(condition: Expression, statement: Statement)(position: (Int, In
     /* Get the label IDs */
     val conditionID = state.nextID
     val bodyID = state.nextID
+    val endID = state.nextID
+    var newState =
+      state.copy(breakLabel = NumberLabel(endID).toString, continueLabel = NumberLabel(conditionID).toString)
 
     /* Branch to the condition and compile the while body with a new scope */
     instructions ++= List(BRANCH(None, labelPrefix + conditionID), NumberLabel(bodyID))
-    var newState = statement.compileNewScope(state)
+    newState = statement.compileNewScope(state)
+    newState = newState.copy(breakLabel = state.breakLabel, continueLabel = state.continueLabel)
 
     /* Compile the condition */
     val conditionReg = newState.getResultRegister
@@ -490,6 +494,7 @@ case class While(condition: Expression, statement: Statement)(position: (Int, In
     /* Jump to the body if it is true */
     instructions += BRANCH(Option(EQ), labelPrefix + bodyID)
 
+    instructions += NumberLabel(endID)
     newState
   }
 
@@ -539,6 +544,8 @@ case class For(
     /* Get the label IDs */
     val conditionID = state.nextID
     val bodyID = state.nextID
+    val updateID = state.nextID
+    val endID = state.nextID
 
     /* Compile the initialization statements */
     for (initialization <- initializations.getOrElse(List.empty)) {
@@ -547,9 +554,12 @@ case class For(
 
     /* Branch to the condition and compile the while body with a new scope */
     instructions ++= List(BRANCH(None, labelPrefix + conditionID), NumberLabel(bodyID))
+    newState = newState.copy(breakLabel = NumberLabel(endID).toString, continueLabel = NumberLabel(updateID).toString)
     newState = body.compileNewScope(newState)
+    newState = newState.copy(breakLabel = state.breakLabel, continueLabel = state.continueLabel)
 
     /* Compile the update statements */
+    instructions += NumberLabel(updateID)
     for (update <- updates.getOrElse(List.empty)) {
       newState = update.compile(newState)
     }
@@ -575,6 +585,7 @@ case class For(
     }
 
     /* Reset the state to exclude the variables declared in the for */
+    instructions += NumberLabel(endID)
     instructions += ADD(RegisterSP, RegisterSP, ImmediateNumber(newState.declaredSize))
     newState = newState.fromScopeToInitialState(state)
     newState
