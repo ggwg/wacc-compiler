@@ -113,7 +113,7 @@ case class UnaryOperatorApplication(operator: UnaryOperator, operand: Expression
 case class FunctionCall(name: Identifier, arguments: Option[ArgumentList])(position: (Int, Int))
     extends AssignmentRight {
   val labelPrefix = "f_"
-  var thisFunctionType: Type = VoidType()
+  var thisFunctionType: Type = NotAType()
 
   override def toString: String =
     "call " + name + "(" + (arguments match {
@@ -161,7 +161,7 @@ case class FunctionCall(name: Identifier, arguments: Option[ArgumentList])(posit
     // 2. Using this functionType, look it up to see if there is a matching function in the symbol table
     val foundFunction = symbolTable.lookupAllFunction(name.identifier, calledFunctionType)
     // 3. If lookUpAllFunction returns true then success.
-    if (!foundFunction.unifies(VoidType())) {
+    if (!foundFunction.unifies(NotAType())) {
       /* Check correctness of all arguments */
       thisFunctionType = foundFunction
       arguments.foreach(_.check(symbolTable))
@@ -184,7 +184,7 @@ case class FunctionCall(name: Identifier, arguments: Option[ArgumentList])(posit
     symbolTable.lookupAllFunction(name.identifier, calledFunctionType) match {
       case FunctionType(returnType, _) =>
         returnType
-      case _ => VoidType()
+      case _ => NotAType()
     }
   }
 }
@@ -225,7 +225,7 @@ case class ArgumentList(expressions: List[Expression]) extends ASTNodeVoid {
 case class ArrayElement(name: Identifier, expressions: List[Expression])(position: (Int, Int))
     extends Expression
     with AssignmentLeft {
-  var expressionType: Type = VoidType()
+  var expressionType: Type = NotAType()
 
   override def toString: String = name.toString + expressions.map("[" + _.toString + "]").mkString
 
@@ -321,7 +321,7 @@ case class ArrayElement(name: Identifier, expressions: List[Expression])(positio
     for (_ <- 1 to expressions.length)
       identType match {
         case ArrayType(arrayType) => identType = arrayType
-        case _                    => return VoidType()
+        case _                    => return NotAType()
       }
     identType
   }
@@ -553,7 +553,7 @@ case class CharacterLiter(char: Char)(position: (Int, Int)) extends Expression {
 
 /* Represents an identifier(e.g. int myIdentifier) */
 case class Identifier(identifier: String)(position: (Int, Int)) extends Expression with AssignmentLeft {
-  var expressionType: Type = VoidType()
+  var expressionType: Type = NotAType()
 
   override def toString: String = identifier
 
@@ -576,7 +576,7 @@ case class Identifier(identifier: String)(position: (Int, Int)) extends Expressi
   }
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
-    if (getType(symbolTable) == VoidType()) {
+    if (getType(symbolTable) == NotAType()) {
       /* Identifier was a void type - indicating that it hasn't been defined yet */
       errors += IdentifierError.undefined(identifier, getPos())
     }
@@ -586,7 +586,7 @@ case class Identifier(identifier: String)(position: (Int, Int)) extends Expressi
 
   override def getType(symbolTable: SymbolTable): Type =
     /* Look up the symbol table hierarchy for the type of the identifier using it's name */
-    symbolTable.lookupAll(identifier).getOrElse((VoidType(), null))._1
+    symbolTable.lookupAll(identifier).getOrElse((NotAType(), null))._1
 
   override def getExpressionType: Type = expressionType
   override def getLeftType: Type = expressionType
@@ -784,11 +784,11 @@ case class NewPair(first: Expression, second: Expression)(position: (Int, Int)) 
 
     /* If any pair element type had an error, the whole pair will be an error as well */
     fstType match {
-      case VoidType() => return VoidType()
+      case NotAType() => return NotAType()
       case _          => ()
     }
     sndType match {
-      case VoidType() => return VoidType()
+      case NotAType() => return NotAType()
       case _          => ()
     }
 
@@ -802,7 +802,7 @@ case class NewPair(first: Expression, second: Expression)(position: (Int, Int)) 
       case PairType(_, _) | NullType() => PairDefault()
       case ArrayType(arrayType)        => ArrayType(arrayType)
       case EmptyType()                 => EmptyType()
-      case _                           => VoidType()
+      case _                           => NotAType()
     }
   }
 }
@@ -811,7 +811,7 @@ case class NewPair(first: Expression, second: Expression)(position: (Int, Int)) 
 case class PairElement(expression: Expression, isFirst: Boolean)(position: (Int, Int))
     extends AssignmentRight
     with AssignmentLeft {
-  var pairElementType: Type = VoidType()
+  var pairElementType: Type = NotAType()
 
   override def toString: String = (if (isFirst) "fst " else "snd ") + expression.toString
 
@@ -866,7 +866,7 @@ case class PairElement(expression: Expression, isFirst: Boolean)(position: (Int,
         if (isFirst) fstType.getType(symbolTable)
         else sndType.getType(symbolTable)
       /* Otherwise, it is invalid */
-      case _ => VoidType()
+      case _ => NotAType()
     }
   }
 

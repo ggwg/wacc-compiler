@@ -6,9 +6,9 @@ import scala.collection.{immutable, mutable}
 
 class SymbolTable(parentSymbolTable: SymbolTable, isFunctionSymbolTable: Boolean, functionReturnType: Type) {
   // default parameter to null
-  def this() = this(null, false, VoidType())
+  def this() = this(null, false, NotAType())
 
-  def this(parentSymbolTable: SymbolTable) = this(parentSymbolTable, false, VoidType())
+  def this(parentSymbolTable: SymbolTable) = this(parentSymbolTable, false, NotAType())
 
   val isFunction: Boolean = isFunctionSymbolTable
 
@@ -63,7 +63,7 @@ class SymbolTable(parentSymbolTable: SymbolTable, isFunctionSymbolTable: Boolean
       }
     }
     /* If no function is found, return voidType to indicate failure */
-    VoidType()
+    NotAType()
   }
 
   /* Add a variable, along with it's type and corresponding AST node, to the symbol table */
@@ -108,7 +108,7 @@ class SymbolTable(parentSymbolTable: SymbolTable, isFunctionSymbolTable: Boolean
         return current.get.returnType
       current = current.get.parent
     }
-    return VoidType()
+    return NotAType()
   }
 
   def identifierIsFunction(identifier: String): Boolean = {

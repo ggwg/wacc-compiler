@@ -71,7 +71,7 @@ case class Function(returnType: Type, name: Identifier, parameters: Option[Param
 ) extends ASTNodeVoid {
   /* Stores the function type of the program. The function type will be defined after semantic analysis
      (.check() call) */
-  var thisFunctionType: Type = VoidType()
+  var thisFunctionType: Type = NotAType()
   override def toString: String =
     returnType.toString + " " + name.toString + "(" +
       parameters.getOrElse("").toString + ") is\n" + body.toString + "end\n"
