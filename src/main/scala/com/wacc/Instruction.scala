@@ -245,6 +245,14 @@ case class MOVE(dest: Register, op2: Operand2, cond: Option[Condition] = Option.
   override def toString: String = s"\tMOV${cond.map(_.toString).getOrElse("")} $dest, $op2"
 }
 
+case class SHIFTLEFT(dest: Register, src1: Register, src2: Register) extends Instruction {
+  override def toString: String = s"\tLSL $dest, $src1, $src2"
+}
+
+case class SHIFTRIGHT(dest: Register, src1: Register, src2: Register) extends Instruction {
+  override def toString: String = s"\tLSR $dest, $src1, $src2"
+}
+
 case class DataDirective() extends Directive {
   override def toString: String = ".data"
 }

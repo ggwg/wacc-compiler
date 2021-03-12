@@ -197,12 +197,20 @@ object Parser {
       ("-".label("a binary operator") <* skipWhitespace) #> binaryFunctionGenerator("-")
     ),
     Ops(InfixL)(
+      (attempt("<<").label("a binary operator") <* skipWhitespace) #> binaryFunctionGenerator("<<"),
+      (attempt(">>").label("a binary operator") <* skipWhitespace) #> binaryFunctionGenerator(">>")
+    ),
+    Ops(InfixL)(
       (attempt(">=").label("a binary operator") <* skipWhitespace) #> binaryFunctionGenerator(">="),
       (attempt("<=").label("a binary operator") <* skipWhitespace) #> binaryFunctionGenerator("<="),
       (attempt("==").label("a binary operator") <* skipWhitespace) #> binaryFunctionGenerator("=="),
       ("!=".label("a binary operator") <* skipWhitespace) #> binaryFunctionGenerator("!="),
       (">".label("a binary operator") <* skipWhitespace) #> binaryFunctionGenerator(">"),
       ("<".label("a binary operator") <* skipWhitespace) #> binaryFunctionGenerator("<")
+    ),
+    Ops(InfixL)(
+      (attempt("&" <* notFollowedBy("&")).label("A binary operator") <* skipWhitespace) #> binaryFunctionGenerator("&"),
+      (attempt("|" <* notFollowedBy("|")).label("A binary operator") <* skipWhitespace) #> binaryFunctionGenerator("|")
     ),
     Ops(InfixL)(("&&".label("a binary operator") <* skipWhitespace) #> binaryFunctionGenerator("&&")),
     Ops(InfixL)(("||".label("a binary operator") <* skipWhitespace) #> binaryFunctionGenerator("||"))

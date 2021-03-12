@@ -36,6 +36,7 @@ case class UnaryOperatorApplication(operator: UnaryOperator, operand: Expression
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     /* Evaluate the expression and store it in the first available register */
     val resultReg = state.getResultRegister
+    val helperReg = state.getHelperRegister
     var nextState = operand.compile(state)
 
     /* Apply the unary operation */
@@ -407,10 +408,16 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
         )
         newState = newState.copy(p_check_divide_by_zero = true, p_throw_runtime_error = true)
 
-      /* Boolean operations */
-      case And() =>
+      /* Shift operations */
+      case ShiftLeft() =>
+        instructions += SHIFTLEFT(resultReg, firstOp, secondOp)
+
+      case ShiftRight() =>
+        instructions += SHIFTRIGHT(resultReg, firstOp, secondOp)
+      /* Logical operations */
+      case And() | BitwiseAnd() =>
         instructions += AND(resultReg, firstOp, secondOp)
-      case Or() =>
+      case Or() | BitwiseOr() =>
         instructions += OR(resultReg, firstOp, secondOp)
 
       /* Comparison operations */
@@ -470,7 +477,8 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
     /* Error generation process */
     operator match {
       /* Integer operations expect integer parameters */
-      case Add() | Divide() | Modulo() | Multiply() | Subtract() =>
+      case Add() | Divide() | Modulo() | Multiply() | Subtract() | BitwiseAnd() | BitwiseOr() | ShiftLeft() |
+          ShiftRight() =>
         if (!leftType.unifies(IntType())) {
           errors += BinaryOperatorError.expectation(op, IntType.toString(), leftType.toString, getPos(), left)
           return
@@ -516,8 +524,10 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
   override def getType(symbolTable: SymbolTable): Type = getExpressionType
 
   override def getExpressionType: Type = operator match {
-    case Add() | Divide() | Modulo() | Multiply() | Subtract() => IntType()
-    case _                                                     => BooleanType()
+    case Add() | Divide() | Modulo() | Multiply() | Subtract() | BitwiseAnd() | BitwiseOr() | ShiftLeft() |
+        ShiftRight() =>
+      IntType()
+    case _ => BooleanType()
   }
 }
 
