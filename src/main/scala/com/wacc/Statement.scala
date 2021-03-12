@@ -33,7 +33,7 @@ sealed trait Statement extends ASTNodeVoid {
     scopeState.fromScopeToInitialState(state)
   }
 }
-sealed trait Initialization
+sealed trait Initialization extends Statement
 
 case class IdentifierDeclaration(identType: Type, name: Identifier, assignmentRight: AssignmentRight)(
   position: (Int, Int)
@@ -504,6 +504,7 @@ case class For(
   body: Statement
 )(position: (Int, Int))
     extends Statement {
+
   override def toString: String = {
     val initsString = initializations
       .map(inits => inits.map(_.toString).reduceOption((acc, init) => acc + ", " + init).getOrElse(""))
@@ -515,6 +516,54 @@ case class For(
       .getOrElse("")
       .filter(_ != '\n')
     s"for ($initsString; $condString; $updatesString) do\n${body}done\n"
+  }
+
+  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
+    var newState = state.newScopeState
+    val labelPrefix = "L"
+
+    /* Get the label IDs */
+    val conditionID = state.nextID
+    val bodyID = state.nextID
+
+    /* Compile the initialization statements */
+    for (initialization <- initializations.getOrElse(List.empty)) {
+      newState = initialization.compile(newState)
+    }
+
+    /* Branch to the condition and compile the while body with a new scope */
+    instructions ++= List(BRANCH(None, labelPrefix + conditionID), NumberLabel(bodyID))
+    newState = body.compileNewScope(state)
+
+    /* Compile the update statements */
+    for (update <- updates.getOrElse(List.empty)) {
+      newState = update.compile(newState)
+    }
+
+    instructions += NumberLabel(conditionID)
+    if (cond.isDefined) {
+      /* Compile the condition */
+      val conditionReg = newState.getResultRegister
+      newState = cond.get.compile(newState)
+
+      /* Check if the condition is true */
+      instructions += COMPARE(conditionReg, ImmediateNumber(1))
+
+      /* Mark the condition register as free to use */
+      newState = newState.copy(freeRegs = conditionReg :: newState.freeRegs)
+
+      /* Jump to the body if it is true */
+      instructions += BRANCH(Option(EQ), labelPrefix + bodyID)
+    } else {
+
+      /* Jump unconditionally */
+      instructions += BRANCH(None, labelPrefix + bodyID)
+    }
+
+    /* Reset the state to exclude the variables declared in the for */
+    instructions += ADD(RegisterSP, RegisterSP, ImmediateNumber(newState.declaredSize))
+    newState = newState.fromScopeToInitialState(state)
+    newState
   }
 }
 
