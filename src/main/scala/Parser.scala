@@ -47,6 +47,8 @@ object Parser {
                | 〈stat〉‘;’〈stat〉*/
   lazy val statementParser: Parsley[Statement] = precedence[Statement](
     (SkipStatement(parseKeyword("skip")) <* skipWhitespace)
+      <\> (Break(parseKeyword("break")) <* skipWhitespace)
+      <\> (Continue(parseKeyword("continue")) <* skipWhitespace)
       <\> identifierDeclarationParser
       <\> assignmentParser
       <\> Read(parseKeyword("read") *> skipWhitespace *> assignmentLeftParser)
@@ -137,7 +139,10 @@ object Parser {
              | 〈array-type〉
              | 〈pair-type〉 */
   lazy val typeParser: Parsley[Type] =
-    (precedence[Type](voidTypeParser <\> pairTypeParser <\> baseTypeParser, Ops(Postfix)("[]" #> toArrayType)) <* skipWhitespace)
+    (precedence[Type](
+      voidTypeParser <\> pairTypeParser <\> baseTypeParser,
+      Ops(Postfix)("[]" #> toArrayType)
+    ) <* skipWhitespace)
       .label("a type")
   lazy val toArrayType: Type => ArrayType = ArrayType(_)
   /* 〈base-type〉::= ‘int’
@@ -361,6 +366,8 @@ object Parser {
     "ord",
     "chr",
     "true",
-    "false"
+    "false",
+    "break",
+    "continue"
   )
 }

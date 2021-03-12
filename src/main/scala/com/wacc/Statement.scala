@@ -616,6 +616,14 @@ case class For(
   override def getPos(): (Int, Int) = position
 }
 
+case class Break() extends Statement {
+  override def toString: String = "break\n"
+}
+
+case class Continue() extends Statement {
+  override def toString: String = "continue\n"
+}
+
 object Statement {
   def apply(action: Parsley[String], expr: Parsley[Expression]): Parsley[Statement] =
     pos <**> (action, expr).map {
@@ -662,6 +670,14 @@ object Read {
 
 object SkipStatement {
   def apply(skip: Parsley[String]): Parsley[SkipStatement] = pos <**> skip.map(_ => SkipStatement())
+}
+
+object Break {
+  def apply(break: Parsley[String]): Parsley[Break] = break.map(_ => Break())
+}
+
+object Continue {
+  def apply(continue: Parsley[String]): Parsley[Continue] = continue.map(_ => Continue())
 }
 
 object StatementSequence {
