@@ -45,7 +45,7 @@ class SymbolTable(parentSymbolTable: SymbolTable, isFunctionSymbolTable: Boolean
     return true
   }
 
-  /* Looks up all the symbol tables */
+  /* Looks up all the symbol tables - returns FunctionType if found, otherwise NotAType() */
   def lookupAllFunction(funcName: String, functionType: FunctionType): Type = {
     var current = Option(this)
     while (current.isDefined) {

@@ -77,19 +77,40 @@ case class IdentifierDeclaration(identType: Type, name: Identifier, assignmentRi
         )
         Some(x)
       case None =>
-        // If left type == right type, then we can add it to dictionary.
-        if (identType.sameTypes(assignmentRight, symbolTable)) {
-          assignmentRight.check(symbolTable)
-          Some((identType, assignmentRight))
-        } else {
-          errors += Error(
-            "Invalid types in identifier assignment. Got: " +
-              assignmentRight.getType(symbolTable) + ", Expected: " + identType,
-            getPos()
-          )
-          None
+        /* If left type == right type, then we can add it to dictionary. */
+        /* First we look up if RHS is a function in the functionDic (in SymbolTable) */
+        assignmentRight match {
+          case functionIdentifier: Identifier =>
+            identType match {
+              case expectedFunctionType @ FunctionType(_, _) =>
+                symbolTable.lookupAllFunction(functionIdentifier.identifier, expectedFunctionType) match {
+                  case f @ FunctionType(_, _) =>
+                    Some((f, assignmentRight))
+                  case _ => assignRHS(identType, assignmentRight, symbolTable)
+                }
+              case _ => assignRHS(identType, assignmentRight, symbolTable)
+            }
+          /* If RHS is not identifier, then assign LHS to RHS */
+          case _ => assignRHS(identType, assignmentRight, symbolTable)
         }
     })
+  }
+
+  private def assignRHS(identType: Type, assignmentRight: AssignmentRight, symbolTable: SymbolTable)
+                       (implicit errors: mutable.ListBuffer[Error])
+                       : Option[(Type, ASTNodeVoid)] = {
+    /* If its not in the function dictionary, then it check regular ST */
+    if (identType.sameTypes(assignmentRight, symbolTable)) {
+      assignmentRight.check(symbolTable)
+      Some((identType, assignmentRight))
+    } else {
+      errors += Error(
+        "Invalid types in identifier assignment. Got: " +
+          assignmentRight.getType(symbolTable) + ", Expected: " + identType,
+        getPos()
+      )
+      None
+    }
   }
 
   override def getPos(): (Int, Int) = position
