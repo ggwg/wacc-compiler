@@ -59,6 +59,7 @@ object Parser {
         ) <* skipWhitespace,
         expressionParser
       )
+      <\> StatementFunctionCall(functionCallParser) <* skipWhitespace
       <\> If(
         parseKeyword("if") *> skipWhitespace *> expressionParser,
         parseKeyword("then") *> skipWhitespace *> statementParser,
