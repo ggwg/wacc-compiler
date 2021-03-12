@@ -146,6 +146,11 @@ class ParserSpec extends AnyFlatSpec {
       .runParser("while (i < len(\"string\")) do i = i + 1 done")
       .get shouldBe a[While]
   }
+  it should "parse a for statement" in {
+    statementParser
+      .runParser("for (int i = 0, j = 0; i < n && j < n; i = i + 1, j = j + 1) do skip done")
+      .get shouldBe a[For]
+  }
   it should "parse a begin-end statement" in {
     statementParser.runParser("begin skip end").get shouldBe a[BeginEnd]
   }
