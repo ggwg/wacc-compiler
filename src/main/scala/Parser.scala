@@ -233,8 +233,8 @@ object Parser {
           UnaryOperatorApplication(UnaryOperator(operator), expr)(expr.getPos())
         } else
           expr match {
-            case IntegerLiter(None, digits) =>
-              IntegerLiter(Option(IntegerSign('-')), digits)(expr.getPos())
+            case IntegerLiter(None, base, digits) =>
+              IntegerLiter(Option(IntegerSign('-')), base, digits)(expr.getPos())
             case _ => UnaryOperatorApplication(UnaryOperator(operator), expr)(expr.getPos())
           }
       }
@@ -285,7 +285,11 @@ object Parser {
       .label("an array element")
   /* 〈int-liter〉::=〈int-sign〉?〈digit〉+ */
   lazy val integerLiterParser: Parsley[IntegerLiter] =
-    IntegerLiter(option(integerSignParser), manyN(1, digitParser) <* skipWhitespace)
+    IntegerLiter(
+      option(integerSignParser),
+      option("0" *> oneOf('b', 'o', 'd', 'x')),
+      manyN(1, digitParser) <* skipWhitespace
+    )
       .label("an integer")
   /*〈digit〉::=  (‘0’-‘9’) */
   lazy val digitParser: Parsley[Digit] =

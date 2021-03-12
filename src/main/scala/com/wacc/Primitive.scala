@@ -3,6 +3,8 @@ package com.wacc
 import parsley.Parsley
 import parsley.implicits.{voidImplicitly => _, _}
 
+import scala.collection.mutable
+
 case class DefaultCharacter(char: Char, isEscaped: Boolean) extends ASTNodeVoid {
   override def toString: String = if (isEscaped) {
     "\\" + char
@@ -29,7 +31,10 @@ object DefaultCharacter {
 }
 
 object Digit {
-  val digits = "0123456789"
+  val digits = "0123456789ABCDEF"
+  var valueOf: mutable.Map[Char, Int] = mutable.Map.empty
+  valueOf = valueOf ++ (for (chr <- '0' to '9') yield (chr, chr - '0'))
+  valueOf = valueOf ++ (for (chr <- 'A' to 'F') yield (chr, chr - 'A' + 10))
   def apply(chr: Parsley[Char]): Parsley[Digit] = chr.map(Digit(_))
 }
 

@@ -604,13 +604,11 @@ case class Identifier(identifier: String)(position: (Int, Int)) extends Expressi
 }
 
 /* Represents an integer (e.g. 1234 or -100) */
-case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit])(position: (Int, Int)) extends Expression {
+case class IntegerLiter(sign: Option[IntegerSign], base: Option[Char], digits: List[Digit])(position: (Int, Int))
+    extends Expression {
   var amount = 0
 
-  override def toString: String = (sign match {
-    case None       => ""
-    case Some(sign) => sign.toString
-  }) + digits.mkString
+  override def toString: String = sign.map(_.toString).getOrElse("") + base.map("0" + _).getOrElse("") + digits.mkString
 
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     instructions += LOAD(state.getResultRegister, ImmediateLoad(amount))
@@ -619,7 +617,14 @@ case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit])(position
 
   override def check(symbolTable: SymbolTable)(implicit errors: ListBuffer[Error]): Unit = {
     /* Map the characters to digits */
-    val intDigits = digits.map(_.digit - '0')
+    val values = digits.map(digit => Digit.valueOf(digit.digit))
+    val baseValue = base match {
+      case Some('b') => 2
+      case Some('o') => 8
+      case Some('d') => 10
+      case Some('x') => 16
+      case None      => 10
+    }
     var value: Long = 0
 
     /* Extract sign value of the number */
@@ -627,8 +632,12 @@ case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit])(position
     if (sign.nonEmpty && sign.get.sign == '-') signValue = -1
 
     /* Check that the number does not exceed the bounds */
-    for (i <- intDigits) {
-      value = (value * 10) + signValue * i
+    for (i <- values) {
+      if (i >= baseValue) {
+        errors += Error("Integer literal used illegal digits", position)
+        return
+      }
+      value = (value * baseValue) + signValue * i
       if (value > Integer.MAX_VALUE) {
         errors += BoundError.exceed(IntType.toString(), getPos(), isMinimum = false)
         return
@@ -922,8 +931,12 @@ object Identifier {
 }
 
 object IntegerLiter {
-  def apply(sign: Parsley[Option[IntegerSign]], digits: Parsley[List[Digit]]): Parsley[IntegerLiter] =
-    pos <**> (sign, digits).map(IntegerLiter(_, _))
+  def apply(
+    sign: Parsley[Option[IntegerSign]],
+    base: Parsley[Option[Char]],
+    digits: Parsley[List[Digit]]
+  ): Parsley[IntegerLiter] =
+    pos <**> (sign, base, digits).map(IntegerLiter(_, _, _))
 }
 
 object PairLiter {
