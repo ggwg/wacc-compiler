@@ -149,8 +149,8 @@ case class FunctionCall(name: Identifier, arguments: Option[ArgumentList])(posit
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
 
-    // 1. Get the function type of the current function call
-    /* Extract the supplied parameter types from the function call */
+    /* Get the function type of the current function call
+       Extract the supplied parameter types from the function call */
     val calledParams = {
       arguments match {
         case Some(list: ArgumentList) => Some(list.expressions.map(expression => expression.getType(symbolTable)))
@@ -158,9 +158,9 @@ case class FunctionCall(name: Identifier, arguments: Option[ArgumentList])(posit
       }
     }
     val calledFunctionType = FunctionType(AnyType(), calledParams)
-    // 2. Using this functionType, look it up to see if there is a matching function in the symbol table
+    /* Using this functionType, look it up to see if there is a matching function in the symbol table */
     val foundFunction = symbolTable.lookupAllFunction(name.identifier, calledFunctionType)
-    // 3. If lookUpAllFunction returns true then success.
+    /* If lookUpAllFunction returns true then success. */
     if (!foundFunction.unifies(NotAType())) {
       /* Check correctness of all arguments */
       thisFunctionType = foundFunction

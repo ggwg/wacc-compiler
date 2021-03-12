@@ -106,9 +106,15 @@ case class Function(returnType: Type, name: Identifier, parameters: Option[Param
   }
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
-    /* Check that the function returns: */
-    if (!body.exitable()) {
-      errors += Error("Function " + name.identifier + " may terminate without return", getPos(), Error.syntaxCode)
+    /* Check that the function returns if it does not return a void type: */
+    returnType match {
+      case VoidType() => ()
+        /* No need to check that function returns anything - ignore it */
+      case _ =>
+        /* Check that the function returns: */
+        if (!body.exitable()) {
+          errors += Error("Function " + name.identifier + " may terminate without return", getPos(), Error.syntaxCode)
+        }
     }
 
     val functionSymbolTable = new SymbolTable(symbolTable, true, returnType)

@@ -13,6 +13,12 @@ sealed trait Type extends ASTNodeVoid {
   }
 }
 
+/* Void Type for void function calls */
+case class VoidType() extends Type {
+  override def toString: String = "void"
+  override def unifies(otherType: Type): Boolean = this == otherType
+}
+
 /* This trait represents types that can appear inside a pair */
 sealed trait PairElementType extends Type
 sealed trait BaseType extends PairElementType {
@@ -72,6 +78,9 @@ case class NotAType() extends PairElementType {
   override def unifies(otherType: Type): Boolean = false
 }
 
+/* AnyType is a type used to help compare 2 function types for function overloading:
+   We are not concerned about the return type of the function in this case.
+ */
 case class AnyType() extends Type {
   override def toString: String = "Any Type (Undefined)"
   override def unifies(otherType: Type): Boolean = true
@@ -130,6 +139,11 @@ object Type {
     list.forall { case (t1, t2) => t1.unifies(t2) }
   }
 }
+
+object VoidType {
+  def apply(string: Parsley[String]): Parsley[VoidType] = string.map(_ => VoidType())
+}
+
 
 object PairDefault {
   def apply(string: Parsley[String]): Parsley[PairDefault] = string.map(_ => PairDefault())
