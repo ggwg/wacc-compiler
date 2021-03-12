@@ -14,6 +14,8 @@ class SymbolTable(parentSymbolTable: SymbolTable, isFunctionSymbolTable: Boolean
 
   val returnType: Type = functionReturnType
 
+  var inLoop: Boolean = if (parentSymbolTable == null) false else parentSymbolTable.inLoop
+
   var parent: Option[SymbolTable] = Option(parentSymbolTable)
   /* The symbol table contains a mapping from the name of the variable to a tuple
      containing its type and corresponding AST node. */

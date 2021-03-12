@@ -503,6 +503,7 @@ case class While(condition: Expression, statement: Statement)(position: (Int, In
     if (conditionType.unifies(BooleanType())) {
       condition.check(symbolTable)
       val whileSymbolTable = new SymbolTable(symbolTable)
+      whileSymbolTable.inLoop = true
       statement.check(whileSymbolTable)
     } else {
       errors += Error(
@@ -616,6 +617,7 @@ case class For(
 
     /* Check the body */
     val forInnerSymbolTable = new SymbolTable(forOuterSymbolTable)
+    forInnerSymbolTable.inLoop = true
     body.check(forInnerSymbolTable)
   }
 
@@ -627,29 +629,37 @@ case class For(
   override def getPos(): (Int, Int) = position
 }
 
-case class Break() extends Statement {
+case class Break()(position: (Int, Int)) extends Statement {
   override def toString: String = "break\n"
 
   override def check(symbolTable: SymbolTable)(implicit errors: ListBuffer[Error]): Unit = {
-    // TODO: Check inside loop
+    if (!symbolTable.inLoop) {
+      errors += Error("Break statement found outside a loop", getPos())
+    }
   }
 
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     instructions += BRANCH(None, state.breakLabel)
     state
   }
+
+  override def getPos(): (Int, Int) = position
 }
 
-case class Continue() extends Statement {
+case class Continue()(position: (Int, Int)) extends Statement {
   override def toString: String = "continue\n"
   override def check(symbolTable: SymbolTable)(implicit errors: ListBuffer[Error]): Unit = {
-    // TODO: Check inside loop
+    if (!symbolTable.inLoop) {
+      errors += Error("Break statement found outside a loop", getPos())
+    }
   }
 
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     instructions += BRANCH(None, state.continueLabel)
     state
   }
+
+  override def getPos(): (Int, Int) = position
 }
 
 object Statement {
@@ -701,11 +711,11 @@ object SkipStatement {
 }
 
 object Break {
-  def apply(break: Parsley[String]): Parsley[Break] = break.map(_ => Break())
+  def apply(break: Parsley[String]): Parsley[Break] = pos <**> break.map(_ => Break())
 }
 
 object Continue {
-  def apply(continue: Parsley[String]): Parsley[Continue] = continue.map(_ => Continue())
+  def apply(continue: Parsley[String]): Parsley[Continue] = pos <**> continue.map(_ => Continue())
 }
 
 object StatementSequence {
