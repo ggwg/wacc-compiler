@@ -3,7 +3,7 @@ import com.wacc._
 import com.wacc.operator.{BinaryOperator, UnaryOperator}
 import parsley.Parsley._
 import parsley.character._
-import parsley.combinator.{attemptChoice, eof, manyN, option}
+import parsley.combinator.{attemptChoice, eof, manyN, option, optional}
 import parsley.expr._
 import parsley.implicits.{voidImplicitly => _, _}
 import parsley.{Parsley, combinator}
@@ -42,12 +42,13 @@ object Parser {
                | ‘println’〈expr〉
                | ’if’〈expr〉‘then’〈stat〉‘else’〈stat〉‘fi’
                | ‘while’〈expr〉‘do’〈stat〉‘done’
+               | ‘for’ (〈initializations〉?; 〈expr〉?; 〈assignments〉?) ‘do’〈stat〉‘done’
                | ‘begin’〈stat〉‘end’
                | 〈stat〉‘;’〈stat〉*/
   lazy val statementParser: Parsley[Statement] = precedence[Statement](
     (SkipStatement(parseKeyword("skip")) <* skipWhitespace)
-      <\> IdentifierDeclaration(typeParser, identifierParser, "=" *> skipWhitespace *> assignmentRightParser)
-      <\> Assignment(assignmentLeftParser, '=' *> skipWhitespace *> assignmentRightParser)
+      <\> identifierDeclarationParser
+      <\> assignmentParser
       <\> Read(parseKeyword("read") *> skipWhitespace *> assignmentLeftParser)
       <\> Statement(
         attemptChoice(
@@ -69,11 +70,35 @@ object Parser {
         parseKeyword("while") *> skipWhitespace *> expressionParser,
         parseKeyword("do") *> skipWhitespace *> statementParser <* parseKeyword("done") <* skipWhitespace
       )
+      <\> For(
+        parseKeyword("for") *> skipWhitespace *> '(' *> skipWhitespace *> option(
+          initializationListParser
+        ) <* ';' <* skipWhitespace,
+        option(expressionParser) <* ';' <* skipWhitespace,
+        option(assignmentListParser) <* ')' <* skipWhitespace,
+        parseKeyword("do") *> skipWhitespace *> statementParser <* parseKeyword("done") <* skipWhitespace
+      )
       <\> BeginEnd(parseKeyword("begin") *> skipWhitespace *> statementParser <* parseKeyword("end") <* skipWhitespace),
     Ops(InfixL)(
       (";" <* skipWhitespace) #> ((st1: Statement, st2: Statement) => StatementSequence(st1, st2)(st1.getPos()))
     )
   ) <* skipWhitespace
+
+  lazy val assignmentParser: Parsley[Assignment] =
+    Assignment(assignmentLeftParser, '=' *> skipWhitespace *> assignmentRightParser)
+
+  lazy val identifierDeclarationParser: Parsley[IdentifierDeclaration] =
+    IdentifierDeclaration(typeParser, identifierParser, "=" *> skipWhitespace *> assignmentRightParser)
+
+  lazy val initializationParser: Parsley[Initialization] =
+    (identifierDeclarationParser <\> assignmentParser)
+
+  lazy val initializationListParser: Parsley[List[Initialization]] =
+    Initialization(initializationParser, combinator.many(',' *> skipWhitespace *> initializationParser))
+
+  lazy val assignmentListParser: Parsley[List[Assignment]] =
+    Assignment.parsleyList(assignmentParser, combinator.many(',' *> skipWhitespace *> assignmentParser))
+
   /* 〈assign-lhs〉::=〈ident〉
                    | 〈array-elem〉
                    | 〈pair-elem〉*/

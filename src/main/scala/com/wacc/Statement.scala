@@ -1,7 +1,7 @@
 package com.wacc
 
 import parsley.Parsley
-import parsley.Parsley.{label, pos, select}
+import parsley.Parsley.pos
 import parsley.implicits.{voidImplicitly => _, _}
 
 import scala.collection.mutable
@@ -33,10 +33,12 @@ sealed trait Statement extends ASTNodeVoid {
     scopeState.fromScopeToInitialState(state)
   }
 }
+sealed trait Initialization extends Statement
 
 case class IdentifierDeclaration(identType: Type, name: Identifier, assignmentRight: AssignmentRight)(
   position: (Int, Int)
-) extends Statement {
+) extends Statement
+    with Initialization {
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     /* Compile the right hand side */
     val resultReg = state.getResultRegister
@@ -96,7 +98,8 @@ case class IdentifierDeclaration(identType: Type, name: Identifier, assignmentRi
 }
 
 case class Assignment(assignmentLeft: AssignmentLeft, assignmentRight: AssignmentRight)(position: (Int, Int))
-    extends Statement {
+    extends Statement
+    with Initialization {
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     /* Compile the pointer of the thing that will be assigned */
     val assignmentRegister = state.getResultRegister
@@ -196,12 +199,14 @@ case class Free(expression: Expression)(position: (Int, Int)) extends Statement 
         /* Free the array memory */
         newState = newState.putMessageIfAbsent(FreeNullArrayError.errorMessage)
         instructions += BRANCHLINK(FreeNullArrayError.label)
-        newState = newState.copy(p_free_array = true, p_throw_runtime_error = true, freeRegs = resultReg :: newState.freeRegs)
+        newState =
+          newState.copy(p_free_array = true, p_throw_runtime_error = true, freeRegs = resultReg :: newState.freeRegs)
       case PairType(_, _) =>
         /* Free the pair memory */
         newState = newState.putMessageIfAbsent(FreeNullPairError.errorMessage)
         instructions += BRANCHLINK(FreeNullPairError.label)
-        newState = newState.copy(p_free_pair = true, p_throw_runtime_error = true, freeRegs = resultReg :: newState.freeRegs)
+        newState =
+          newState.copy(p_free_pair = true, p_throw_runtime_error = true, freeRegs = resultReg :: newState.freeRegs)
     }
     newState
   }
@@ -484,6 +489,7 @@ case class While(condition: Expression, statement: Statement)(position: (Int, In
 
     /* Jump to the body if it is true */
     instructions += BRANCH(Option(EQ), labelPrefix + bodyID)
+
     newState
   }
 
@@ -505,6 +511,111 @@ case class While(condition: Expression, statement: Statement)(position: (Int, In
   override def getPos(): (Int, Int) = position
 }
 
+case class For(
+  initializations: Option[List[Initialization]],
+  cond: Option[Expression],
+  updates: Option[List[Assignment]],
+  body: Statement
+)(position: (Int, Int))
+    extends Statement {
+
+  override def toString: String = {
+    val initsString = initializations
+      .map(inits => inits.map(_.toString).reduceOption((acc, init) => acc + ", " + init).getOrElse(""))
+      .getOrElse("")
+      .filter(_ != '\n')
+    val condString = cond.map(_.toString).getOrElse("")
+    val updatesString = initializations
+      .map(updates => updates.map(_.toString).reduceOption((acc, update) => acc + ", " + update).getOrElse(""))
+      .getOrElse("")
+      .filter(_ != '\n')
+    s"for ($initsString; $condString; $updatesString) do\n${body}done\n"
+  }
+
+  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
+    var newState = state.newScopeState
+    val labelPrefix = "L"
+
+    /* Get the label IDs */
+    val conditionID = state.nextID
+    val bodyID = state.nextID
+
+    /* Compile the initialization statements */
+    for (initialization <- initializations.getOrElse(List.empty)) {
+      newState = initialization.compile(newState)
+    }
+
+    /* Branch to the condition and compile the while body with a new scope */
+    instructions ++= List(BRANCH(None, labelPrefix + conditionID), NumberLabel(bodyID))
+    newState = body.compileNewScope(newState)
+
+    /* Compile the update statements */
+    for (update <- updates.getOrElse(List.empty)) {
+      newState = update.compile(newState)
+    }
+
+    instructions += NumberLabel(conditionID)
+    if (cond.isDefined) {
+      /* Compile the condition */
+      val conditionReg = newState.getResultRegister
+      newState = cond.get.compile(newState)
+
+      /* Check if the condition is true */
+      instructions += COMPARE(conditionReg, ImmediateNumber(1))
+
+      /* Mark the condition register as free to use */
+      newState = newState.copy(freeRegs = conditionReg :: newState.freeRegs)
+
+      /* Jump to the body if it is true */
+      instructions += BRANCH(Option(EQ), labelPrefix + bodyID)
+    } else {
+
+      /* Jump unconditionally */
+      instructions += BRANCH(None, labelPrefix + bodyID)
+    }
+
+    /* Reset the state to exclude the variables declared in the for */
+    instructions += ADD(RegisterSP, RegisterSP, ImmediateNumber(newState.declaredSize))
+    newState = newState.fromScopeToInitialState(state)
+    newState
+  }
+
+  override def check(symbolTable: SymbolTable)(implicit errors: ListBuffer[Error]): Unit = {
+    val forOuterSymbolTable = new SymbolTable(symbolTable)
+
+    /* Check the initialization statemtents */
+    initializations.getOrElse(List.empty).foreach(_.check(forOuterSymbolTable))
+
+    /* Check that the condition is a boolean expression */
+    if (cond.isDefined) {
+      val conditionType = cond.get.getType(forOuterSymbolTable)
+      if (conditionType.unifies(BooleanType())) {
+        cond.get.check(forOuterSymbolTable)
+      } else {
+        errors += Error(
+          "For condition does not evaluate to boolean. Got type: " + conditionType.toString +
+            ", in expression: " + cond.get.toString,
+          position
+        )
+      }
+    }
+
+    /* Check the update statements */
+    updates.getOrElse(List.empty).foreach(_.check(forOuterSymbolTable))
+
+    /* Check the body */
+    val forInnerSymbolTable = new SymbolTable(forOuterSymbolTable)
+    body.check(forInnerSymbolTable)
+  }
+
+  /* initializations: Option[List[Initialization]],
+  cond: Option[Expression],
+  updates: Option[List[Assignment]],
+  body: Statement*/
+
+  override def getPos(): (Int, Int) = position
+}
+
 object Statement {
   def apply(action: Parsley[String], expr: Parsley[Expression]): Parsley[Statement] =
     pos <**> (action, expr).map {
@@ -519,6 +630,9 @@ object Statement {
 object Assignment {
   def apply(left: Parsley[AssignmentLeft], right: Parsley[AssignmentRight]): Parsley[Assignment] =
     pos <**> (left, right).map(Assignment(_, _))
+
+  def parsleyList(assignment: Parsley[Assignment], assignments: Parsley[List[Assignment]]): Parsley[List[Assignment]] =
+    (assignment, assignments).map(_ :: _)
 }
 
 object BeginEnd {
@@ -558,6 +672,20 @@ object StatementSequence {
 object While {
   def apply(cond: Parsley[Expression], body: Parsley[Statement]): Parsley[While] =
     pos <**> (cond, body).map(While(_, _))
+}
+
+object For {
+  def apply(
+    initializations: Parsley[Option[List[Initialization]]],
+    cond: Parsley[Option[Expression]],
+    updates: Parsley[Option[List[Assignment]]],
+    body: Parsley[Statement]
+  ): Parsley[For] = pos <**> (initializations, cond, updates, body).map(For(_, _, _, _))
+}
+
+object Initialization {
+  def apply(init: Parsley[Initialization], inits: Parsley[List[Initialization]]): Parsley[List[Initialization]] =
+    (init, inits).map(_ :: _)
 }
 
 object StatementFunctionCall {
