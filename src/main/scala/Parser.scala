@@ -9,14 +9,14 @@ import parsley.implicits.{voidImplicitly => _, _}
 import parsley.{Parsley, combinator}
 
 object Parser {
-  /* 〈program〉::=  ‘begin’〈func〉*〈stat〉‘end’ */
+  /*  <program> ::=  ‘begin’ <func> * <stat> ‘end’ */
   lazy val programParser: Parsley[Program] =
     Program(
       skipWhitespace *> parseKeyword("begin") *> skipWhitespace *> combinator.many(attempt(functionParser)),
       statementParser <* parseKeyword("end") <* skipWhitespace <* eof
     )
       .label("a program")
-  /* 〈func〉::=〈type〉 〈ident〉‘(’〈param-list〉?  ‘)’ ‘is’〈stat〉‘end’ */
+  /*  <func> ::= <type>   <ident> ‘(’ <param-list> ?  ‘)’ ‘is’ <stat> ‘end’ */
   lazy val functionParser: Parsley[wacc.Function] = Function(
     typeParser,
     identifierParser,
@@ -24,26 +24,26 @@ object Parser {
     parseKeyword("is") *> skipWhitespace *> statementParser <* parseKeyword("end") <* skipWhitespace
   )
     .label("a function definition")
-  /* 〈param-list〉::=〈param〉( ‘,’〈param〉)* */
+  /*  <param-list> ::= <param> ( ‘,’ <param> )* */
   lazy val parameterListParser: Parsley[ParameterList] =
     ParameterList(parameterParser, combinator.many(',' *> skipWhitespace *> parameterParser))
       .label("a parameter list")
-  /* 〈param〉::=〈type〉 〈ident〉 */
+  /*  <param> ::= <type>   <ident>  */
   lazy val parameterParser: Parsley[Parameter] =
     Parameter(typeParser, identifierParser).label("a parameter")
-  /* 〈stat〉::=  ‘skip’
-               | 〈type〉 〈ident〉‘=’〈assign-rhs〉
-               | 〈assign-lhs〉‘=’〈assign-rhs〉
-               | ‘read’〈assign-lhs〉
-               | ‘free’〈expr〉
-               | ‘return’〈expr〉
-               | ‘exit’〈expr〉
-               | ‘print’〈expr〉
-               | ‘println’〈expr〉
-               | ’if’〈expr〉‘then’〈stat〉‘else’〈stat〉‘fi’
-               | ‘while’〈expr〉‘do’〈stat〉‘done’
-               | ‘begin’〈stat〉‘end’
-               | 〈stat〉‘;’〈stat〉*/
+  /*  <stat> ::=  ‘skip’
+               |  <type>   <ident> ‘=’ <assign-rhs>
+               |  <assign-lhs> ‘=’ <assign-rhs>
+               | ‘read’ <assign-lhs>
+               | ‘free’ <expr>
+               | ‘return’ <expr>
+               | ‘exit’ <expr>
+               | ‘print’ <expr>
+               | ‘println’ <expr>
+               | ’if’ <expr> ‘then’ <stat> ‘else’ <stat> ‘fi’
+               | ‘while’ <expr> ‘do’ <stat> ‘done’
+               | ‘begin’ <stat> ‘end’
+               |  <stat> ‘;’ <stat> */
   lazy val statementParser: Parsley[Statement] = precedence[Statement](
     (SkipStatement(parseKeyword("skip")) <* skipWhitespace)
       <\> IdentifierDeclaration(typeParser, identifierParser, "=" *> skipWhitespace *> assignmentRightParser)
@@ -74,17 +74,17 @@ object Parser {
       (";" <* skipWhitespace) #> ((st1: Statement, st2: Statement) => StatementSequence(st1, st2)(st1.getPos()))
     )
   ) <* skipWhitespace
-  /* 〈assign-lhs〉::=〈ident〉
-                   | 〈array-elem〉
-                   | 〈pair-elem〉*/
+  /*  <assign-lhs> ::= <ident>
+                   |  <array-elem>
+                   |  <pair-elem> */
   lazy val assignmentLeftParser: Parsley[AssignmentLeft] =
     ((pairElementParser <\> arrayElementParser <\> identifierParser) <* skipWhitespace)
       .label("a left assignment")
-  /* 〈assign-rhs〉::=〈expr〉
-                   | 〈array-liter〉
-                   | ‘newpair’ ‘(’〈expr〉‘,’〈expr〉‘)’
-                   | 〈pair-elem〉
-                   | ‘call’〈ident〉‘(’〈arg-list〉?  ‘)’ */
+  /*  <assign-rhs> ::= <expr>
+                   |  <array-liter>
+                   | ‘newpair’ ‘(’ <expr> ‘,’ <expr> ‘)’
+                   |  <pair-elem>
+                   | ‘call’ <ident> ‘(’ <arg-list> ?  ‘)’ */
   lazy val assignmentRightParser: Parsley[AssignmentRight] =
     (newpairParser <\> functionCallParser <\> pairElementParser <\> expressionParser <\> arrayLiterParser) <* skipWhitespace
   lazy val newpairParser: Parsley[NewPair] =
@@ -99,23 +99,27 @@ object Parser {
       '(' *> skipWhitespace *> option(argumentListParser) <* ')'
     )
       .label("a function call")
-  /*〈arg-list〉::=〈expr〉(‘,’〈expr〉)* */
+  /* <arg-list> ::= <expr> (‘,’ <expr> )* */
   lazy val argumentListParser: Parsley[ArgumentList] =
     ArgumentList(expressionParser, combinator.many(',' *> skipWhitespace *> expressionParser))
       .label("an argument list")
-  /* 〈pair-elem〉::= ‘fst’〈expr〉
-                    |‘snd’〈expr〉 */
+  /*  <pair-elem> ::= ‘fst’ <expr>
+                    |‘snd’ <expr>  */
   lazy val pairElementParser: Parsley[PairElement] =
     (PairElement(parseKeyword("fst") *> skipWhitespace *> expressionParser, isFirst = true) <\>
       PairElement(parseKeyword("snd") *> skipWhitespace *> expressionParser, isFirst = false)).label("a pair element")
-  /* 〈type〉::=〈base-type〉
-             | 〈array-type〉
-             | 〈pair-type〉 */
+  /*  <type> ::= <base-type>
+             |  <array-type>
+             |  <pair-type>
+             |  <func-type> */
   lazy val typeParser: Parsley[Type] =
-    (precedence[Type](voidTypeParser <\> pairTypeParser <\> baseTypeParser, Ops(Postfix)("[]" #> toArrayType)) <* skipWhitespace)
+    (precedence[Type](
+      voidTypeParser <\> pairTypeParser <\> baseTypeParser,
+      Ops(Postfix)("[]" #> toArrayType)
+    ) <* skipWhitespace)
       .label("a type")
   lazy val toArrayType: Type => ArrayType = ArrayType(_)
-  /* 〈base-type〉::= ‘int’
+  /*  <base-type> ::= ‘int’
                    | ‘bool’
                    | ‘char’
                    | ‘string’ */
@@ -124,20 +128,20 @@ object Parser {
       .label("a void type")
   lazy val baseTypeParser: Parsley[BaseType] =
     (BaseType(attemptChoice(BaseType.types.map(parseKeyword(_)): _*)) <* skipWhitespace).label("a base type")
-  /*〈array-type〉::=〈type〉‘[’ ‘]’ */
+  /* <array-type> ::= <type> ‘[’ ‘]’ */
   lazy val arrayTypeParser: Parsley[ArrayType] =
     (lookAhead(attemptChoice(baseTypeParser, pairTypeParser) *> "[") *> typeParser)
       .map(_.asInstanceOf[ArrayType]) <* skipWhitespace
       .label("an array type")
-  /*〈pair-type〉::=  ‘pair’ ‘(’〈pair-elem-type〉‘,’〈pair-elem-type〉‘)’ */
+  /* <pair-type> ::=  ‘pair’ ‘(’ <pair-elem-type> ‘,’ <pair-elem-type> ‘)’ */
   lazy val pairTypeParser: Parsley[PairType] =
     (PairType(
       parseKeyword("pair") *> skipWhitespace *> "(" *> skipWhitespace *> pairElementTypeParser,
       "," *> skipWhitespace *> pairElementTypeParser <* ")"
     ) <* skipWhitespace).label("a pair type")
-  /* 〈pair-elem-type〉::=〈base-type〉
+  /*  <pair-elem-type> ::= <base-type>
                        | ‘pair’
-                       | 〈array-type〉 */
+                       |  <array-type>  */
   lazy val pairElementTypeParser: Parsley[PairElementType] =
     ((PairDefault(parseKeyword("pair")) <\> arrayTypeParser <\> baseTypeParser) <* skipWhitespace)
       .label("a pair element type")
@@ -178,16 +182,16 @@ object Parser {
     Ops(InfixL)(("||".label("a binary operator") <* skipWhitespace) #> binaryFunctionGenerator("||"))
   ) <* skipWhitespace).label("an expression")
 
-  /*〈expr〉::=〈int-liter〉
-            | 〈bool-liter〉
-            | 〈char-liter〉
-            | 〈str-liter〉
-            | 〈pair-liter〉
-            | 〈ident〉
-            | 〈array-elem〉
-            | 〈unary-oper〉 〈expr〉
-            | 〈expr〉 〈binary-oper〉 〈expr〉
-            | ‘(’〈expr〉‘)’ */
+  /* <expr> ::= <int-liter>
+            |  <bool-liter>
+            |  <char-liter>
+            |  <str-liter>
+            |  <pair-liter>
+            |  <ident>
+            |  <array-elem>
+            |  <unary-oper>   <expr>
+            |  <expr>   <binary-oper>   <expr>
+            | ‘(’ <expr> ‘)’ */
   lazy val unaryFunctionGenerator: String => Expression => Expression =
     (operator: String) =>
       (expr: Expression) => {
@@ -205,7 +209,7 @@ object Parser {
     (operator: String) =>
       (expr1: Expression, expr2: Expression) =>
         BinaryOperatorApplication(expr1, BinaryOperator(operator), expr2)(expr1.getPos())
-  /* 〈unary-oper〉::= ‘!’
+  /*  <unary-oper> ::= ‘!’
                     | ‘-’
                     | ‘len’
                     | ‘ord’
@@ -213,7 +217,7 @@ object Parser {
   lazy val unaryOperatorParser: Parsley[UnaryOperator] =
     UnaryOperator(attemptChoice(UnaryOperator.operators.map(attempt(_)): _*))
       .label("an unary operator")
-  /*〈binary-oper〉::= ‘*’
+  /* <binary-oper> ::= ‘*’
                     | ‘/’
                     | ‘%’
                     | ‘+’
@@ -229,7 +233,7 @@ object Parser {
   lazy val binaryOperatorParser: Parsley[BinaryOperator] =
     BinaryOperator(attemptChoice(BinaryOperator.operators.map(attempt(_)): _*) <* skipWhitespace)
       .label("a binary operator")
-  /*〈ident〉::=  ( ‘’|‘a’-‘z’|‘A’-‘Z’ ) ( ‘’|‘a’-‘z’|‘A’-‘Z’|‘0’-‘9’ )* */
+  /* <ident> ::=  ( ‘’|‘a’-‘z’|‘A’-‘Z’ ) ( ‘’|‘a’-‘z’|‘A’-‘Z’|‘0’-‘9’ )* */
   lazy val identifierParser: Parsley[Identifier] =
     Identifier(
       attemptChoice(keywords.map(attempt(_)): _*),
@@ -241,39 +245,39 @@ object Parser {
       combinator.many('_' <\> alphaNum) <* skipWhitespace
     )
       .label("an identifier")
-  /*〈array-elem〉::=〈ident〉(‘[’〈expr〉‘]’)+ */
+  /* <array-elem> ::= <ident> (‘[’ <expr> ‘]’)+ */
   lazy val arrayElementParser: Parsley[ArrayElement] =
     ArrayElement(identifierParser, manyN(1, "[" *> skipWhitespace *> expressionParser <* "]") <* skipWhitespace)
       .label("an array element")
-  /* 〈int-liter〉::=〈int-sign〉?〈digit〉+ */
+  /*  <int-liter> ::= <int-sign> ? <digit> + */
   lazy val integerLiterParser: Parsley[IntegerLiter] =
     IntegerLiter(option(integerSignParser), manyN(1, digitParser) <* skipWhitespace)
       .label("an integer")
-  /*〈digit〉::=  (‘0’-‘9’) */
+  /* <digit> ::=  (‘0’-‘9’) */
   lazy val digitParser: Parsley[Digit] =
     Digit(satisfy(Digit.digits.contains(_))).label("a digit")
-  /*〈int-sign〉::=  ‘+’|‘-’ */
+  /* <int-sign> ::=  ‘+’|‘-’ */
   lazy val integerSignParser: Parsley[IntegerSign] =
     IntegerSign('+' <\> '-')
-  /*〈bool-liter〉::=  ‘true’|‘false’ */
+  /* <bool-liter> ::=  ‘true’|‘false’ */
   lazy val booleanLiterParser: Parsley[BooleanLiter] =
     BooleanLiter((parseKeyword("true") <\> parseKeyword("false")) <* skipWhitespace)
       .label("a boolean")
-  /*〈char-liter〉::=  ‘'’〈character〉‘'’ */
+  /* <char-liter> ::=  ‘'’ <character> ‘'’ */
   lazy val characterLiterParser: Parsley[CharacterLiter] =
     CharacterLiter("\'" *> defaultCharacterParser <* "\'" <* skipWhitespace)
       .label("a character literal")
-  /*〈str-liter〉::=  ‘"’〈character〉* ‘"’ */
+  /* <str-liter> ::=  ‘"’ <character> * ‘"’ */
   lazy val stringLiterParser: Parsley[StringLiter] =
     StringLiter("\"" *> combinator.many(defaultCharacterParser) <* "\"" <* skipWhitespace)
       .label("a string literal")
-  /*〈character〉::= any-ASCII-character-except-‘\’-‘'’-‘"’
-                  | ‘\’〈escaped-char〉*/
+  /* <character> ::= any-ASCII-character-except-‘\’-‘'’-‘"’
+                  | ‘\’ <escaped-char> */
   lazy val defaultCharacterParser: Parsley[DefaultCharacter] =
     DefaultCharacter(noneOf('\\', '\'', '\"'), isEscaped = false)
       .label("a character different than \\, \' and \"") <\>
       DefaultCharacter(('\\' *> escapedCharParser).map(esc => esc.char), isEscaped = true)
-  /*〈escaped-char〉::= ‘0’
+  /* <escaped-char> ::= ‘0’
                      | ‘b’
                      | ‘t’
                      | ‘n’
@@ -285,17 +289,17 @@ object Parser {
   lazy val escapedCharParser: Parsley[EscapedCharacter] =
     EscapedCharacter(satisfy(EscapedCharacter.escapableCharacters.contains(_)))
       .label("an escapable character")
-  /*〈array-liter〉::= ‘[’ (〈expr〉(‘,’〈expr〉)* )?  ‘]’ */
+  /* <array-liter> ::= ‘[’ ( <expr> (‘,’ <expr> )* )?  ‘]’ */
   lazy val arrayLiterParser: Parsley[ArrayLiter] = ArrayLiter(
     "[" *> skipWhitespace *> option(
       expressionParser <~> combinator.many("," *> skipWhitespace *> expressionParser)
     ) <* "]" <* skipWhitespace
   )
     .label("an array literal")
-  /*〈pair-liter〉::=  ‘null’ */
+  /* <pair-liter> ::=  ‘null’ */
   lazy val pairLiterParser: Parsley[PairLiter] =
     PairLiter(parseKeyword("null") <* skipWhitespace).label("null")
-  /* 〈comment〉::=  ‘#’ (any-character-except-EOL)*〈EOL〉 */
+  /*  <comment> ::=  ‘#’ (any-character-except-EOL)* <EOL>  */
   lazy val commentParser: Parsley[Comment] =
     Comment('#' *> combinator.manyUntil(anyChar, "\n")).hide
   lazy val skipWhitespace: Parsley[Unit] =
