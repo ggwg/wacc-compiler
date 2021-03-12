@@ -134,8 +134,6 @@ case class FunctionCall(name: Identifier, arguments: Option[ArgumentList])(posit
     }
 
     /* For overloaded functions, get the name of the label to be branched to first: */
-    println(name.identifier)
-    println(thisFunctionType)
     val functionLabel = newState.getFunctionLabel(name.identifier, thisFunctionType)
     /* Jump to the function, reset the stack pointer, and move the result */
     instructions ++= List(
@@ -184,7 +182,18 @@ case class FunctionCall(name: Identifier, arguments: Option[ArgumentList])(posit
     symbolTable.lookupAllFunction(name.identifier, calledFunctionType) match {
       case FunctionType(returnType, _) =>
         returnType
-      case _ => NotAType()
+      case _ =>
+        /* If the function was not found in the function table, then check again to see if it is in the
+           regular symbol table (as a function type)
+         */
+        symbolTable.lookupAll(name.identifier) match {
+          case Some(value) =>
+            value._1 match {
+              case FunctionType(returnType, _) => returnType
+              case _ => NotAType()
+            }
+          case None => NotAType()
+        }
     }
   }
 }

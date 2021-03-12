@@ -74,7 +74,7 @@ case class ArrayType(arrayType: Type) extends Type with PairElementType {
 
 /* Error type. This type represents errors caught during the semantic analysis. */
 case class NotAType() extends PairElementType {
-  override def toString: String = "void"
+  override def toString: String = "NOT A TYPE"
   override def unifies(otherType: Type): Boolean = false
 }
 
