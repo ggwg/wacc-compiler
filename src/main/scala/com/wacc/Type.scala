@@ -144,7 +144,6 @@ object VoidType {
   def apply(string: Parsley[String]): Parsley[VoidType] = string.map(_ => VoidType())
 }
 
-
 object PairDefault {
   def apply(string: Parsley[String]): Parsley[PairDefault] = string.map(_ => PairDefault())
 }
@@ -156,4 +155,9 @@ object PairType {
 
 object ArrayType {
   def apply(arrayType: Parsley[Type]): Parsley[ArrayType] = arrayType.map(ArrayType(_))
+}
+
+object FunctionType {
+  def apply(ret: Parsley[Type], params: Parsley[Option[List[Type]]]): Parsley[FunctionType] =
+    (ret, params).map(FunctionType(_, _))
 }

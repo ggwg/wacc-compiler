@@ -114,7 +114,7 @@ object Parser {
              |  <func-type> */
   lazy val typeParser: Parsley[Type] =
     (precedence[Type](
-      voidTypeParser <\> pairTypeParser <\> baseTypeParser,
+      voidTypeParser <\> pairTypeParser <\> baseTypeParser <\> functionTypeParser,
       Ops(Postfix)("[]" #> toArrayType)
     ) <* skipWhitespace)
       .label("a type")
@@ -133,6 +133,12 @@ object Parser {
     (lookAhead(attemptChoice(baseTypeParser, pairTypeParser) *> "[") *> typeParser)
       .map(_.asInstanceOf[ArrayType]) <* skipWhitespace
       .label("an array type")
+  /* <func-type> ::= 'func' '(' <type>, <type>* ')' */
+  lazy val functionTypeParser: Parsley[FunctionType] = (FunctionType(
+    parseKeyword("func") *> skipWhitespace *> "(" *> typeParser,
+    option[List[Type]](combinator.many("," *> skipWhitespace *> typeParser)) <* ")"
+  ) <* skipWhitespace).label("a function type")
+
   /* <pair-type> ::=  ‘pair’ ‘(’ <pair-elem-type> ‘,’ <pair-elem-type> ‘)’ */
   lazy val pairTypeParser: Parsley[PairType] =
     (PairType(
