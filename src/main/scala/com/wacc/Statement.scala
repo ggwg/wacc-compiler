@@ -1,7 +1,7 @@
 package com.wacc
 
 import parsley.Parsley
-import parsley.Parsley.{label, pos, select}
+import parsley.Parsley.pos
 import parsley.implicits.{voidImplicitly => _, _}
 
 import scala.collection.mutable
@@ -33,10 +33,12 @@ sealed trait Statement extends ASTNodeVoid {
     scopeState.fromScopeToInitialState(state)
   }
 }
+sealed trait Initialization
 
 case class IdentifierDeclaration(identType: Type, name: Identifier, assignmentRight: AssignmentRight)(
   position: (Int, Int)
-) extends Statement {
+) extends Statement
+    with Initialization {
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     /* Compile the right hand side */
     val resultReg = state.getResultRegister
@@ -96,7 +98,8 @@ case class IdentifierDeclaration(identType: Type, name: Identifier, assignmentRi
 }
 
 case class Assignment(assignmentLeft: AssignmentLeft, assignmentRight: AssignmentRight)(position: (Int, Int))
-    extends Statement {
+    extends Statement
+    with Initialization {
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     /* Compile the pointer of the thing that will be assigned */
     val assignmentRegister = state.getResultRegister
@@ -196,12 +199,14 @@ case class Free(expression: Expression)(position: (Int, Int)) extends Statement 
         /* Free the array memory */
         newState = newState.putMessageIfAbsent(FreeNullArrayError.errorMessage)
         instructions += BRANCHLINK(FreeNullArrayError.label)
-        newState = newState.copy(p_free_array = true, p_throw_runtime_error = true, freeRegs = resultReg :: newState.freeRegs)
+        newState =
+          newState.copy(p_free_array = true, p_throw_runtime_error = true, freeRegs = resultReg :: newState.freeRegs)
       case PairType(_, _) =>
         /* Free the pair memory */
         newState = newState.putMessageIfAbsent(FreeNullPairError.errorMessage)
         instructions += BRANCHLINK(FreeNullPairError.label)
-        newState = newState.copy(p_free_pair = true, p_throw_runtime_error = true, freeRegs = resultReg :: newState.freeRegs)
+        newState =
+          newState.copy(p_free_pair = true, p_throw_runtime_error = true, freeRegs = resultReg :: newState.freeRegs)
     }
     newState
   }
@@ -492,6 +497,14 @@ case class While(condition: Expression, statement: Statement)(position: (Int, In
   override def getPos(): (Int, Int) = position
 }
 
+case class For(
+  initializations: Option[List[Initialization]],
+  cond: Option[Expression],
+  updates: Option[List[Assignment]],
+  body: Statement
+)(position: (Int, Int))
+    extends Statement
+
 object Statement {
   def apply(action: Parsley[String], expr: Parsley[Expression]): Parsley[Statement] =
     pos <**> (action, expr).map {
@@ -506,6 +519,9 @@ object Statement {
 object Assignment {
   def apply(left: Parsley[AssignmentLeft], right: Parsley[AssignmentRight]): Parsley[Assignment] =
     pos <**> (left, right).map(Assignment(_, _))
+
+  def parsleyList(assignment: Parsley[Assignment], assignments: Parsley[List[Assignment]]): Parsley[List[Assignment]] =
+    (assignment, assignments).map(_ :: _)
 }
 
 object BeginEnd {
@@ -545,4 +561,18 @@ object StatementSequence {
 object While {
   def apply(cond: Parsley[Expression], body: Parsley[Statement]): Parsley[While] =
     pos <**> (cond, body).map(While(_, _))
+}
+
+object For {
+  def apply(
+    initializations: Parsley[Option[List[Initialization]]],
+    cond: Parsley[Option[Expression]],
+    updates: Parsley[Option[List[Assignment]]],
+    body: Parsley[Statement]
+  ): Parsley[For] = pos <**> (initializations, cond, updates, body).map(For(_, _, _, _))
+}
+
+object Initialization {
+  def apply(init: Parsley[Initialization], inits: Parsley[List[Initialization]]): Parsley[List[Initialization]] =
+    (init, inits).map(_ :: _)
 }
