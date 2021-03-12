@@ -503,7 +503,20 @@ case class For(
   updates: Option[List[Assignment]],
   body: Statement
 )(position: (Int, Int))
-    extends Statement
+    extends Statement {
+  override def toString: String = {
+    val initsString = initializations
+      .map(inits => inits.map(_.toString).reduceOption((acc, init) => acc + ", " + init).getOrElse(""))
+      .getOrElse("")
+      .filter(_ != '\n')
+    val condString = cond.map(_.toString).getOrElse("")
+    val updatesString = initializations
+      .map(updates => updates.map(_.toString).reduceOption((acc, update) => acc + ", " + update).getOrElse(""))
+      .getOrElse("")
+      .filter(_ != '\n')
+    s"for ($initsString; $condString; $updatesString) do\n${body}done\n"
+  }
+}
 
 object Statement {
   def apply(action: Parsley[String], expr: Parsley[Expression]): Parsley[Statement] =
