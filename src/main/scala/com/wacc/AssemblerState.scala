@@ -32,7 +32,10 @@ case class AssemblerState(
   p_free_pair: Boolean,
   p_check_null_pointer: Boolean,
   p_check_array_bounds: Boolean,
-  p_free_array: Boolean
+  p_free_array: Boolean,
+  /* The labels that we will use when we reach a continue or break statement */
+  breakLabel: String,
+  continueLabel: String
 ) {
   /* Returns the register in which an expression's result will be stored */
   def getResultRegister: Register = freeRegs.head
@@ -138,7 +141,13 @@ case class AssemblerState(
      adjusts some fields of the scope state to match its parent state. The newly
      returned state can be used to continue to assemble code. */
   def fromScopeToInitialState(state: AssemblerState): AssemblerState =
-    this.copy(spOffset = state.spOffset, varDic = state.varDic, declaredSize = state.declaredSize)
+    this.copy(
+      spOffset = state.spOffset,
+      varDic = state.varDic,
+      declaredSize = state.declaredSize,
+      breakLabel = state.breakLabel,
+      continueLabel = state.continueLabel
+    )
 }
 
 object AssemblerState {
@@ -157,6 +166,8 @@ object AssemblerState {
       p_free_pair = false,
       p_check_null_pointer = false,
       p_check_array_bounds = false,
-      p_free_array = false
+      p_free_array = false,
+      breakLabel = "",
+      continueLabel = ""
     )
 }
