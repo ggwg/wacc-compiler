@@ -180,10 +180,6 @@ object Parser {
       <\> attempt(pairLiterParser)
       <\> attempt(arrayElementParser)
       <\> attempt(identifierParser),
-    Ops(Postfix)(
-      attempt(("++".label("an unary operator") <* skipWhitespace) #> incDecFunctionGenerator(false, true)),
-      attempt(("--".label("an unary operator") <* skipWhitespace) #> incDecFunctionGenerator(false, false))
-    ),
     Ops(Prefix)(
       attempt(("++".label("an unary operator") <* skipWhitespace) #> incDecFunctionGenerator(true, true)),
       attempt(("--".label("an unary operator") <* skipWhitespace) #> incDecFunctionGenerator(true, false)),
