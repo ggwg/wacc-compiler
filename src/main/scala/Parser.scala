@@ -48,7 +48,7 @@ object Parser {
   lazy val statementParser: Parsley[Statement] = precedence[Statement](
     (SkipStatement(parseKeyword("skip")) <* skipWhitespace)
       <\> (Break(parseKeyword("break")) <* skipWhitespace)
-      <\> (Continue(parseKeyword("continue")) <* skipWhitespace)
+      <\> (ContinueLoop(parseKeyword("continueloop")) <* skipWhitespace)
       <\> identifierDeclarationParser
       <\> assignmentParser
       <\> Read(parseKeyword("read") *> skipWhitespace *> assignmentLeftParser)
@@ -380,6 +380,6 @@ object Parser {
     "true",
     "false",
     "break",
-    "continue"
+    "continueloop"
   )
 }

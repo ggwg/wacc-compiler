@@ -646,11 +646,11 @@ case class Break()(position: (Int, Int)) extends Statement {
   override def getPos(): (Int, Int) = position
 }
 
-case class Continue()(position: (Int, Int)) extends Statement {
-  override def toString: String = "continue\n"
+case class ContinueLoop()(position: (Int, Int)) extends Statement {
+  override def toString: String = "continueloop\n"
   override def check(symbolTable: SymbolTable)(implicit errors: ListBuffer[Error]): Unit = {
     if (!symbolTable.inLoop) {
-      errors += Error("Break statement found outside a loop", getPos())
+      errors += Error("Continue statement found outside a loop", getPos())
     }
   }
 
@@ -714,8 +714,8 @@ object Break {
   def apply(break: Parsley[String]): Parsley[Break] = pos <**> break.map(_ => Break())
 }
 
-object Continue {
-  def apply(continue: Parsley[String]): Parsley[Continue] = pos <**> continue.map(_ => Continue())
+object ContinueLoop {
+  def apply(continue: Parsley[String]): Parsley[ContinueLoop] = pos <**> continue.map(_ => ContinueLoop())
 }
 
 object StatementSequence {
