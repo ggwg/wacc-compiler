@@ -180,11 +180,15 @@ object Parser {
       <\> attempt(pairLiterParser)
       <\> attempt(arrayElementParser)
       <\> attempt(identifierParser),
+    Ops(Postfix)(
+      attempt(("++".label("an unary operator") <* skipWhitespace) #> incDecFunctionGenerator(false, true)),
+      attempt(("--".label("an unary operator") <* skipWhitespace) #> incDecFunctionGenerator(false, false))
+    ),
     Ops(Prefix)(
+      attempt(("++".label("an unary operator") <* skipWhitespace) #> incDecFunctionGenerator(true, true)),
+      attempt(("--".label("an unary operator") <* skipWhitespace) #> incDecFunctionGenerator(true, false)),
       attempt(("!".label("an unary operator") <* skipWhitespace) #> unaryFunctionGenerator("!")),
       attempt(("-".label("an unary operator") <* skipWhitespace) #> unaryFunctionGenerator("-")),
-      attempt(("++".label("an unary operator") <* skipWhitespace) #> unaryFunctionGenerator("++")),
-      attempt(("--".label("an unary operator") <* skipWhitespace) #> unaryFunctionGenerator("--")),
       attempt((parseKeyword("len").label("an unary operator") <* skipWhitespace) #> unaryFunctionGenerator("len")),
       attempt((parseKeyword("ord").label("an unary operator") <* skipWhitespace) #> unaryFunctionGenerator("ord")),
       attempt((parseKeyword("chr").label("an unary operator") <* skipWhitespace) #> unaryFunctionGenerator("chr"))
@@ -241,6 +245,9 @@ object Parser {
             case _ => UnaryOperatorApplication(UnaryOperator(operator), expr)(expr.getPos())
           }
       }
+  lazy val incDecFunctionGenerator: (Boolean, Boolean) => Expression => Expression =
+    (isPrefix: Boolean, isIncrement: Boolean) =>
+      (expr: Expression) => IncDec(isPrefix, isIncrement, expr)(expr.getPos())
 
   lazy val binaryFunctionGenerator: String => (Expression, Expression) => BinaryOperatorApplication =
     (operator: String) =>

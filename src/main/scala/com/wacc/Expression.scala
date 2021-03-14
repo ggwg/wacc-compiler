@@ -28,6 +28,68 @@ sealed trait AssignmentLeft extends ASTNodeVoid {
   def getLeftType: Type
 }
 
+case class IncDec(isPrefix: Boolean, isIncrement: Boolean, operand: Expression)(position: (Int, Int))
+    extends Expression {
+  val operator: String = if (isIncrement) "++" else "--"
+
+  override def toString: String = {
+    if (isPrefix) operator.toString + operand.toString else operand.toString + operator.toString
+  }
+
+  override def check(symbolTable: SymbolTable)(implicit errors: ListBuffer[Error]): Unit = {
+    val operandType = operand.getType(symbolTable)
+
+    if (!operandType.unifies(IntType())) {
+      errors += UnaryOperatorError.expectation(operator, "int", operandType.toString, operand.getPos())
+      return
+    }
+    if (!operand.isInstanceOf[AssignmentLeft]) {
+      errors += Error(
+        "Expression can not be assigned to; It must be an identifier or an array element access",
+        position
+      )
+      return
+    }
+    operand.check(symbolTable)
+  }
+
+  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
+    /* Evaluate the expression and store it in the first available register */
+    val resultReg = state.getResultRegister
+    val helperReg = state.getHelperRegister
+    var newState = state
+
+    /* Apply the unary operation */
+    val diff = if (isIncrement) 1 else -1
+    val variable = operand.asInstanceOf[AssignmentLeft]
+    val isByte = variable.getLeftType.getSize == 1
+
+    /* Put in result register the reference to the variable */
+    newState = variable.compileReference(newState)
+
+    /* Put in helper register the actual value of the variable */
+    instructions += LOAD(helperReg, RegisterLoad(resultReg), isByte)
+
+    /* Perform the operation */
+    newState = newState.putMessageIfAbsent(OverflowError.errorMessage)
+    instructions ++= List(ADDS(helperReg, helperReg, ImmediateNumber(diff)), BLVS(OverflowError.label))
+    newState = newState.copy(p_throw_overflow_error = true, p_throw_runtime_error = true)
+
+    /* Store back the result */
+    instructions += STORE(helperReg, RegisterLoad(resultReg), isByte = isByte)
+    if (isPrefix) {
+      instructions += SUBS(helperReg, helperReg, ImmediateNumber(diff))
+    }
+    instructions += MOVE(resultReg, helperReg)
+
+    newState
+  }
+
+  override def getPos(): (Int, Int) = position
+  override def getType(symbolTable: SymbolTable): Type = IntType()
+  override def getExpressionType: Type = IntType()
+}
+
 /* Class representing an unary operation (e.g. chr 101) */
 case class UnaryOperatorApplication(operator: UnaryOperator, operand: Expression)(position: (Int, Int))
     extends Expression {
@@ -1009,4 +1071,9 @@ object PairElement {
 object ArgumentList {
   def apply(expression: Parsley[Expression], expressions: Parsley[List[Expression]]): Parsley[ArgumentList] =
     (expression, expressions).map((e, es) => ArgumentList(e :: es))
+}
+
+object IncDec {
+  def apply(isPrefix: Boolean, isIncrement: Boolean, expression: Parsley[Expression]): Parsley[IncDec] =
+    pos <**> expression.map(IncDec(isPrefix, isIncrement, _))
 }
