@@ -287,7 +287,7 @@ object Parser {
   lazy val integerLiterParser: Parsley[IntegerLiter] =
     IntegerLiter(
       option(integerSignParser),
-      option("0" *> oneOf('b', 'o', 'd', 'x')),
+      option(attempt("0" *> oneOf('b', 'o', 'd', 'x'))),
       manyN(1, digitParser) <* skipWhitespace
     )
       .label("an integer")
