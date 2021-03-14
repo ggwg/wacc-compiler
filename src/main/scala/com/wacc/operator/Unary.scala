@@ -21,9 +21,15 @@ case class Not() extends UnaryOperator {
 case class Ord() extends UnaryOperator {
   override def toString: String = "ord "
 }
+case class PrefixInc() extends UnaryOperator {
+  override def toString: String = "++"
+}
+case class PrefixDec() extends UnaryOperator {
+  override def toString: String = "--"
+}
 
 object UnaryOperator {
-  val operators = List("!", "-", "len", "ord", "chr")
+  val operators = List("!", "-", "len", "ord", "chr", "++", "--")
 
   def apply(operator: String): UnaryOperator = operator match {
     case "!"   => Not()
@@ -31,6 +37,8 @@ object UnaryOperator {
     case "len" => Length()
     case "ord" => Ord()
     case "chr" => Chr()
+    case "++"  => PrefixInc()
+    case "--"  => PrefixDec()
   }
 
   def apply(operator: Parsley[String]): Parsley[UnaryOperator] =

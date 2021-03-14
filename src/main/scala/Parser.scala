@@ -183,6 +183,8 @@ object Parser {
     Ops(Prefix)(
       attempt(("!".label("an unary operator") <* skipWhitespace) #> unaryFunctionGenerator("!")),
       attempt(("-".label("an unary operator") <* skipWhitespace) #> unaryFunctionGenerator("-")),
+      attempt(("++".label("an unary operator") <* skipWhitespace) #> unaryFunctionGenerator("++")),
+      attempt(("--".label("an unary operator") <* skipWhitespace) #> unaryFunctionGenerator("--")),
       attempt((parseKeyword("len").label("an unary operator") <* skipWhitespace) #> unaryFunctionGenerator("len")),
       attempt((parseKeyword("ord").label("an unary operator") <* skipWhitespace) #> unaryFunctionGenerator("ord")),
       attempt((parseKeyword("chr").label("an unary operator") <* skipWhitespace) #> unaryFunctionGenerator("chr"))
@@ -225,7 +227,8 @@ object Parser {
             | 〈array-elem〉
             | 〈unary-oper〉 〈expr〉
             | 〈expr〉 〈binary-oper〉 〈expr〉
-            | ‘(’〈expr〉‘)’ */
+            | ‘(’〈expr〉‘)’
+            | {++/--} <expr> {++/--} */
   lazy val unaryFunctionGenerator: String => Expression => Expression =
     (operator: String) =>
       (expr: Expression) => {

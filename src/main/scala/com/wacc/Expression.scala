@@ -37,22 +37,48 @@ case class UnaryOperatorApplication(operator: UnaryOperator, operand: Expression
     /* Evaluate the expression and store it in the first available register */
     val resultReg = state.getResultRegister
     val helperReg = state.getHelperRegister
-    var nextState = operand.compile(state)
+    var newState = state
 
     /* Apply the unary operation */
     operator match {
       case Length() =>
+        newState = operand.compile(newState)
         instructions += LOAD(resultReg, RegisterLoad(resultReg))
       case Negate() =>
-        nextState = nextState.putMessageIfAbsent(OverflowError.errorMessage)
+        newState = operand.compile(newState)
+        newState = newState.putMessageIfAbsent(OverflowError.errorMessage)
         instructions ++= List(ReverseSUBS(resultReg, resultReg, ImmediateNumber(0)), BLVS(OverflowError.label))
-        nextState = nextState.copy(p_throw_overflow_error = true, p_throw_runtime_error = true)
+        newState = newState.copy(p_throw_overflow_error = true, p_throw_runtime_error = true)
       case Not() =>
+        newState = operand.compile(newState)
         instructions += XOR(resultReg, resultReg, ImmediateNumber(1))
+      case PrefixInc() | PrefixDec() =>
+        val diff = operator match {
+          case PrefixInc() => 1
+          case PrefixDec() => -1
+        }
+        val variable = operand.asInstanceOf[AssignmentLeft]
+        val isByte = variable.getLeftType.getSize == 1
+
+        /* Put in result register the reference to the variable */
+        newState = variable.compileReference(newState)
+
+        /* Put in helper register the actual value of the variable */
+        instructions += LOAD(helperReg, RegisterLoad(resultReg), isByte)
+
+        /* Perform the operation */
+        newState = newState.putMessageIfAbsent(OverflowError.errorMessage)
+        instructions ++= List(ADDS(helperReg, helperReg, ImmediateNumber(diff)), BLVS(OverflowError.label))
+        newState = newState.copy(p_throw_overflow_error = true, p_throw_runtime_error = true)
+
+        /* Store back the result */
+        instructions += STORE(helperReg, RegisterLoad(resultReg), isByte = isByte)
+        instructions += SUBS(helperReg, helperReg, ImmediateNumber(diff))
+        instructions += MOVE(resultReg, helperReg)
       case _ => ()
     }
 
-    nextState
+    newState
   }
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
@@ -92,6 +118,18 @@ case class UnaryOperatorApplication(operator: UnaryOperator, operand: Expression
           case _ =>
             errors += UnaryOperatorError.expectation("length", "array", operandType.toString, operand.getPos())
             return
+        }
+      case PrefixInc() | PrefixDec() =>
+        if (!operandType.unifies(IntType())) {
+          errors += UnaryOperatorError.expectation(operator.toString, "int", operandType.toString, operand.getPos())
+          return
+        }
+        if (!operand.isInstanceOf[AssignmentLeft]) {
+          errors += Error(
+            "Expression can not be assigned to; It must be an identifier or an array element access",
+            position
+          )
+          return
         }
     }
 
