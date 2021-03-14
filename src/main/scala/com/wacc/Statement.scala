@@ -22,6 +22,9 @@ sealed trait Statement extends ASTNodeVoid {
     }
   }
 
+  /* Returns a new statement in which all nodes that were impossible to be reached were removed */
+  override def removeUnreachableStatements(): Statement = this
+
   /* Given the 'parent' state, this function compiles the scope statement with a scope state, then
      ensures the compilation can proceed after exiting the scope statement. */
   def compileNewScope(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
@@ -229,6 +232,14 @@ case class If(condition: Expression, trueStatement: Statement, falseStatement: S
     extends Statement {
   override def toString: String =
     "if " + condition + " then\n" + trueStatement.toString + "else\n" + falseStatement + "fi\n"
+
+  override def removeUnreachableStatements(): Statement = {
+    condition match {
+      case BooleanLiter(true)  => trueStatement.removeUnreachableStatements()
+      case BooleanLiter(false) => falseStatement.removeUnreachableStatements()
+      case _                   => this
+    }
+  }
 
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     val labelPrefix = "L"
@@ -449,6 +460,15 @@ case class StatementSequence(statement1: Statement, statement2: Statement)(posit
   override def toString: String =
     statement1.toString.stripSuffix("\n") + ";\n" + statement2.toString
 
+  override def removeUnreachableStatements(): Statement = {
+    val newStatement1 = statement1.removeUnreachableStatements()
+    val newStatement2 = statement2.removeUnreachableStatements()
+    newStatement1 match {
+      case SkipStatement() => newStatement2
+      case _               => StatementSequence(newStatement1, newStatement2)(position)
+    }
+  }
+
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     val nextState = statement1.compile(state)
     statement2.compile(nextState)
@@ -464,6 +484,13 @@ case class StatementSequence(statement1: Statement, statement2: Statement)(posit
 
 case class While(condition: Expression, statement: Statement)(position: (Int, Int)) extends Statement {
   override def toString: String = "while " + condition.toString + " do\n" + statement.toString + "done\n"
+
+  override def removeUnreachableStatements(): Statement = {
+    condition match {
+      case BooleanLiter(false) => SkipStatement()(position)
+      case _                   => While(condition, statement.removeUnreachableStatements())(position)
+    }
+  }
 
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     val labelPrefix = "L"
@@ -524,6 +551,13 @@ case class For(
   body: Statement
 )(position: (Int, Int))
     extends Statement {
+
+  override def removeUnreachableStatements(): Statement = {
+    cond match {
+      case Some(BooleanLiter(false)) => SkipStatement()(position)
+      case _                         => For(initializations, cond, updates, body.removeUnreachableStatements())(position)
+    }
+  }
 
   override def toString: String = {
     val initsString = initializations

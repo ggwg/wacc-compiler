@@ -252,7 +252,7 @@ object Compiler {
        Initialize top level Symbol Table */
     val topST: SymbolTable = new SymbolTable()
 
-    val AST = parseResult.get
+    var AST = parseResult.get
     implicit val semanticErrors: mutable.ListBuffer[Error] = mutable.ListBuffer.empty
 
     /* Traverse the AST to identify any semantic errors and a few syntactic ones */
@@ -267,6 +267,10 @@ object Compiler {
       case None => ()
     }
 
+    println("before: \n" + AST.toString)
+    /* Remove unreachable statements */
+    AST = AST.removeUnreachableStatements()
+    println("after: \n" + AST.toString)
     /* Check for semantic errors */
     semanticErrors.foreach(_.throwError())
     if (semanticErrors.nonEmpty) {

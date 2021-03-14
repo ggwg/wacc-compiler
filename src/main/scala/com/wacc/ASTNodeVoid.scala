@@ -49,4 +49,7 @@ trait ASTNode {
 /* Create a new trait that extends ASTNode and defined default void return */
 trait ASTNodeVoid extends ASTNode {
   override def getType(symbolTable: SymbolTable): Type = NotAType()
+
+  /* Returns a new statement in which all nodes that were impossible to be reached were removed */
+  def removeUnreachableStatements(): Any = this
 }

@@ -14,6 +14,10 @@ case class Program(functions: List[Function], body: Statement)(position: (Int, I
     .reduceOption((left, right) => left + right)
     .getOrElse("") + body.toString + "end"
 
+  override def removeUnreachableStatements(): Program = {
+    Program(functions.map(_.removeUnreachableStatements()), body.removeUnreachableStatements())(position)
+  }
+
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     var newState = state
 
@@ -36,7 +40,6 @@ case class Program(functions: List[Function], body: Statement)(position: (Int, I
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     functions.foreach { func =>
-
       // TODO: Create functionType object for function
       val functionAdded = symbolTable.addFunction(func.name.identifier, func.getType(symbolTable))
       if (!functionAdded) {
@@ -76,6 +79,10 @@ case class Function(returnType: Type, name: Identifier, parameters: Option[Param
     returnType.toString + " " + name.toString + "(" +
       parameters.getOrElse("").toString + ") is\n" + body.toString + "end\n"
 
+  override def removeUnreachableStatements(): Function = {
+    Function(returnType, name, parameters, body.removeUnreachableStatements())(position)
+  }
+
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     var newState = state
 
@@ -109,7 +116,7 @@ case class Function(returnType: Type, name: Identifier, parameters: Option[Param
     /* Check that the function returns if it does not return a void type: */
     returnType match {
       case VoidType() => ()
-        /* No need to check that function returns anything - ignore it */
+      /* No need to check that function returns anything - ignore it */
       case _ =>
         /* Check that the function returns: */
         if (!body.exitable()) {
