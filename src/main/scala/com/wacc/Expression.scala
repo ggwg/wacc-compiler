@@ -137,7 +137,8 @@ case class UnaryOperatorApplication(operator: UnaryOperator, operand: Expression
         instructions += STORE(helperReg, RegisterLoad(resultReg), isByte = isByte)
         instructions += SUBS(helperReg, helperReg, ImmediateNumber(diff))
         instructions += MOVE(resultReg, helperReg)
-      case _ => ()
+      case _ =>
+        newState = operand.compile(newState)
     }
 
     newState
@@ -236,9 +237,18 @@ case class FunctionCall(name: Identifier, arguments: Option[ArgumentList])(posit
 
     /* For overloaded functions, get the name of the label to be branched to first: */
     val functionLabel = newState.getFunctionLabel(name.identifier, thisFunctionType)
+
     /* Jump to the function, reset the stack pointer, and move the result */
     instructions ++= List(
-      BRANCHLINK(labelPrefix + functionLabel),
+      if (!functionLabel.equals("ERROR")) {
+        BRANCHLINK(labelPrefix + functionLabel)
+      } else {
+        /* Find the position of the identifier in the stack relative to the SP */
+        val offset: Int = newState.spOffset - newState.getOffset(name.identifier)
+        instructions += ADD(resultReg, RegisterSP, ImmediateNumber(offset))
+        instructions += LOAD(resultReg, RegisterLoad(resultReg))
+        BRANCHLINKX(resultReg)
+      },
       ADD(RegisterSP, RegisterSP, ImmediateNumber(declaredSize)),
       MOVE(resultReg, Register0)
     )
@@ -291,7 +301,7 @@ case class FunctionCall(name: Identifier, arguments: Option[ArgumentList])(posit
           case Some(value) =>
             value._1 match {
               case FunctionType(returnType, _) => returnType
-              case _ => NotAType()
+              case _                           => NotAType()
             }
           case None => NotAType()
         }
@@ -679,10 +689,15 @@ case class Identifier(identifier: String)(position: (Int, Int)) extends Expressi
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     val resultReg = state.getResultRegister
 
-    /* Find the position of the identifier in the stack and access it*/
-    val newState = compileReference(state)
-    instructions += LOAD(resultReg, RegisterLoad(resultReg), expressionType.getSize == 1)
-    newState
+    if (state.varDic.contains(identifier)) {
+      /* Find the position of the identifier in the stack and access it*/
+      val newState = compileReference(state)
+      instructions += LOAD(resultReg, RegisterLoad(resultReg), expressionType.getSize == 1)
+      newState
+    } else {
+      instructions += LOAD(resultReg, FunctionLoad(state.getFunctionLabel(identifier, expressionType)))
+      state.copy(freeRegs = state.freeRegs.tail)
+    }
   }
 
   override def compileReference(
@@ -695,17 +710,32 @@ case class Identifier(identifier: String)(position: (Int, Int)) extends Expressi
   }
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
-    if (getType(symbolTable) == NotAType()) {
-      /* Identifier was a void type - indicating that it hasn't been defined yet */
-      errors += IdentifierError.undefined(identifier, getPos())
-    }
-
     expressionType = getType(symbolTable)
+    if (expressionType == NotAType()) {
+      val functionTypes = symbolTable.getOverloadedFunctionTypes(identifier)
+      if (functionTypes.isEmpty) {
+        /* Identifier was a void type - indicating that it hasn't been defined yet */
+        errors += IdentifierError.undefined(identifier, getPos())
+      } else {
+        errors += Error("Cannot assign overloaded function type", position)
+      }
+    }
   }
 
-  override def getType(symbolTable: SymbolTable): Type =
+  override def getType(symbolTable: SymbolTable): Type = {
     /* Look up the symbol table hierarchy for the type of the identifier using it's name */
-    symbolTable.lookupAll(identifier).getOrElse((NotAType(), null))._1
+    val varType = symbolTable.lookupAll(identifier).getOrElse((NotAType(), null))._1
+    val functionTypes = symbolTable.getOverloadedFunctionTypes(identifier)
+    if (varType == NotAType()) {
+      if (functionTypes.isEmpty || functionTypes.length > 1) {
+        NotAType()
+      } else {
+        functionTypes.head
+      }
+    } else {
+      varType
+    }
+  }
 
   override def getExpressionType: Type = expressionType
   override def getLeftType: Type = expressionType

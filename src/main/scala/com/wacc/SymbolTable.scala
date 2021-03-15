@@ -81,6 +81,20 @@ class SymbolTable(parentSymbolTable: SymbolTable, isFunctionSymbolTable: Boolean
     false
   }
 
+  def getOverloadedFunctionTypes(funcName: String): List[FunctionType] = {
+    var current = Option(this)
+    while (current.isDefined) {
+      current.get.functionDic.get(funcName) match {
+        case Some(expectedFunctionTypes) =>
+          return expectedFunctionTypes
+        case None =>
+          current = current.get.parent
+      }
+    }
+    /* If no function is found, return voidType to indicate failure */
+    List.empty
+  }
+
   /* Add a variable, along with it's type and corresponding AST node, to the symbol table */
   def add(varName: String, varType: Type, varObj: ASTNode): Unit = {
     dictionary += (varName -> (varType, varObj))

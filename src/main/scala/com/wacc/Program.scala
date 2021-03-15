@@ -21,6 +21,12 @@ case class Program(functions: List[Function], body: Statement)(position: (Int, I
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     var newState = state
 
+    for (function <- functions) {
+      /* Overloaded Functions: Get the generated label for all functions */
+      /* Add function to assembler state */
+      newState = newState.putFunction(function.name.identifier, function.thisFunctionType)
+    }
+
     /* Compile all the functions */
     for (function <- functions) {
       newState = function.compile(newState)
@@ -91,9 +97,6 @@ case class Function(returnType: Type, name: Identifier, parameters: Option[Param
       newState = parameters.get.compile(newState)
     }
 
-    /* Overloaded Functions: Get the generated label for all functions */
-    /* Add function to assembler state */
-    newState = newState.putFunction(name.identifier, thisFunctionType)
     /* Call getFunctionLabel to get the string label. */
     val functionLabel = newState.getFunctionLabel(name.identifier, thisFunctionType)
 

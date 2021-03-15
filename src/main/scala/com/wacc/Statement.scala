@@ -90,6 +90,7 @@ case class IdentifierDeclaration(identType: Type, name: Identifier, assignmentRi
               case expectedFunctionType @ FunctionType(_, _) =>
                 symbolTable.lookupAllFunction(functionIdentifier.identifier, expectedFunctionType) match {
                   case f @ FunctionType(_, _) =>
+                    assignmentRight.check(symbolTable)
                     Some((f, assignmentRight))
                   case _ => assignRHS(identType, assignmentRight, symbolTable)
                 }
@@ -101,10 +102,10 @@ case class IdentifierDeclaration(identType: Type, name: Identifier, assignmentRi
     })
   }
 
-  private def assignRHS(identType: Type, assignmentRight: AssignmentRight, symbolTable: SymbolTable)
-                       (implicit errors: mutable.ListBuffer[Error])
-                       : Option[(Type, ASTNodeVoid)] = {
-    /* If its not in the function dictionary, then it check regular ST */
+  private def assignRHS(identType: Type, assignmentRight: AssignmentRight, symbolTable: SymbolTable)(implicit
+    errors: mutable.ListBuffer[Error]
+  ): Option[(Type, ASTNodeVoid)] = {
+    /* If its not in the function dictionary, then it kk regular ST */
     if (identType.sameTypes(assignmentRight, symbolTable)) {
       assignmentRight.check(symbolTable)
       Some((identType, assignmentRight))
@@ -142,8 +143,8 @@ case class Assignment(assignmentLeft: AssignmentLeft, assignmentRight: Assignmen
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
     /* Note: for assignment of functions:
-    *   1. Get left type of function - if it is a FunctionType then:
-    *   2. Check if RHS is in the FunctionDictionary in the SymbolTable */
+     *   1. Get left type of function - if it is a FunctionType then:
+     *   2. Check if RHS is in the FunctionDictionary in the SymbolTable */
     /* Check that assignment-left type is same as return type of assignment-right */
 
     /* TODO: Do not allow assignment of pre-defined functions */

@@ -268,7 +268,7 @@ object Compiler {
     }
 
     /* Remove unreachable statements */
-    AST = AST.removeUnreachableStatements()
+//    AST = AST.removeUnreachableStatements()
 
     /* Check for semantic errors */
     semanticErrors.foreach(_.throwError())
