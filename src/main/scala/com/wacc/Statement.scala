@@ -139,9 +139,11 @@ case class Assignment(assignmentLeft: AssignmentLeft, assignmentRight: Assignmen
     *   1. Get left type of function - if it is a FunctionType then:
     *   2. Check if RHS is in the FunctionDictionary in the SymbolTable */
     /* Check that assignment-left type is same as return type of assignment-right */
+
+    /* TODO: Do not allow assignment of pre-defined functions */
     assignmentLeft match {
       case Identifier(identifier) =>
-        if (symbolTable.identifierIsFunction(identifier)) {
+        if (symbolTable.containsFunction(identifier)) {
           errors += Error("Function identifier " + identifier + " cannot be assigned", getPos())
           return
         }
@@ -161,6 +163,7 @@ case class Assignment(assignmentLeft: AssignmentLeft, assignmentRight: Assignmen
             }
           case _ => ()
         }
+      case _ => ()
     }
     if (!assignmentLeft.getType(symbolTable).unifies(assignmentRight.getType(symbolTable))) {
       errors += Error(

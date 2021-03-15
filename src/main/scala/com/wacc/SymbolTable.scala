@@ -66,6 +66,19 @@ class SymbolTable(parentSymbolTable: SymbolTable, isFunctionSymbolTable: Boolean
     NotAType()
   }
 
+  def containsFunction(funcName: String): Boolean = {
+    var current = Option(this)
+    while (current.isDefined) {
+      if (current.get.functionDic.contains(funcName)) {
+        return true
+      } else {
+        current = current.get.parent
+      }
+    }
+    /* If no function identifier is found, return false to indicate failure */
+    false
+  }
+
   /* Add a variable, along with it's type and corresponding AST node, to the symbol table */
   def add(varName: String, varType: Type, varObj: ASTNode): Unit = {
     dictionary += (varName -> (varType, varObj))
