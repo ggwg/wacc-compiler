@@ -267,10 +267,9 @@ object Compiler {
       case None => ()
     }
 
-    println("before: \n" + AST.toString)
     /* Remove unreachable statements */
-    AST = AST.removeUnreachableStatements()
-    println("after: \n" + AST.toString)
+//    AST = AST.removeUnreachableStatements()
+
     /* Check for semantic errors */
     semanticErrors.foreach(_.throwError())
     if (semanticErrors.nonEmpty) {

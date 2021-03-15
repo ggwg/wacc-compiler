@@ -47,7 +47,7 @@ class SymbolTable(parentSymbolTable: SymbolTable, isFunctionSymbolTable: Boolean
     return true
   }
 
-  /* Looks up all the symbol tables */
+  /* Looks up all the symbol tables - returns FunctionType if found, otherwise NotAType() */
   def lookupAllFunction(funcName: String, functionType: FunctionType): Type = {
     var current = Option(this)
     while (current.isDefined) {
@@ -66,6 +66,33 @@ class SymbolTable(parentSymbolTable: SymbolTable, isFunctionSymbolTable: Boolean
     }
     /* If no function is found, return voidType to indicate failure */
     NotAType()
+  }
+
+  def containsFunction(funcName: String): Boolean = {
+    var current = Option(this)
+    while (current.isDefined) {
+      if (current.get.functionDic.contains(funcName)) {
+        return true
+      } else {
+        current = current.get.parent
+      }
+    }
+    /* If no function identifier is found, return false to indicate failure */
+    false
+  }
+
+  def getOverloadedFunctionTypes(funcName: String): List[FunctionType] = {
+    var current = Option(this)
+    while (current.isDefined) {
+      current.get.functionDic.get(funcName) match {
+        case Some(expectedFunctionTypes) =>
+          return expectedFunctionTypes
+        case None =>
+          current = current.get.parent
+      }
+    }
+    /* If no function is found, return voidType to indicate failure */
+    List.empty
   }
 
   /* Add a variable, along with it's type and corresponding AST node, to the symbol table */

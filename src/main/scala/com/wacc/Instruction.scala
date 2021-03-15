@@ -92,6 +92,10 @@ case class MessageLoad(id: Int) extends AddressAccess {
   override def toString: String = s"=msg_$id"
 }
 
+case class FunctionLoad(name: String) extends AddressAccess {
+  override def toString: String = s"=f_$name"
+}
+
 case class ImmediateLoad(value: Int) extends AddressAccess {
   override def toString: String = "=" + value
 }
@@ -223,6 +227,10 @@ case class BRANCH(cond: Option[Condition], label: String) extends Instruction {
 
 case class BRANCHLINK(label: String, cond: Option[Condition] = Option.empty) extends Instruction {
   override def toString: String = s"\tBL${cond.map(_.toString).getOrElse("")} $label"
+}
+
+case class BRANCHLINKX(register: Register) extends Instruction {
+  override def toString: String = s"\tBLX $register"
 }
 
 case class BLVS(label: String) extends Instruction {

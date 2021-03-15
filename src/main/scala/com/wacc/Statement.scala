@@ -82,19 +82,41 @@ case class IdentifierDeclaration(identType: Type, name: Identifier, assignmentRi
         )
         Some(x)
       case None =>
-        // If left type == right type, then we can add it to dictionary.
-        if (identType.sameTypes(assignmentRight, symbolTable)) {
-          assignmentRight.check(symbolTable)
-          Some((identType, assignmentRight))
-        } else {
-          errors += Error(
-            "Invalid types in identifier assignment. Got: " +
-              assignmentRight.getType(symbolTable) + ", Expected: " + identType,
-            getPos()
-          )
-          None
+        /* If left type == right type, then we can add it to dictionary. */
+        /* First we look up if RHS is a function in the functionDic (in SymbolTable) */
+        assignmentRight match {
+          case functionIdentifier: Identifier =>
+            identType match {
+              case expectedFunctionType @ FunctionType(_, _) =>
+                symbolTable.lookupAllFunction(functionIdentifier.identifier, expectedFunctionType) match {
+                  case f @ FunctionType(_, _) =>
+                    assignmentRight.check(symbolTable)
+                    Some((f, assignmentRight))
+                  case _ => assignRHS(identType, assignmentRight, symbolTable)
+                }
+              case _ => assignRHS(identType, assignmentRight, symbolTable)
+            }
+          /* If RHS is not identifier, then assign LHS to RHS */
+          case _ => assignRHS(identType, assignmentRight, symbolTable)
         }
     })
+  }
+
+  private def assignRHS(identType: Type, assignmentRight: AssignmentRight, symbolTable: SymbolTable)(implicit
+    errors: mutable.ListBuffer[Error]
+  ): Option[(Type, ASTNodeVoid)] = {
+    /* If its not in the function dictionary, then it kk regular ST */
+    if (identType.sameTypes(assignmentRight, symbolTable)) {
+      assignmentRight.check(symbolTable)
+      Some((identType, assignmentRight))
+    } else {
+      errors += Error(
+        "Invalid types in identifier assignment. Got: " +
+          assignmentRight.getType(symbolTable) + ", Expected: " + identType,
+        getPos()
+      )
+      None
+    }
   }
 
   override def getPos(): (Int, Int) = position
@@ -120,12 +142,33 @@ case class Assignment(assignmentLeft: AssignmentLeft, assignmentRight: Assignmen
     assignmentLeft.toString + " = " + assignmentRight.toString + "\n"
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
+    /* Note: for assignment of functions:
+     *   1. Get left type of function - if it is a FunctionType then:
+     *   2. Check if RHS is in the FunctionDictionary in the SymbolTable */
     /* Check that assignment-left type is same as return type of assignment-right */
+
+    /* TODO: Do not allow assignment of pre-defined functions */
     assignmentLeft match {
       case Identifier(identifier) =>
-        if (symbolTable.identifierIsFunction(identifier)) {
+        if (symbolTable.containsFunction(identifier)) {
           errors += Error("Function identifier " + identifier + " cannot be assigned", getPos())
           return
+        }
+      case _ => ()
+    }
+    /* Check if LHS is referring to a function type */
+    assignmentLeft.getType(symbolTable) match {
+      case f @ FunctionType(_, _) =>
+        /* Check if RHS is an identifier in the FunctionDictionary, and see if there is a matching type for it. */
+        assignmentRight match {
+          case functionIdentifier: Identifier =>
+            /* Check if RHS is actually referring to a defined function */
+            symbolTable.lookupAllFunction(functionIdentifier.identifier, f) match {
+              case FunctionType(_, _) =>
+                return
+              case _ => ()
+            }
+          case _ => ()
         }
       case _ => ()
     }
