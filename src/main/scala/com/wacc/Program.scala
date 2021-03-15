@@ -112,7 +112,7 @@ case class Function(returnType: Type, name: Identifier, parameters: Option[Param
 
     /* Pop the PC and add the ltorg directive */
     instructions ++= List(PopPC(), LtorgDirective())
-    newState.copy(spOffset = newState.spOffset - 4)
+    newState.copy(spOffset = newState.spOffset - newState.declaredSize - 4, declaredSize = 0)
   }
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
@@ -187,7 +187,8 @@ case class Parameter(parameterType: Type, identifier: Identifier)(position: (Int
     /* Update the state */
     state.copy(
       spOffset = state.spOffset + size,
-      varDic = state.varDic + (identifier.identifier -> (state.spOffset + size))
+      varDic = state.varDic + (identifier.identifier -> (state.spOffset + size)),
+      declaredSize = state.declaredSize + size
     )
   }
 
