@@ -135,6 +135,9 @@ case class Assignment(assignmentLeft: AssignmentLeft, assignmentRight: Assignmen
     assignmentLeft.toString + " = " + assignmentRight.toString + "\n"
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
+    /* Note: for assignment of functions:
+    *   1. Get left type of function - if it is a FunctionType then:
+    *   2. Check if RHS is in the FunctionDictionary in the SymbolTable */
     /* Check that assignment-left type is same as return type of assignment-right */
     assignmentLeft match {
       case Identifier(identifier) =>
@@ -143,6 +146,21 @@ case class Assignment(assignmentLeft: AssignmentLeft, assignmentRight: Assignmen
           return
         }
       case _ => ()
+    }
+    /* Check if LHS is referring to a function type */
+    assignmentLeft.getType(symbolTable) match {
+      case f @ FunctionType(_, _) =>
+        /* Check if RHS is an identifier in the FunctionDictionary, and see if there is a matching type for it. */
+        assignmentRight match {
+          case functionIdentifier: Identifier =>
+            /* Check if RHS is actually referring to a defined function */
+            symbolTable.lookupAllFunction(functionIdentifier.identifier, f) match {
+              case FunctionType(_, _) =>
+                return
+              case _ => ()
+            }
+          case _ => ()
+        }
     }
     if (!assignmentLeft.getType(symbolTable).unifies(assignmentRight.getType(symbolTable))) {
       errors += Error(
