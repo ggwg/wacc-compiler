@@ -28,6 +28,68 @@ sealed trait AssignmentLeft extends ASTNodeVoid {
   def getLeftType: Type
 }
 
+case class IncDec(isPrefix: Boolean, isIncrement: Boolean, operand: Expression)(position: (Int, Int))
+    extends Expression {
+  val operator: String = if (isIncrement) "++" else "--"
+
+  override def toString: String = {
+    if (isPrefix) operator.toString + operand.toString else operand.toString + operator.toString
+  }
+
+  override def check(symbolTable: SymbolTable)(implicit errors: ListBuffer[Error]): Unit = {
+    val operandType = operand.getType(symbolTable)
+
+    if (!operandType.unifies(IntType())) {
+      errors += UnaryOperatorError.expectation(operator, "int", operandType.toString, operand.getPos())
+      return
+    }
+    if (!operand.isInstanceOf[AssignmentLeft]) {
+      errors += Error(
+        "Expression can not be assigned to; It must be an identifier or an array element access",
+        position
+      )
+      return
+    }
+    operand.check(symbolTable)
+  }
+
+  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
+    /* Evaluate the expression and store it in the first available register */
+    val resultReg = state.getResultRegister
+    val helperReg = state.getHelperRegister
+    var newState = state
+
+    /* Apply the unary operation */
+    val diff = if (isIncrement) 1 else -1
+    val variable = operand.asInstanceOf[AssignmentLeft]
+    val isByte = variable.getLeftType.getSize == 1
+
+    /* Put in result register the reference to the variable */
+    newState = variable.compileReference(newState)
+
+    /* Put in helper register the actual value of the variable */
+    instructions += LOAD(helperReg, RegisterLoad(resultReg), isByte)
+
+    /* Perform the operation */
+    newState = newState.putMessageIfAbsent(OverflowError.errorMessage)
+    instructions ++= List(ADDS(helperReg, helperReg, ImmediateNumber(diff)), BLVS(OverflowError.label))
+    newState = newState.copy(p_throw_overflow_error = true, p_throw_runtime_error = true)
+
+    /* Store back the result */
+    instructions += STORE(helperReg, RegisterLoad(resultReg), isByte = isByte)
+    if (isPrefix) {
+      instructions += SUBS(helperReg, helperReg, ImmediateNumber(diff))
+    }
+    instructions += MOVE(resultReg, helperReg)
+
+    newState
+  }
+
+  override def getPos(): (Int, Int) = position
+  override def getType(symbolTable: SymbolTable): Type = IntType()
+  override def getExpressionType: Type = IntType()
+}
+
 /* Class representing an unary operation (e.g. chr 101) */
 case class UnaryOperatorApplication(operator: UnaryOperator, operand: Expression)(position: (Int, Int))
     extends Expression {
@@ -36,22 +98,49 @@ case class UnaryOperatorApplication(operator: UnaryOperator, operand: Expression
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     /* Evaluate the expression and store it in the first available register */
     val resultReg = state.getResultRegister
-    var nextState = operand.compile(state)
+    val helperReg = state.getHelperRegister
+    var newState = state
 
     /* Apply the unary operation */
     operator match {
       case Length() =>
+        newState = operand.compile(newState)
         instructions += LOAD(resultReg, RegisterLoad(resultReg))
       case Negate() =>
-        nextState = nextState.putMessageIfAbsent(OverflowError.errorMessage)
+        newState = operand.compile(newState)
+        newState = newState.putMessageIfAbsent(OverflowError.errorMessage)
         instructions ++= List(ReverseSUBS(resultReg, resultReg, ImmediateNumber(0)), BLVS(OverflowError.label))
-        nextState = nextState.copy(p_throw_overflow_error = true, p_throw_runtime_error = true)
+        newState = newState.copy(p_throw_overflow_error = true, p_throw_runtime_error = true)
       case Not() =>
+        newState = operand.compile(newState)
         instructions += XOR(resultReg, resultReg, ImmediateNumber(1))
+      case PrefixInc() | PrefixDec() =>
+        val diff = operator match {
+          case PrefixInc() => 1
+          case PrefixDec() => -1
+        }
+        val variable = operand.asInstanceOf[AssignmentLeft]
+        val isByte = variable.getLeftType.getSize == 1
+
+        /* Put in result register the reference to the variable */
+        newState = variable.compileReference(newState)
+
+        /* Put in helper register the actual value of the variable */
+        instructions += LOAD(helperReg, RegisterLoad(resultReg), isByte)
+
+        /* Perform the operation */
+        newState = newState.putMessageIfAbsent(OverflowError.errorMessage)
+        instructions ++= List(ADDS(helperReg, helperReg, ImmediateNumber(diff)), BLVS(OverflowError.label))
+        newState = newState.copy(p_throw_overflow_error = true, p_throw_runtime_error = true)
+
+        /* Store back the result */
+        instructions += STORE(helperReg, RegisterLoad(resultReg), isByte = isByte)
+        instructions += SUBS(helperReg, helperReg, ImmediateNumber(diff))
+        instructions += MOVE(resultReg, helperReg)
       case _ => ()
     }
 
-    nextState
+    newState
   }
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
@@ -91,6 +180,18 @@ case class UnaryOperatorApplication(operator: UnaryOperator, operand: Expression
           case _ =>
             errors += UnaryOperatorError.expectation("length", "array", operandType.toString, operand.getPos())
             return
+        }
+      case PrefixInc() | PrefixDec() =>
+        if (!operandType.unifies(IntType())) {
+          errors += UnaryOperatorError.expectation(operator.toString, "int", operandType.toString, operand.getPos())
+          return
+        }
+        if (!operand.isInstanceOf[AssignmentLeft]) {
+          errors += Error(
+            "Expression can not be assigned to; It must be an identifier or an array element access",
+            position
+          )
+          return
         }
     }
 
@@ -416,10 +517,16 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
         )
         newState = newState.copy(p_check_divide_by_zero = true, p_throw_runtime_error = true)
 
-      /* Boolean operations */
-      case And() =>
+      /* Shift operations */
+      case ShiftLeft() =>
+        instructions += SHIFTLEFT(resultReg, firstOp, secondOp)
+
+      case ShiftRight() =>
+        instructions += SHIFTRIGHT(resultReg, firstOp, secondOp)
+      /* Logical operations */
+      case And() | BitwiseAnd() =>
         instructions += AND(resultReg, firstOp, secondOp)
-      case Or() =>
+      case Or() | BitwiseOr() =>
         instructions += OR(resultReg, firstOp, secondOp)
 
       /* Comparison operations */
@@ -479,7 +586,8 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
     /* Error generation process */
     operator match {
       /* Integer operations expect integer parameters */
-      case Add() | Divide() | Modulo() | Multiply() | Subtract() =>
+      case Add() | Divide() | Modulo() | Multiply() | Subtract() | BitwiseAnd() | BitwiseOr() | ShiftLeft() |
+          ShiftRight() =>
         if (!leftType.unifies(IntType())) {
           errors += BinaryOperatorError.expectation(op, IntType.toString(), leftType.toString, getPos(), left)
           return
@@ -525,8 +633,10 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
   override def getType(symbolTable: SymbolTable): Type = getExpressionType
 
   override def getExpressionType: Type = operator match {
-    case Add() | Divide() | Modulo() | Multiply() | Subtract() => IntType()
-    case _                                                     => BooleanType()
+    case Add() | Divide() | Modulo() | Multiply() | Subtract() | BitwiseAnd() | BitwiseOr() | ShiftLeft() |
+        ShiftRight() =>
+      IntType()
+    case _ => BooleanType()
   }
 }
 
@@ -603,13 +713,11 @@ case class Identifier(identifier: String)(position: (Int, Int)) extends Expressi
 }
 
 /* Represents an integer (e.g. 1234 or -100) */
-case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit])(position: (Int, Int)) extends Expression {
+case class IntegerLiter(sign: Option[IntegerSign], base: Option[Char], digits: List[Digit])(position: (Int, Int))
+    extends Expression {
   var amount = 0
 
-  override def toString: String = (sign match {
-    case None       => ""
-    case Some(sign) => sign.toString
-  }) + digits.mkString
+  override def toString: String = sign.map(_.toString).getOrElse("") + base.map("0" + _).getOrElse("") + digits.mkString
 
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     instructions += LOAD(state.getResultRegister, ImmediateLoad(amount))
@@ -618,7 +726,14 @@ case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit])(position
 
   override def check(symbolTable: SymbolTable)(implicit errors: ListBuffer[Error]): Unit = {
     /* Map the characters to digits */
-    val intDigits = digits.map(_.digit - '0')
+    val values = digits.map(digit => Digit.valueOf(digit.digit))
+    val baseValue = base match {
+      case Some('b') => 2
+      case Some('o') => 8
+      case Some('d') => 10
+      case Some('x') => 16
+      case None      => 10
+    }
     var value: Long = 0
 
     /* Extract sign value of the number */
@@ -626,8 +741,12 @@ case class IntegerLiter(sign: Option[IntegerSign], digits: List[Digit])(position
     if (sign.nonEmpty && sign.get.sign == '-') signValue = -1
 
     /* Check that the number does not exceed the bounds */
-    for (i <- intDigits) {
-      value = (value * 10) + signValue * i
+    for (i <- values) {
+      if (i >= baseValue) {
+        errors += Error("Integer literal used illegal digits", position)
+        return
+      }
+      value = (value * baseValue) + signValue * i
       if (value > Integer.MAX_VALUE) {
         errors += BoundError.exceed(IntType.toString(), getPos(), isMinimum = false)
         return
@@ -921,8 +1040,12 @@ object Identifier {
 }
 
 object IntegerLiter {
-  def apply(sign: Parsley[Option[IntegerSign]], digits: Parsley[List[Digit]]): Parsley[IntegerLiter] =
-    pos <**> (sign, digits).map(IntegerLiter(_, _))
+  def apply(
+    sign: Parsley[Option[IntegerSign]],
+    base: Parsley[Option[Char]],
+    digits: Parsley[List[Digit]]
+  ): Parsley[IntegerLiter] =
+    pos <**> (sign, base, digits).map(IntegerLiter(_, _, _))
 }
 
 object PairLiter {
@@ -957,4 +1080,9 @@ object PairElement {
 object ArgumentList {
   def apply(expression: Parsley[Expression], expressions: Parsley[List[Expression]]): Parsley[ArgumentList] =
     (expression, expressions).map((e, es) => ArgumentList(e :: es))
+}
+
+object IncDec {
+  def apply(isPrefix: Boolean, isIncrement: Boolean, expression: Parsley[Expression]): Parsley[IncDec] =
+    pos <**> expression.map(IncDec(isPrefix, isIncrement, _))
 }

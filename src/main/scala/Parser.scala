@@ -3,7 +3,7 @@ import com.wacc._
 import com.wacc.operator.{BinaryOperator, UnaryOperator}
 import parsley.Parsley._
 import parsley.character._
-import parsley.combinator.{attemptChoice, eof, manyN, option}
+import parsley.combinator.{attemptChoice, eof, manyN, option, optional}
 import parsley.expr._
 import parsley.implicits.{voidImplicitly => _, _}
 import parsley.{Parsley, combinator}
@@ -46,8 +46,10 @@ object Parser {
                |  <stat> ‘;’ <stat> */
   lazy val statementParser: Parsley[Statement] = precedence[Statement](
     (SkipStatement(parseKeyword("skip")) <* skipWhitespace)
-      <\> IdentifierDeclaration(typeParser, identifierParser, "=" *> skipWhitespace *> assignmentRightParser)
-      <\> Assignment(assignmentLeftParser, '=' *> skipWhitespace *> assignmentRightParser)
+      <\> (Break(parseKeyword("break")) <* skipWhitespace)
+      <\> (ContinueLoop(parseKeyword("continueloop")) <* skipWhitespace)
+      <\> identifierDeclarationParser
+      <\> assignmentParser
       <\> Read(parseKeyword("read") *> skipWhitespace *> assignmentLeftParser)
       <\> Statement(
         attemptChoice(
@@ -69,6 +71,14 @@ object Parser {
         parseKeyword("while") *> skipWhitespace *> expressionParser,
         parseKeyword("do") *> skipWhitespace *> statementParser <* parseKeyword("done") <* skipWhitespace
       )
+      <\> For(
+        parseKeyword("for") *> skipWhitespace *> '(' *> skipWhitespace *> option(
+          initializationListParser
+        ) <* ';' <* skipWhitespace,
+        option(expressionParser) <* ';' <* skipWhitespace,
+        option(assignmentListParser) <* ')' <* skipWhitespace,
+        parseKeyword("do") *> skipWhitespace *> statementParser <* parseKeyword("done") <* skipWhitespace
+      )
       <\> BeginEnd(parseKeyword("begin") *> skipWhitespace *> statementParser <* parseKeyword("end") <* skipWhitespace),
     Ops(InfixL)(
       (";" <* skipWhitespace) #> ((st1: Statement, st2: Statement) => StatementSequence(st1, st2)(st1.getPos()))
@@ -77,6 +87,25 @@ object Parser {
   /*  <assign-lhs> ::= <ident>
                    |  <array-elem>
                    |  <pair-elem> */
+
+  lazy val assignmentParser: Parsley[Assignment] =
+    Assignment(assignmentLeftParser, '=' *> skipWhitespace *> assignmentRightParser)
+
+  lazy val identifierDeclarationParser: Parsley[IdentifierDeclaration] =
+    IdentifierDeclaration(typeParser, identifierParser, "=" *> skipWhitespace *> assignmentRightParser)
+
+  lazy val initializationParser: Parsley[Initialization] =
+    (identifierDeclarationParser <\> assignmentParser)
+
+  lazy val initializationListParser: Parsley[List[Initialization]] =
+    Initialization(initializationParser, combinator.many(',' *> skipWhitespace *> initializationParser))
+
+  lazy val assignmentListParser: Parsley[List[Assignment]] =
+    Assignment.parsleyList(assignmentParser, combinator.many(',' *> skipWhitespace *> assignmentParser))
+
+  /* 〈assign-lhs〉::=〈ident〉
+                   | 〈array-elem〉
+                   | 〈pair-elem〉*/
   lazy val assignmentLeftParser: Parsley[AssignmentLeft] =
     ((pairElementParser <\> arrayElementParser <\> identifierParser) <* skipWhitespace)
       .label("a left assignment")
@@ -161,6 +190,8 @@ object Parser {
       <\> attempt(arrayElementParser)
       <\> attempt(identifierParser),
     Ops(Prefix)(
+      attempt(("++".label("an unary operator") <* skipWhitespace) #> incDecFunctionGenerator(true, true)),
+      attempt(("--".label("an unary operator") <* skipWhitespace) #> incDecFunctionGenerator(true, false)),
       attempt(("!".label("an unary operator") <* skipWhitespace) #> unaryFunctionGenerator("!")),
       attempt(("-".label("an unary operator") <* skipWhitespace) #> unaryFunctionGenerator("-")),
       attempt((parseKeyword("len").label("an unary operator") <* skipWhitespace) #> unaryFunctionGenerator("len")),
@@ -177,12 +208,20 @@ object Parser {
       ("-".label("a binary operator") <* skipWhitespace) #> binaryFunctionGenerator("-")
     ),
     Ops(InfixL)(
+      (attempt("<<").label("a binary operator") <* skipWhitespace) #> binaryFunctionGenerator("<<"),
+      (attempt(">>").label("a binary operator") <* skipWhitespace) #> binaryFunctionGenerator(">>")
+    ),
+    Ops(InfixL)(
       (attempt(">=").label("a binary operator") <* skipWhitespace) #> binaryFunctionGenerator(">="),
       (attempt("<=").label("a binary operator") <* skipWhitespace) #> binaryFunctionGenerator("<="),
       (attempt("==").label("a binary operator") <* skipWhitespace) #> binaryFunctionGenerator("=="),
       ("!=".label("a binary operator") <* skipWhitespace) #> binaryFunctionGenerator("!="),
       (">".label("a binary operator") <* skipWhitespace) #> binaryFunctionGenerator(">"),
       ("<".label("a binary operator") <* skipWhitespace) #> binaryFunctionGenerator("<")
+    ),
+    Ops(InfixL)(
+      (attempt("&" <* notFollowedBy("&")).label("A binary operator") <* skipWhitespace) #> binaryFunctionGenerator("&"),
+      (attempt("|" <* notFollowedBy("|")).label("A binary operator") <* skipWhitespace) #> binaryFunctionGenerator("|")
     ),
     Ops(InfixL)(("&&".label("a binary operator") <* skipWhitespace) #> binaryFunctionGenerator("&&")),
     Ops(InfixL)(("||".label("a binary operator") <* skipWhitespace) #> binaryFunctionGenerator("||"))
@@ -205,11 +244,14 @@ object Parser {
           UnaryOperatorApplication(UnaryOperator(operator), expr)(expr.getPos())
         } else
           expr match {
-            case IntegerLiter(None, digits) =>
-              IntegerLiter(Option(IntegerSign('-')), digits)(expr.getPos())
+            case IntegerLiter(None, base, digits) =>
+              IntegerLiter(Option(IntegerSign('-')), base, digits)(expr.getPos())
             case _ => UnaryOperatorApplication(UnaryOperator(operator), expr)(expr.getPos())
           }
       }
+  lazy val incDecFunctionGenerator: (Boolean, Boolean) => Expression => Expression =
+    (isPrefix: Boolean, isIncrement: Boolean) =>
+      (expr: Expression) => IncDec(isPrefix, isIncrement, expr)(expr.getPos())
 
   lazy val binaryFunctionGenerator: String => (Expression, Expression) => BinaryOperatorApplication =
     (operator: String) =>
@@ -257,7 +299,11 @@ object Parser {
       .label("an array element")
   /*  <int-liter> ::= <int-sign> ? <digit> + */
   lazy val integerLiterParser: Parsley[IntegerLiter] =
-    IntegerLiter(option(integerSignParser), manyN(1, digitParser) <* skipWhitespace)
+    IntegerLiter(
+      option(integerSignParser),
+      option(attempt("0" *> oneOf('b', 'o', 'd', 'x'))),
+      manyN(1, digitParser) <* skipWhitespace
+    )
       .label("an integer")
   /* <digit> ::=  (‘0’-‘9’) */
   lazy val digitParser: Parsley[Digit] =
@@ -346,6 +392,9 @@ object Parser {
     "ord",
     "chr",
     "true",
-    "false"
+    "false",
+    "break",
+    "continueloop",
+    "for"
   )
 }

@@ -12,6 +12,12 @@ case class Add() extends BinaryOperator {
 case class And() extends BinaryOperator {
   override def toString: String = "&&"
 }
+case class BitwiseAnd() extends BinaryOperator {
+  override def toString: String = "&"
+}
+case class BitwiseOr() extends BinaryOperator {
+  override def toString: String = "|"
+}
 case class Divide() extends BinaryOperator {
   override def toString: String = "/"
 }
@@ -36,6 +42,12 @@ case class NotEquals() extends BinaryOperator {
 case class Or() extends BinaryOperator {
   override def toString: String = "||"
 }
+case class ShiftLeft() extends BinaryOperator {
+  override def toString: String = "<<"
+}
+case class ShiftRight() extends BinaryOperator {
+  override def toString: String = ">>"
+}
 case class SmallerEqualThan() extends BinaryOperator {
   override def toString: String = "<="
 }
@@ -48,7 +60,7 @@ case class Subtract() extends BinaryOperator {
 
 object BinaryOperator {
   val operators =
-    List(">=", "<=", "==", "!=", "&&", "||", "*", "/", "%", "+", "-", ">", "<")
+    List(">=", "<=", "==", "!=", "&&", "||", "<<", ">>", "&", "|", "*", "/", "%", "+", "-", ">", "<")
   def apply(operator: String): BinaryOperator = operator match {
     case "*"  => Multiply()
     case "/"  => Divide()
@@ -63,6 +75,10 @@ object BinaryOperator {
     case "!=" => NotEquals()
     case "&&" => And()
     case "||" => Or()
+    case "&"  => BitwiseAnd()
+    case "|"  => BitwiseOr()
+    case "<<" => ShiftLeft()
+    case ">>" => ShiftRight()
   }
 
   def apply(operator: Parsley[String]): Parsley[BinaryOperator] =
