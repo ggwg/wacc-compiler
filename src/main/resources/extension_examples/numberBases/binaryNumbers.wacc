@@ -1,0 +1,6 @@
+# should print 12
+
+begin
+  int binary = 0b1100;
+  print binary
+end

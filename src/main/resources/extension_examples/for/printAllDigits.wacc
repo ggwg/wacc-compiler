@@ -1,18 +1,8 @@
-# should print:
-# 0
-# 1
-# 2
-# 3
-# 4
-# 5
-# 6
-# 7
-# 8
-# 9
+# should print 0123456789
 
 begin
   for (int chrOrd = ord '0'; chrOrd <= ord '9'; chrOrd = chrOrd + 1) do
     char character = chr chrOrd;
-    println character
+    print character
   done
 end

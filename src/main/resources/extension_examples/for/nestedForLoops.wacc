@@ -11,5 +11,5 @@ begin
       prod = prod * matrix[i][j]
     done
   done;
-  println prod
+  print prod
 end
