@@ -1,0 +1,10 @@
+#should print 012345
+
+begin
+  int i = 0;
+  while true do
+    print i;
+    if (i == 5) then break else skip;
+    i = i + 1;
+  done
+end
