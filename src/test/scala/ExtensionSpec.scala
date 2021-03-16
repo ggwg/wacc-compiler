@@ -82,4 +82,7 @@ class ExtensionSpec extends AnyFlatSpec {
       "10\n30\ntrue\na\n"
     )
   }
+  it should "compile higher order functions" in {
+    compileAndMatch("src/main/resources/extension_examples/higherOrderFunctions/simpleMap.wacc", "2\n3\n4\n5\n")
+  }
 }
