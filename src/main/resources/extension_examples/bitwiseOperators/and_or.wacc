@@ -1,0 +1,10 @@
+#should print
+# 8
+# 14
+
+begin
+  int n = 12; # 1100
+  int m = 10; # 1010
+  println n & m;
+  println n | m
+end
