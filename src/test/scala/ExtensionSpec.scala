@@ -46,5 +46,28 @@ class ExtensionSpec extends AnyFlatSpec {
 
   "The extended compiler" should "compile integer bitwise operations" in {
     compileAndMatch("src/main/resources/extension_examples/bitwiseOperators/and_or.wacc", "8\n14\n")
+    compileAndMatch("src/main/resources/extension_examples/bitwiseOperators/shifts.wacc", "36\n2\n")
+  }
+  it should "compile for loops" in {
+    compileAndMatch("src/main/resources/extension_examples/for/nestedForLoops.wacc", "362880")
+    compileAndMatch("src/main/resources/extension_examples/for/printAllDigits.wacc", "0123456789")
+    compileAndMatch("src/main/resources/extension_examples/for/sumOfArray.wacc", "45")
+  }
+  it should "compile break and continueloop statements" in {
+    compileAndMatch("src/main/resources/extension_examples/loopControl/breakFor.wacc", "012345")
+    compileAndMatch("src/main/resources/extension_examples/loopControl/breakWhile.wacc", "012345")
+    compileAndMatch("src/main/resources/extension_examples/loopControl/continueFor.wacc", "012345")
+    compileAndMatch("src/main/resources/extension_examples/loopControl/continueWhile.wacc", "12345")
+    compileAndMatch("src/main/resources/extension_examples/loopControl/continueAndBreak.wacc", "4567")
+  }
+  it should "compile numbers in different bases" in {
+    compileAndMatch("src/main/resources/extension_examples/numberBases/binaryNumbers.wacc", "12")
+    compileAndMatch("src/main/resources/extension_examples/numberBases/octalNumbers.wacc", "21")
+    compileAndMatch("src/main/resources/extension_examples/numberBases/hexNumbers.wacc", "255")
+    compileAndMatch("src/main/resources/extension_examples/numberBases/mixedBaseOperations.wacc", "true")
+  }
+  it should "compile void functions and standalone function calls" in {
+    compileAndMatch("src/main/resources/extension_examples/void/functionCallStatement.wacc", "true\ntrue\n")
+    compileAndMatch("src/main/resources/extension_examples/void/voidFunction.wacc", "Hello, World!\n")
   }
 }

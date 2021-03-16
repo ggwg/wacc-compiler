@@ -3,7 +3,7 @@
 begin
   int binary = 0b1010; # 10
   int octal = 0o12; # 10
-  int hex = 0o0A; # 10
+  int hex = 0x0A; # 10
   bool allEqual = binary == octal && octal == hex;
   print allEqual
 end
