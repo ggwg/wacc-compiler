@@ -37,7 +37,7 @@ class ExtensionSpec extends AnyFlatSpec {
     }
 
     /* Check the outputs match */
-    assert(processOutput.equals(expected))
+    assertResult(expected)(processOutput)
 
     /* Remove the generated file */
     new File(fileName).delete()
@@ -69,5 +69,17 @@ class ExtensionSpec extends AnyFlatSpec {
   it should "compile void functions and standalone function calls" in {
     compileAndMatch("src/main/resources/extension_examples/void/functionCallStatement.wacc", "true\ntrue\n")
     compileAndMatch("src/main/resources/extension_examples/void/voidFunction.wacc", "Hello, World!\n")
+  }
+  it should "compile overloaded functions" in {
+    compileAndMatch("src/main/resources/extension_examples/functionOverloading/differentArgumentNumber.wacc", "true")
+    compileAndMatch("src/main/resources/extension_examples/functionOverloading/differentArgumentType.wacc", "true")
+    compileAndMatch(
+      "src/main/resources/extension_examples/functionOverloading/differentArgumentTypeAndNumber.wacc",
+      "true"
+    )
+    compileAndMatch(
+      "src/main/resources/extension_examples/functionOverloading/manyOverloaded.wacc",
+      "10\n30\ntrue\na\n"
+    )
   }
 }

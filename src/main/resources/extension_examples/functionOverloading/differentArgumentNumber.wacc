@@ -1,0 +1,13 @@
+#should print true
+
+begin
+  int id(int x) is
+    return x
+  end
+  int id(int x, int y) is
+    return x
+  end
+  int x1 = call id(10);
+  int x2 = call id(10, 100);
+  print x1 == x2
+end

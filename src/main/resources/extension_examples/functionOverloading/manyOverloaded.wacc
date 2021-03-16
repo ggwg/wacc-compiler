@@ -1,0 +1,28 @@
+#should print
+# 10
+# 30
+# true
+# a
+
+begin
+  int f(int x) is
+    return x
+  end
+  int f(int x, int y) is
+    return x + y
+  end
+  bool f(bool x, bool y) is
+    return x && y
+  end
+  char f(int x, bool y) is
+    return chr x
+  end
+  int x = call f(10);
+  println x;
+  x = call f(10, 20);
+  println x;
+  bool b = call f(true, true);
+  println b;
+  char c = call f(ord 'a', true);
+  println c
+end
