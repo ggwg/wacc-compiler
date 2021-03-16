@@ -1,0 +1,8 @@
+# should print Hello, World!
+
+begin
+  void printHelloWorld() is
+    println "Hello, World!"
+  end
+  call printHelloWorld()
+end
