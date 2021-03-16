@@ -1,0 +1,10 @@
+# should print 45
+
+begin
+  int[] arr = [0,1,2,3,4,5,6,7,8,9];
+  int sum = 0;
+  for (int i = 0, sum = 0; i < len arr; i = i + 1) do
+    sum = sum + arr[i]
+  done;
+  println sum
+end
