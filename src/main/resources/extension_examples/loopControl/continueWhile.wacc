@@ -4,7 +4,7 @@ begin
   int i = 0;
   while (i < 10) do
     i = i + 1;
-    if (i > 5) then continueloop else skip;
-    print 5
+    if (i > 5) then continueloop else skip fi;
+    print i
   done
 end
