@@ -1,0 +1,6 @@
+begin
+  for (int chrOrd = ord '0'; chrOrd <= ord '9'; chrOrd = chrOrd + 1) do
+    char character = chr chrOrd;
+    println character
+  done
+end
