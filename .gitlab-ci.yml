@@ -11,7 +11,7 @@ build:
 
 test:
   before_script:
-    - apt-get install gcc-arm-linux-gnueabi qemu-system-arm qemu-efi
+    - apt-get update -qq && apt-get install -y -qq gcc-arm-linux-gnueabi qemu-system-arm qemu-efi
   stage: test
   script:
     - sbt test
