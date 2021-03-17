@@ -1,0 +1,13 @@
+#should print true
+
+begin
+  char toChar(int x) is
+    return chr x
+  end
+  char toChar(char x) is
+    return x
+  end
+  char c1 = call toChar(ord 'a');
+  char c2 = call toChar('a');
+  print c1 == c2
+end

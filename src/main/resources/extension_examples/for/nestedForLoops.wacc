@@ -1,0 +1,15 @@
+# Should print 362880
+
+begin
+  int[] l1 = [1,2,3];
+  int[] l2 = [4,5,6];
+  int[] l3 = [7,8,9];
+  int[][] matrix = [l1, l2, l3];
+  int prod = 1;
+  for (int i = 0 ; i < len matrix; i = i + 1) do
+    for (int j = 0; j < len matrix[0]; j = j + 1) do
+      prod = prod * matrix[i][j]
+    done
+  done;
+  print prod
+end

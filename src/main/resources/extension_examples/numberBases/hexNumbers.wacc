@@ -1,0 +1,6 @@
+# should print 255
+
+begin
+  int hex = 0xFF;
+  print hex
+end

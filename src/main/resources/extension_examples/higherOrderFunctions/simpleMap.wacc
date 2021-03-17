@@ -1,0 +1,15 @@
+begin
+  int inc(int x) is
+    return x + 1
+  end
+  void map(func(int, int) f, int[] a) is
+    for (int i = 0; i < len a; i = i + 1) do
+      a[i] = call f(a[i])
+    done
+  end
+  int[] a = [1,2,3,4];
+  call map(inc, a);
+  for (int i = 0; i < len a; i = i + 1) do
+    println a[i]
+  done
+end

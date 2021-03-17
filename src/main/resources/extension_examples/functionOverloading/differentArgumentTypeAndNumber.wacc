@@ -1,0 +1,13 @@
+#should print true
+
+begin
+  int f(int x) is
+    return x
+  end
+  char f(char x, char y) is
+    if (ord x > ord y) then return x else return y fi
+  end
+  int x = call f(ord 'z');
+  char y = call f('z', 'a');
+  print chr x == y
+end

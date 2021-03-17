@@ -1,0 +1,9 @@
+# should print
+# 36
+# 2
+
+begin
+  int x = 9; # 1001
+  println x << 2;
+  println x >> 2
+end

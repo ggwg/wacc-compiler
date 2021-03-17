@@ -1,0 +1,8 @@
+# should print 0123456789
+
+begin
+  for (int chrOrd = ord '0'; chrOrd <= ord '9'; chrOrd = chrOrd + 1) do
+    char character = chr chrOrd;
+    print character
+  done
+end

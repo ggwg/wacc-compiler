@@ -1,0 +1,6 @@
+#should print 21
+
+begin
+  int octal = 0o25;
+  print octal
+end
