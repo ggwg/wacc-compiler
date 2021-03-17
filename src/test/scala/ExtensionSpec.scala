@@ -14,9 +14,11 @@ class ExtensionSpec extends AnyFlatSpec {
     /* Get the assembled file name */
     val fileName = path.split('.')(0).split('/').last + ".s"
 
+    val execName = "exec"
+
     /* Create and run the linking process */
     val linkIO = new ProcessIO(_ => {}, _ => {}, _ => {})
-    val linkProcess = s"arm-linux-gnueabi-gcc -o exec -mcpu=arm1176jzf-s -mtune=arm1176jzf-s $fileName".run(linkIO)
+    val linkProcess = s"arm-linux-gnueabi-gcc -o $execName -mcpu=arm1176jzf-s -mtune=arm1176jzf-s $fileName".run(linkIO)
     while (linkProcess.isAlive()) {
       Thread.sleep(100)
     }
@@ -31,7 +33,7 @@ class ExtensionSpec extends AnyFlatSpec {
       },
       stderr => { stderr.close() }
     )
-    val runProcess = "qemu-arm -L /usr/arm-linux-gnueabi exec".run(runIO)
+    val runProcess = "qemu-arm-static -L /usr/arm-linux-gnueabi exec".run(runIO)
     while (runProcess.isAlive()) {
       Thread.sleep(100)
     }
@@ -41,6 +43,8 @@ class ExtensionSpec extends AnyFlatSpec {
 
     /* Remove the generated file */
     new File(fileName).delete()
+    new File(execName).delete()
+
     true
   }
 
