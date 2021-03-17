@@ -10,6 +10,8 @@ build:
     - sbt compile
 
 test:
+  before_script:
+    - apt-get install gcc-arm-linux-gnueabi qemu-system-arm qemu-efi
   stage: test
   script:
     - sbt test
