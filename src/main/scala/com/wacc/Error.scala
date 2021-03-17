@@ -4,9 +4,9 @@ case class Error(message: String, position: (Int, Int) = Error.defaultPosition, 
   val getMessage: String =
     code match {
       case Error.semanticCode | Error.syntaxCode =>
-        Error.formatRed(
-          "(Error Code " + code + ")"
-        ) + " Semantic error on line " + position._1 + ", column " + position._2 + ":\n\t- " + message
+        Error.formatRed("(Error Code " + code + ")") +
+          (if (code == Error.semanticCode) " Semantic " else " Syntax ") +
+          "error on line " + position._1 + ", column " + position._2 + ":\n\t- " + message
       case _ => Error.formatRed("(Runtime Error)" + ": " + message)
     }
 

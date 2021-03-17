@@ -773,7 +773,7 @@ case class IntegerLiter(sign: Option[IntegerSign], base: Option[Char], digits: L
     /* Check that the number does not exceed the bounds */
     for (i <- values) {
       if (i >= baseValue) {
-        errors += Error("Integer literal used illegal digits", position)
+        errors += Error("Integer literal used illegal digits", position, Error.syntaxCode)
         return
       }
       value = (value * baseValue) + signValue * i
