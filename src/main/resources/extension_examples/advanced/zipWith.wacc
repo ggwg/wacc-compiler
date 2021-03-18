@@ -1,0 +1,39 @@
+# Shound print
+# i exceeded array bounds
+# [A, B, C, d]
+
+begin
+  import io_lib
+
+  # Returns a capitalised version of c if b is true and c is a letter
+  char conditionalToUpper(char c, bool b) is
+    if (b == true && c >= 'a' && c <= 'z') then
+      return chr (ord c - 32)
+    else
+      return c
+    fi
+  end
+
+  # Applies f pairwise between chars and bools, and stores the result in res
+  void zipWith(func(char,char,bool) f, char[] res, char[] chars, bool[] bools) is
+    for (int i = 0;; i = i + 1) do
+      try
+        res[i] = call f(chars[i], bools[i]);
+        continueloop
+      catch
+        println "i exceeded array bounds";
+        break
+      end;
+      println "This should never be reached";
+      exit -1
+    done
+  end
+
+  ############################################
+
+  char[] chars = ['A', 'b', 'C', 'd'];
+  bool[] bools = [true, true, false, false];
+  char[] res = [' ', ' ', ' ', ' '];
+  call zipWith(conditionalToUpper, res, chars, bools);
+  call prettyPrint(res)
+end
