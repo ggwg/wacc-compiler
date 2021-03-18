@@ -8,14 +8,14 @@ import parsley.implicits.{voidImplicitly => _, _}
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
-case class Program(functions: List[Function], body: Statement)(position: (Int, Int)) extends ASTNodeVoid {
+case class Program(imports: List[Import], functions: List[Function], body: Statement)(position: (Int, Int)) extends ASTNodeVoid {
   override def toString: String = "begin\n" + functions
     .map(_.toString)
     .reduceOption((left, right) => left + right)
     .getOrElse("") + body.toString + "end"
 
   override def removeUnreachableStatements(): Program = {
-    Program(functions.map(_.removeUnreachableStatements()), body.removeUnreachableStatements())(position)
+    Program(imports, functions.map(_.removeUnreachableStatements()), body.removeUnreachableStatements())(position)
   }
 
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
@@ -45,6 +45,11 @@ case class Program(functions: List[Function], body: Statement)(position: (Int, I
   }
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
+    // Check each of the files at the imports
+    for (imp <- imports) {
+      imp.check(symbolTable)
+    }
+
     functions.foreach { func =>
       // TODO: Create functionType object for function
       val functionAdded = symbolTable.addFunction(func.name.identifier, func.getType(symbolTable))
@@ -69,6 +74,22 @@ case class Program(functions: List[Function], body: Statement)(position: (Int, I
     }
     val bodySymbolTable = new SymbolTable(symbolTable)
     body.check(bodySymbolTable)
+  }
+
+  override def getPos(): (Int, Int) = position
+}
+
+/* Function declaration - see P31 of semantic analysis slides */
+case class Import(fileName: Identifier)(position: (Int, Int)) extends ASTNodeVoid {
+  override def toString: String = "import " + fileName
+
+  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
+    state
+  }
+
+  override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
+    // Check the imported program itself recursively.
+    println(fileName.identifier)
   }
 
   override def getPos(): (Int, Int) = position
@@ -206,8 +227,12 @@ case class Parameter(parameterType: Type, identifier: Identifier)(position: (Int
 }
 
 object Program {
-  def apply(funs: Parsley[List[Function]], body: Parsley[Statement]): Parsley[Program] =
-    pos <**> (funs, body).map(Program(_, _))
+  def apply(imports: Parsley[List[Import]], funs: Parsley[List[Function]], body: Parsley[Statement]): Parsley[Program] =
+    pos <**> (imports, funs, body).map(Program(_, _, _))
+}
+
+object Import {
+  def apply(fileName: Parsley[Identifier]): Parsley[Import] = pos <**> fileName.map(Import(_))
 }
 
 object Function {
