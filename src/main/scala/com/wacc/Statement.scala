@@ -237,12 +237,7 @@ case class Free(expression: Expression)(position: (Int, Int)) extends Statement 
     var newState = expression.compile(state)
 
     instructions += MOVE(Register0, resultReg)
-    if (newState.catchLabel.isEmpty) {
-      instructions += MOVE(Register1, ImmediateNumber(0))
-    } else {
-      instructions += LOAD(Register1, LabelLoad(newState.catchLabel.get))
-    }
-    instructions += LOAD(Register2, ImmediateLoad(newState.spOffset - newState.tryCatchSPInit))
+    instructions ++= TryCatch.setupRuntimeArgs(newState, Register1, Register2)
     expression.getExpressionType match {
       case ArrayType(_) =>
         /* Free the array memory */
@@ -756,7 +751,6 @@ case class TryCatch(tryStatement: Statement, catchStatement: Statement) extends 
 
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     val labelPrefix = "L"
-    val reg = state.getResultRegister
 
     /* Get the label IDs */
     val catchID = state.nextID
@@ -868,6 +862,16 @@ object StatementFunctionCall {
 
 object TryCatch {
   val catchLabelPosition: String = "-catchLabel"
+
   def apply(tryStatement: Parsley[Statement], catchStatement: Parsley[Statement]): Parsley[TryCatch] =
     (tryStatement, catchStatement).map(TryCatch(_, _))
+
+  def setupRuntimeArgs(state: AssemblerState, labelReg: Register, offsetReg: Register): List[Instruction] = List(
+    if (state.catchLabel.isEmpty) {
+      MOVE(labelReg, ImmediateNumber(0))
+    } else {
+      LOAD(labelReg, LabelLoad(state.catchLabel.get))
+    },
+    LOAD(offsetReg, ImmediateLoad(state.spOffset - state.tryCatchSPInit))
+  )
 }

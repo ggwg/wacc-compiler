@@ -89,6 +89,7 @@ object Compiler {
   def generateFooter(state: AssemblerState): ListBuffer[Instruction] = {
     var footer: ListBuffer[Instruction] = ListBuffer.empty
     if (state.p_check_null_pointer) {
+      /* r0 = pointer, r1 = catch label, r2 = sp offset for the label */
       footer ++= List(
         StringLabel(NullDereferenceError.label),
         PushLR(),
@@ -99,6 +100,7 @@ object Compiler {
       )
     }
     if (state.p_check_divide_by_zero) {
+      /* r0 = denominator, r1 = numerator, r2 = catch label, r3 = sp offset for the label */
       footer ++= List(
         StringLabel(DivideByZeroError.label),
         PushLR(),
@@ -111,6 +113,7 @@ object Compiler {
       )
     }
     if (state.p_throw_overflow_error) {
+      /* r0 = catch label, r1 = sp offset for the label */
       footer ++= List(
         StringLabel(OverflowError.label),
         PushLR(),
@@ -122,6 +125,7 @@ object Compiler {
       )
     }
     if (state.p_free_pair) {
+      /* r0 = pointer, r1 = catch label, r2 = sp offset for the label */
       footer ++= List(
         StringLabel(FreeNullPairError.label),
         PushLR(),
@@ -145,6 +149,7 @@ object Compiler {
       )
     }
     if (state.p_free_array) {
+      /* r0 = pointer, r1 = catch label, r2 = sp offset for the label */
       footer ++= List(
         StringLabel(FreeNullArrayError.label),
         PushLR(),
@@ -156,6 +161,7 @@ object Compiler {
       )
     }
     if (state.p_check_array_bounds) {
+      /* r0 = index, r1 = array pointer, r2 = catch label, r3 = sp offset for the label */
       footer ++= List(
         StringLabel(ArrayIndexError.label),
         PushLR(),
@@ -188,6 +194,7 @@ object Compiler {
       )
     }
     if (state.p_throw_runtime_error) {
+      /* r0 = message, r1 = catch label, r2 = sp offset for the label */
       footer ++= List(
         StringLabel(RuntimeError.label),
         ADD(Register0, Register0, ImmediateNumber(4)),

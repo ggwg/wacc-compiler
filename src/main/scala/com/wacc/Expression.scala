@@ -72,16 +72,9 @@ case class IncDec(isPrefix: Boolean, isIncrement: Boolean, operand: Expression)(
 
     /* Perform the operation */
     newState = newState.putMessageIfAbsent(OverflowError.errorMessage)
-    instructions ++= List(
-      ADDS(helperReg, helperReg, ImmediateNumber(diff)),
-      if (newState.catchLabel.isEmpty) {
-        MOVE(Register0, ImmediateNumber(0))
-      } else {
-        LOAD(Register0, LabelLoad(newState.catchLabel.get))
-      },
-      LOAD(Register1, ImmediateLoad(newState.spOffset - newState.tryCatchSPInit)),
-      BLVS(OverflowError.label)
-    )
+    instructions += ADDS(helperReg, helperReg, ImmediateNumber(diff))
+    instructions ++= TryCatch.setupRuntimeArgs(newState, Register0, Register1)
+    instructions += BLVS(OverflowError.label)
     newState = newState.copy(p_throw_overflow_error = true, p_throw_runtime_error = true)
 
     /* Store back the result */
@@ -118,52 +111,13 @@ case class UnaryOperatorApplication(operator: UnaryOperator, operand: Expression
       case Negate() =>
         newState = operand.compile(newState)
         newState = newState.putMessageIfAbsent(OverflowError.errorMessage)
-        instructions ++= List(
-          ReverseSUBS(resultReg, resultReg, ImmediateNumber(0)),
-          if (newState.catchLabel.isEmpty) {
-            MOVE(Register0, ImmediateNumber(0))
-          } else {
-            LOAD(Register0, LabelLoad(newState.catchLabel.get))
-          },
-          LOAD(Register1, ImmediateLoad(newState.spOffset - newState.tryCatchSPInit)),
-          BLVS(OverflowError.label)
-        )
+        instructions += ReverseSUBS(resultReg, resultReg, ImmediateNumber(0))
+        instructions ++= TryCatch.setupRuntimeArgs(newState, Register0, Register1)
+        instructions += BLVS(OverflowError.label)
         newState = newState.copy(p_throw_overflow_error = true, p_throw_runtime_error = true)
       case Not() =>
         newState = operand.compile(newState)
         instructions += XOR(resultReg, resultReg, ImmediateNumber(1))
-      case PrefixInc() | PrefixDec() =>
-        val diff = operator match {
-          case PrefixInc() => 1
-          case PrefixDec() => -1
-        }
-        val variable = operand.asInstanceOf[AssignmentLeft]
-        val isByte = variable.getLeftType.getSize == 1
-
-        /* Put in result register the reference to the variable */
-        newState = variable.compileReference(newState)
-
-        /* Put in helper register the actual value of the variable */
-        instructions += LOAD(helperReg, RegisterLoad(resultReg), isByte)
-
-        /* Perform the operation */
-        newState = newState.putMessageIfAbsent(OverflowError.errorMessage)
-        instructions ++= List(
-          ADDS(helperReg, helperReg, ImmediateNumber(diff)),
-          if (newState.catchLabel.isEmpty) {
-            MOVE(Register0, ImmediateNumber(0))
-          } else {
-            LOAD(Register0, LabelLoad(newState.catchLabel.get))
-          },
-          LOAD(Register1, ImmediateLoad(newState.spOffset - newState.tryCatchSPInit)),
-          BLVS(OverflowError.label)
-        )
-        newState = newState.copy(p_throw_overflow_error = true, p_throw_runtime_error = true)
-
-        /* Store back the result */
-        instructions += STORE(helperReg, RegisterLoad(resultReg), isByte = isByte)
-        instructions += SUBS(helperReg, helperReg, ImmediateNumber(diff))
-        instructions += MOVE(resultReg, helperReg)
       case _ =>
         newState = operand.compile(newState)
     }
@@ -418,15 +372,9 @@ case class ArrayElement(name: Identifier, expressions: List[Expression])(positio
       instructions ++= List(
         LOAD(arrayReg, RegisterLoad(arrayReg)),
         MOVE(Register0, indexReg),
-        MOVE(Register1, arrayReg),
-        if (newState.catchLabel.isEmpty) {
-          MOVE(Register2, ImmediateNumber(0))
-        } else {
-          LOAD(Register2, LabelLoad(newState.catchLabel.get))
-        },
-        LOAD(Register3, ImmediateLoad(newState.spOffset - newState.tryCatchSPInit)),
-        BRANCHLINK(ArrayIndexError.label)
-      )
+        MOVE(Register1, arrayReg)
+      ) ++ TryCatch.setupRuntimeArgs(newState, Register2, Register3)
+      instructions += BRANCHLINK(ArrayIndexError.label)
       newState = newState.copy(p_check_array_bounds = true, p_throw_runtime_error = true)
 
       /* Skip over the array size */
@@ -520,42 +468,23 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
       /* Integer operations */
       case Add() =>
         newState = newState.putMessageIfAbsent(OverflowError.errorMessage)
-        instructions ++= List(
-          ADDS(resultReg, firstOp, secondOp),
-          if (newState.catchLabel.isEmpty) {
-            MOVE(Register0, ImmediateNumber(0))
-          } else {
-            LOAD(Register0, LabelLoad(newState.catchLabel.get))
-          },
-          LOAD(Register1, ImmediateLoad(newState.spOffset - newState.tryCatchSPInit)),
-          BLVS(OverflowError.label)
-        )
+        instructions += ADDS(resultReg, firstOp, secondOp)
+        instructions ++= TryCatch.setupRuntimeArgs(newState, Register0, Register1)
+        instructions += BLVS(OverflowError.label)
         newState = newState.copy(p_throw_overflow_error = true, p_throw_runtime_error = true)
 
       case Subtract() =>
         newState = newState.putMessageIfAbsent(OverflowError.errorMessage)
-        instructions ++= List(
-          SUBS(resultReg, firstOp, secondOp),
-          if (newState.catchLabel.isEmpty) {
-            MOVE(Register0, ImmediateNumber(0))
-          } else {
-            LOAD(Register0, LabelLoad(newState.catchLabel.get))
-          },
-          LOAD(Register1, ImmediateLoad(newState.spOffset - newState.tryCatchSPInit)),
-          BLVS(OverflowError.label)
-        )
+        instructions += SUBS(resultReg, firstOp, secondOp)
+        instructions ++= TryCatch.setupRuntimeArgs(newState, Register0, Register1)
+        instructions += BLVS(OverflowError.label)
         newState = newState.copy(p_throw_overflow_error = true, p_throw_runtime_error = true)
 
       case Multiply() =>
         val tempResultReg = newState.getResultRegister
         newState = newState.putMessageIfAbsent(OverflowError.errorMessage)
+        instructions ++= TryCatch.setupRuntimeArgs(newState, Register0, Register1)
         instructions ++= List(
-          if (newState.catchLabel.isEmpty) {
-            MOVE(Register0, ImmediateNumber(0))
-          } else {
-            LOAD(Register0, LabelLoad(newState.catchLabel.get))
-          },
-          LOAD(Register1, ImmediateLoad(newState.spOffset - newState.tryCatchSPInit)),
           SMULL(resultReg, tempResultReg, firstOp, secondOp),
           COMPAREASR(tempResultReg, resultReg),
           BLNE(OverflowError.label)
@@ -564,15 +493,11 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
 
       case Divide() =>
         newState = newState.putMessageIfAbsent(DivideByZeroError.errorMessage)
+        instructions += MOVE(Register0, firstOp)
+        instructions += MOVE(Register1, secondOp)
+        instructions ++= TryCatch.setupRuntimeArgs(newState, Register2, Register3)
+        instructions += BLVS(OverflowError.label)
         instructions ++= List(
-          MOVE(Register0, firstOp),
-          MOVE(Register1, secondOp),
-          if (newState.catchLabel.isEmpty) {
-            MOVE(Register2, ImmediateNumber(0))
-          } else {
-            LOAD(Register2, LabelLoad(newState.catchLabel.get))
-          },
-          LOAD(Register3, ImmediateLoad(newState.spOffset - newState.tryCatchSPInit)),
           BRANCHLINK(DivideByZeroError.label),
           BRANCHLINK("__aeabi_idiv"),
           MOVE(resultReg, Register0)
@@ -581,15 +506,11 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
 
       case Modulo() =>
         newState = newState.putMessageIfAbsent(DivideByZeroError.errorMessage)
+        instructions += MOVE(Register0, firstOp)
+        instructions += MOVE(Register1, secondOp)
+        instructions ++= TryCatch.setupRuntimeArgs(newState, Register2, Register3)
+        instructions += BLVS(OverflowError.label)
         instructions ++= List(
-          MOVE(Register0, firstOp),
-          MOVE(Register1, secondOp),
-          if (newState.catchLabel.isEmpty) {
-            MOVE(Register2, ImmediateNumber(0))
-          } else {
-            LOAD(Register2, LabelLoad(newState.catchLabel.get))
-          },
-          LOAD(Register3, ImmediateLoad(newState.spOffset - newState.tryCatchSPInit)),
           BRANCHLINK(DivideByZeroError.label),
           BRANCHLINK("__aeabi_idivmod"),
           MOVE(resultReg, Register1)
@@ -1062,12 +983,7 @@ case class PairElement(expression: Expression, isFirst: Boolean)(position: (Int,
     /* Check for null pointer */
     newState = newState.putMessageIfAbsent(NullDereferenceError.errorMessage)
     instructions += MOVE(Register0, resultReg)
-    if (newState.catchLabel.isEmpty) {
-      instructions += MOVE(Register1, ImmediateNumber(0))
-    } else {
-      instructions += LOAD(Register1, LabelLoad(newState.catchLabel.get))
-    }
-    instructions += LOAD(Register2, ImmediateLoad(newState.spOffset - newState.tryCatchSPInit))
+    instructions ++= TryCatch.setupRuntimeArgs(newState, Register1, Register2)
     instructions += BRANCHLINK(NullDereferenceError.label)
     newState = newState.copy(p_check_null_pointer = true, p_throw_runtime_error = true)
 
