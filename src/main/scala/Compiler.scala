@@ -298,6 +298,9 @@ object Compiler {
           case None => ()
         }
 
+        /* Remove unreachable statements */
+        AST = AST.removeUnreachableStatements()
+
         var instructions = ListBuffer.empty[Instruction]
         for (function <- parseResult.get.functions) {
           state = state.putFunction(function.name.identifier, function.thisFunctionType)

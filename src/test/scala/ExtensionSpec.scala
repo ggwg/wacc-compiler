@@ -1,8 +1,7 @@
+import Parser._
 import org.scalatest.flatspec.AnyFlatSpec
 
 import java.io.File
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Await, Future, blocking}
 import scala.sys.process._
 
 class ExtensionSpec extends AnyFlatSpec {
@@ -115,6 +114,21 @@ class ExtensionSpec extends AnyFlatSpec {
       "src/main/resources/extension_examples/advanced/zipWith.wacc",
       "i exceeded array bounds\n[A, B, C, d]\n",
       libraries = List("src/main/resources/extension_examples/linking/io_lib.wacc")
+    )
+  }
+  it should "optimise unreachable statements" in {
+    assertResult(statementParser.runParser("skip").get)(
+      statementParser
+        .runParser(
+          "if true then" +
+            "       while false do" +
+            "             println 100" +
+            "       done" +
+            "     else" +
+            "       print 1000 fi"
+        )
+        .get
+        .removeUnreachableStatements()
     )
   }
 }
