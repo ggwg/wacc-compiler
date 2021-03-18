@@ -736,6 +736,8 @@ case class ContinueLoop()(position: (Int, Int)) extends Statement {
 }
 
 case class TryCatch(tryStatement: Statement, catchStatement: Statement) extends Statement {
+  val catchLabelPosition: String = "-catchLabel"
+
   override def toString: String = s"try $tryStatement catch $catchStatement end"
 
   override def check(symbolTable: SymbolTable)(implicit errors: ListBuffer[Error]): Unit = {
@@ -744,6 +746,37 @@ case class TryCatch(tryStatement: Statement, catchStatement: Statement) extends 
 
     val catchSymbolTable = new SymbolTable(symbolTable)
     catchStatement.check(catchSymbolTable)
+  }
+
+  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
+    val labelPrefix = "L"
+    val reg = state.getResultRegister
+
+    /* Get the label IDs */
+    val catchID = state.nextID
+    val endID = state.nextID
+
+    /* Add the catch label on the stack */
+    instructions += LOAD(reg, LabelLoad(labelPrefix + endID))
+    instructions += SUB(RegisterSP, RegisterSP, ImmediateNumber(4))
+    instructions += STORE(reg, RegisterLoad(RegisterSP))
+    var newState =
+      state.copy(spOffset = state.spOffset + 4, varDic = state.varDic + (catchLabelPosition, state.spOffset + 4))
+
+    /* Compile the try statement */
+    newState = tryStatement.compileNewScope(newState)
+
+    /* Reset the try catch label */
+    instructions += ADD(RegisterSP, RegisterSP, ImmediateNumber(4))
+    newState = newState.copy(spOffset = newState.spOffset - 4, varDic = state.varDic)
+    instructions += BRANCH(None, labelPrefix + endID)
+
+    /* Compile the catch statement */
+    instructions += NumberLabel(catchID)
+    newState = catchStatement.compileNewScope(newState)
+
+    instructions += NumberLabel(endID)
+    newState
   }
 }
 

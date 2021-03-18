@@ -96,6 +96,10 @@ case class FunctionLoad(name: String) extends AddressAccess {
   override def toString: String = s"=f_$name"
 }
 
+case class LabelLoad(label: String) extends AddressAccess {
+  override def toString: String = s"=$LabelLoad"
+}
+
 case class ImmediateLoad(value: Int) extends AddressAccess {
   override def toString: String = "=" + value
 }

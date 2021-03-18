@@ -1,0 +1,8 @@
+begin
+  try
+    int x = 0 / 0;
+    println "Should not have reached this"
+  catch
+    println "Exception caught"
+  end
+end
