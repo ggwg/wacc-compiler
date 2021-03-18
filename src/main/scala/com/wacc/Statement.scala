@@ -761,7 +761,7 @@ case class TryCatch(tryStatement: Statement, catchStatement: Statement) extends 
     instructions += SUB(RegisterSP, RegisterSP, ImmediateNumber(4))
     instructions += STORE(reg, RegisterLoad(RegisterSP))
     var newState =
-      state.copy(spOffset = state.spOffset + 4, varDic = state.varDic + (catchLabelPosition, state.spOffset + 4))
+      state.copy(spOffset = state.spOffset + 4, varDic = state.varDic + ((catchLabelPosition, state.spOffset + 4)))
 
     /* Compile the try statement */
     newState = tryStatement.compileNewScope(newState)
