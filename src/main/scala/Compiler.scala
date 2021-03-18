@@ -267,7 +267,6 @@ object Compiler {
           case None => ()
         }
 
-        println("Success")
         var instructions = ListBuffer.empty[Instruction]
         for (function <- parseResult.get.functions) {
           state = state.putFunction(function.name.identifier, function.thisFunctionType)

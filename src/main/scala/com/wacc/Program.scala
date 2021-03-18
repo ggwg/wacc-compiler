@@ -87,15 +87,13 @@ case class Import(fileName: Identifier)(position: (Int, Int)) extends ASTNodeVoi
   override def toString: String = "import " + fileName
 
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
-    println("importDic:" + state.importDic)
     instructions ++= state.getImport(fileName.identifier)
     // Error message if import not found
     state
   }
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
-    // Check the imported program itself recursively.
-    println(fileName.identifier)
+    // No need for check here - program already checked imported file when importing functions
   }
 
   override def getPos(): (Int, Int) = position
