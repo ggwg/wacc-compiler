@@ -1,0 +1,74 @@
+begin
+
+  # identity function for higher order functions such as maps
+  int id(int x) is
+    return x
+  end
+  char id(char c) is
+    return c
+  end
+  string id(string s) is
+    return s
+  end
+  bool id(bool b) is
+    return b
+  end
+
+  # Map higher order function: Applies a function to all elements of an array.
+  int[] map(func(int, int) f, int[] arr) is
+    for (int i = 0; i < len arr; i = i + 1) do
+      arr[i] = call f(arr[i])
+    done ;
+    return arr
+  end
+  char[] map(func(char, char) f, char[] arr) is
+    for (int i = 0; i < len arr; i = i + 1) do
+      arr[i] = call f(arr[i])
+    done ;
+    return arr
+  end
+  string[] map(func(string, string) f, string[] arr) is
+    for (int i = 0; i < len arr; i = i + 1) do
+      arr[i] = call f(arr[i])
+    done ;
+    return arr
+  end
+  bool[] map(func(bool, bool) f, bool[] arr) is
+    for (int i = 0; i < len arr; i = i + 1) do
+      arr[i] = call f(arr[i])
+    done ;
+    return arr
+  end
+
+  # Reduce higher order function - reduces list of elements of type T into a single element of type T
+  int reduce(func(int, int, int) f, int[] arr) is
+    int res = arr[0] ;
+    for (int i = 1; i < len arr; i = i + 1) do
+      res = call f(res, arr[i])
+    done ;
+    return res
+  end
+  char reduce(func(char, char, char) f, char[] arr) is
+    char res = arr[0] ;
+    for (int i = 1; i < len arr; i = i + 1) do
+      res = call f(res, arr[i])
+    done ;
+    return res
+  end
+  string reduce(func(string, string, string) f, string[] arr) is
+    string res = arr[0] ;
+    for (int i = 1; i < len arr; i = i + 1) do
+      res = call f(res, arr[i])
+    done ;
+    return res
+  end
+  bool reduce(func(bool, bool, bool) f, bool[] arr) is
+    bool res = arr[0] ;
+    for (int i = 1; i < len arr; i = i + 1) do
+      res = call f(res, arr[i])
+    done ;
+    return res
+  end
+
+  skip
+end

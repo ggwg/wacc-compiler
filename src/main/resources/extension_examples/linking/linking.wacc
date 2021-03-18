@@ -1,0 +1,33 @@
+# Compile files together by calling from the project root directory (run make first):
+# ./compile src/main/resources/extension_examples/linking/linking.wacc src/main/resources/extension_examples/linking/hof_lib.wacc src/main/resources/extension_examples/linking/io_lib.wacc
+
+begin
+  import hof_lib
+  import io_lib
+
+  int add(int a, int b) is
+    return a + b
+  end
+  int timesTwo(int n) is
+    return n * 2
+  end
+  int sum(int[] arr) is
+    int res = call reduce(add, arr);
+    return res
+  end
+
+  # initialize an example array.
+  int[] arr = [1,2,3,4] ;
+  call prettyPrint(arr) ;
+
+  # Map applies a function (as parameter) to all elements of an array.
+  call map(timesTwo, arr);
+  call prettyPrint(arr) ;
+
+  # Functions can be renamed and treated as variables
+  func(int, int[]) sumArray = sum ;
+  int x = call sumArray(arr);
+  println x
+
+end
+

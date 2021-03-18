@@ -12,10 +12,15 @@ object Parser {
   /*  <program> ::=  ‘begin’ <func> * <stat> ‘end’ */
   lazy val programParser: Parsley[Program] =
     Program(
-      skipWhitespace *> parseKeyword("begin") *> skipWhitespace *> combinator.many(attempt(functionParser)),
+      skipWhitespace *> parseKeyword("begin") *> skipWhitespace *>
+        combinator.many(attempt(importParser)), combinator.many(attempt(functionParser)),
       statementParser <* parseKeyword("end") <* skipWhitespace <* eof
     )
       .label("a program")
+  lazy val importParser: Parsley[Import] = Import(
+    parseKeyword("import") *> skipWhitespace *> identifierParser <* skipWhitespace
+  )
+    .label("an import")
   /*  <func> ::= <type>   <ident> ‘(’ <param-list> ?  ‘)’ ‘is’ <stat> ‘end’ */
   lazy val functionParser: Parsley[wacc.Function] = Function(
     typeParser,

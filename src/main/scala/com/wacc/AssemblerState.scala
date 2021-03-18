@@ -25,6 +25,8 @@ case class AssemblerState(
   declaredSize: Int,
   /* TODO: Add a function to the dictionary whenever */
   functionDic: immutable.Map[String, List[FunctionType]],
+
+  importDic: immutable.Map[String, List[Instruction]],
   /* Whether functions are set */
   p_throw_overflow_error: Boolean,
   p_throw_runtime_error: Boolean,
@@ -65,6 +67,18 @@ case class AssemblerState(
       return this.copy(messageDic = messageDic + (message -> getNextMessageID))
     }
     this
+  }
+
+  /* Adds compiled import functions from a file to the importDic */
+  def putImport(importFileName: String, instructions: List[Instruction]): AssemblerState = {
+    if (!containsMessage(importFileName)) {
+      return this.copy(importDic = importDic + (importFileName -> instructions))
+    }
+    this
+  }
+
+  def getImport(importFileName: String): List[Instruction] = {
+    importDic.getOrElse(importFileName, List.empty[Instruction])
   }
 
   // TODO: Check that no 2 functions of the same type can be added to the symbol table.
@@ -163,6 +177,7 @@ object AssemblerState {
       declaredSize = 0,
       messageDic = Map.empty,
       functionDic = Map.empty,
+      importDic = Map.empty,
       p_throw_overflow_error = false,
       p_throw_runtime_error = false,
       p_check_divide_by_zero = false,

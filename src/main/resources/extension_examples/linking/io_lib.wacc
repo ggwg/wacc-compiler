@@ -1,0 +1,54 @@
+# A standard library to pretty print arrays
+
+begin
+  void prettyPrint(int[] arr) is
+    print '[' ;
+    for (int i = 0; i < len arr; i = i + 1) do
+      print arr[i] ;
+      if (i != (len(arr) - 1)) then
+        print ", "
+      else
+        skip
+      fi
+    done ;
+    println ']'
+  end
+  void prettyPrint(char[] arr) is
+    print '[' ;
+    for (int i = 0; i < len arr; i = i + 1) do
+      print arr[i] ;
+      if (i != (len(arr) - 1)) then
+        print ", "
+      else
+        skip
+      fi
+    done ;
+    println ']'
+  end
+  void prettyPrint(string[] arr) is
+    print '[' ;
+    for (int i = 0; i < len arr; i = i + 1) do
+      print arr[i] ;
+      if (i != (len(arr) - 1)) then
+        print ", "
+      else
+        skip
+      fi
+    done ;
+    println ']'
+  end
+  void prettyPrint(bool[] arr) is
+    print '[' ;
+    for (int i = 0; i < len arr; i = i + 1) do
+      print arr[i] ;
+      if (i != (len(arr) - 1)) then
+        print ", "
+      else
+        skip
+      fi
+    done ;
+    println ']'
+  end
+
+  skip
+end
