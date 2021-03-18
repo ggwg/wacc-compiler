@@ -16,9 +16,11 @@ sealed trait Statement extends ASTNodeVoid {
       case BeginEnd(statement) => statement.exitable()
       case If(_, trueStatement, falseStatement) =>
         trueStatement.exitable() && falseStatement.exitable()
-      case StatementSequence(_, statement) => statement.exitable()
-      case While(_, statement)             => statement.exitable()
-      case _                               => false
+      case StatementSequence(_, statement)        => statement.exitable()
+      case While(_, statement)                    => statement.exitable()
+      case For(_, _, _, statement)                => statement.exitable()
+      case TryCatch(tryStatement, catchStatement) => tryStatement.exitable() && catchStatement.exitable()
+      case _                                      => false
     }
   }
 
