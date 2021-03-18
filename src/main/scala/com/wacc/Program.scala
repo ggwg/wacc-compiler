@@ -8,7 +8,8 @@ import parsley.implicits.{voidImplicitly => _, _}
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
-case class Program(imports: List[Import], functions: List[Function], body: Statement)(position: (Int, Int)) extends ASTNodeVoid {
+case class Program(imports: List[Import], functions: List[Function], body: Statement)(position: (Int, Int))
+    extends ASTNodeVoid {
   override def toString: String = "begin\n" + functions
     .map(_.toString)
     .reduceOption((left, right) => left + right)
@@ -58,7 +59,11 @@ case class Program(imports: List[Import], functions: List[Function], body: State
       // TODO: Create functionType object for function
       val functionAdded = symbolTable.addFunction(func.name.identifier, func.getType(symbolTable))
       if (!functionAdded) {
-        errors += Error("ERROR", getPos(), Error.semanticCode)
+        errors += Error(
+          "Function '" + func.name + "' already defined with the same signature",
+          func.getPos(),
+          Error.semanticCode
+        )
       }
 
 //      val F = symbolTable.lookup(func.name.identifier)
