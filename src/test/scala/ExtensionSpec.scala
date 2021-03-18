@@ -6,10 +6,10 @@ import scala.concurrent.{Await, Future, blocking}
 import scala.sys.process._
 
 class ExtensionSpec extends AnyFlatSpec {
-  def compileAndMatch(path: String, expected: String): Boolean = {
+  def compileAndMatch(path: String, expected: String, libraries: List[String] = List.empty): Boolean = {
 
     /* Assemble the file */
-    Compiler.main(Array(path))
+    Compiler.main((path :: libraries).toArray)
 
     /* Get the assembled file name */
     val fileName = path.split('.')(0).split('/').last + ".s"
@@ -88,5 +88,33 @@ class ExtensionSpec extends AnyFlatSpec {
   }
   it should "compile higher order functions" in {
     compileAndMatch("src/main/resources/extension_examples/higherOrderFunctions/simpleMap.wacc", "2\n3\n4\n5\n")
+  }
+  it should "compile try catch blocks" in {
+    compileAndMatch("src/main/resources/extension_examples/exception/simpleException.wacc", "Exception caught\n")
+    compileAndMatch(
+      "src/main/resources/extension_examples/exception/nestedException1.wacc",
+      "First catch block\nSecond catch block\n"
+    )
+    compileAndMatch(
+      "src/main/resources/extension_examples/exception/nestedException2.wacc",
+      "Inner catch block\nOuter catch block\n"
+    )
+  }
+  it should "compile linked external libraries" in {
+    compileAndMatch(
+      "src/main/resources/extension_examples/linking/linking.wacc",
+      "[1, 2, 3, 4]\n[2, 4, 6, 8]\n20\n",
+      libraries = List(
+        "src/main/resources/extension_examples/linking/hof_lib.wacc",
+        "src/main/resources/extension_examples/linking/io_lib.wacc"
+      )
+    )
+  }
+  it should "compile an advanced program using all extensions" in {
+    compileAndMatch(
+      "src/main/resources/extension_examples/advanced/zipWith.wacc",
+      "i exceeded array bounds\n[A, B, C, d]\n",
+      libraries = List("src/main/resources/extension_examples/linking/io_lib.wacc")
+    )
   }
 }

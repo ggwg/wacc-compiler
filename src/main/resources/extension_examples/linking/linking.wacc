@@ -1,6 +1,11 @@
 # Compile files together by calling from the project root directory (run make first):
 # ./compile src/main/resources/extension_examples/linking/linking.wacc src/main/resources/extension_examples/linking/hof_lib.wacc src/main/resources/extension_examples/linking/io_lib.wacc
 
+# Should print
+# [1, 2, 3, 4]
+# [2, 4, 6, 8]
+# 20
+
 begin
   import hof_lib
   import io_lib

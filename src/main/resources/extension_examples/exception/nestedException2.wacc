@@ -1,6 +1,6 @@
 # Should print
-# First try block
-# Second try block
+# Inner catch block
+# Outer catch block
 
 begin
   try
