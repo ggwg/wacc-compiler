@@ -21,6 +21,10 @@ case class Program(imports: List[Import], functions: List[Function], body: State
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     var newState = state
 
+    for (imp <- imports) {
+      newState = imp.compile(newState)
+    }
+
     for (function <- functions) {
       /* Overloaded Functions: Get the generated label for all functions */
       /* Add function to assembler state */
@@ -79,11 +83,13 @@ case class Program(imports: List[Import], functions: List[Function], body: State
   override def getPos(): (Int, Int) = position
 }
 
-/* Function declaration - see P31 of semantic analysis slides */
 case class Import(fileName: Identifier)(position: (Int, Int)) extends ASTNodeVoid {
   override def toString: String = "import " + fileName
 
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
+    println("importDic:" + state.importDic)
+    instructions ++= state.getImport(fileName.identifier)
+    // Error message if import not found
     state
   }
 

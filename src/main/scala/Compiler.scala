@@ -222,9 +222,61 @@ object Compiler {
   }
 
   def main(args: Array[String]): Unit = {
-    if (args.length != 1) {
+    var state = AssemblerState.initialState
+    /* Semantic Analysis: Initialize top level Symbol Table */
+    val topST: SymbolTable = new SymbolTable()
+
+    if (args.length < 1) {
       println("Usage: ./compile <path_to_file>")
       return
+    }
+    /* Compile additional libraries */
+    if (args.length > 1) {
+      for (i <- 1 to args.length - 1) {
+        val fileName = args(i)
+        val split = fileName.split('.')
+        /* Check that the input is correct */
+        if (split.length != 2 || !split(1).equals("wacc")) {
+          println("File path must be of the form 'path/name.wacc' or 'name.wacc'")
+          return
+        }
+        /* Retrieve the base file name from the path */
+        val baseName = split(0).split('/').last
+        /* Parse the input */
+        val parseResult = Parser.programParser.parseFromFile(new File(fileName))
+
+        parseResult match {
+          case Failure(msg) =>
+            println("#syntax_error#\n" + msg)
+            sys.exit(Error.syntaxCode)
+          case Success(_) => ()
+        }
+
+        var AST = parseResult.get
+        implicit val semanticErrors: mutable.ListBuffer[Error] = mutable.ListBuffer.empty
+
+        /* Traverse the AST to identify any semantic errors and a few syntactic ones */
+        AST.check(topST)(semanticErrors)
+
+        /* Check for any syntax errors */
+        val syntaxError = semanticErrors.find(error => error.code == Error.syntaxCode)
+        syntaxError match {
+          case Some(err) =>
+            err.throwError()
+            sys.exit(Error.syntaxCode)
+          case None => ()
+        }
+
+        println("Success")
+        var instructions = ListBuffer.empty[Instruction]
+        for (function <- parseResult.get.functions) {
+          state = state.putFunction(function.name.identifier, function.thisFunctionType)
+          state = function.compile(state)(instructions)
+        }
+
+        /* Finally, add parsed program into assembler state */
+        state = state.putImport(baseName, instructions.toList)
+      }
     }
 
     val fileName = args(0)
@@ -249,9 +301,9 @@ object Compiler {
       case Success(_) => ()
     }
 
-    /* Semantic Analysis:
-       Initialize top level Symbol Table */
-    val topST: SymbolTable = new SymbolTable()
+//    /* Semantic Analysis:
+//       Initialize top level Symbol Table */
+//    val topST: SymbolTable = new SymbolTable()
 
     var AST = parseResult.get
     implicit val semanticErrors: mutable.ListBuffer[Error] = mutable.ListBuffer.empty
@@ -279,7 +331,7 @@ object Compiler {
 
     /* Compile the program */
     val instructions: ListBuffer[Instruction] = ListBuffer.empty
-    val state = AST.compile(AssemblerState.initialState)(instructions)
+    state = AST.compile(state)(instructions)
 
     /* Add the program headers. Program headers include messages */
     val header: ListBuffer[Instruction] = generateHeader(state)
