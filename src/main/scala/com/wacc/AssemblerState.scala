@@ -35,7 +35,10 @@ case class AssemblerState(
   p_free_array: Boolean,
   /* The labels that we will use when we reach a continue or break statement */
   breakLabel: String,
-  continueLabel: String
+  continueLabel: String,
+  /* Try-catch infromation fields */
+  catchLabel: Option[String],
+  tryCatchSPInit: Int
 ) {
   /* Returns the register in which an expression's result will be stored */
   def getResultRegister: Register = freeRegs.head
@@ -168,6 +171,8 @@ object AssemblerState {
       p_check_array_bounds = false,
       p_free_array = false,
       breakLabel = "",
-      continueLabel = ""
+      continueLabel = "",
+      catchLabel = None,
+      tryCatchSPInit = 0
     )
 }

@@ -7,6 +7,7 @@ import com.wacc.{
   AssemblerState,
   BRANCH,
   BRANCHLINK,
+  BRANCHX,
   COMPARE,
   CS,
   DataDirective,
@@ -21,6 +22,7 @@ import com.wacc.{
   LT,
   MOVE,
   MessageLoad,
+  NE,
   NullDereferenceError,
   OverflowError,
   POP,
@@ -29,6 +31,8 @@ import com.wacc.{
   PushLR,
   Register0,
   Register1,
+  Register2,
+  Register3,
   RegisterLoad,
   RegisterOffsetLoad,
   RegisterSP,
@@ -100,6 +104,8 @@ object Compiler {
         PushLR(),
         COMPARE(Register1, ImmediateNumber(0)),
         LOAD(Register0, MessageLoad(state.getMessageID(DivideByZeroError.errorMessage)), isByte = false, Option(EQ)),
+        MOVE(Register1, Register2, cond = Option(EQ)),
+        MOVE(Register2, Register3, cond = Option(EQ)),
         BRANCHLINK(RuntimeError.label, Option(EQ)),
         PopPC()
       )
@@ -107,6 +113,8 @@ object Compiler {
     if (state.p_throw_overflow_error) {
       footer ++= List(
         StringLabel(OverflowError.label),
+        MOVE(Register2, Register1),
+        MOVE(Register1, Register0),
         LOAD(Register0, MessageLoad(state.getMessageID(OverflowError.errorMessage))),
         BRANCHLINK(RuntimeError.label)
       )
@@ -156,7 +164,13 @@ object Compiler {
           isByte = false,
           Option(LT)
         ),
+        PUSH(Register1),
+        PUSH(Register2),
+        MOVE(Register1, Register2),
+        MOVE(Register3, Register2),
         BRANCHLINK(RuntimeError.label, Option(LT)),
+        POP(Register2),
+        POP(Register1),
         LOAD(Register1, RegisterLoad(Register1)),
         COMPARE(Register0, Register1),
         LOAD(
@@ -165,6 +179,8 @@ object Compiler {
           isByte = false,
           Option(CS)
         ),
+        MOVE(Register1, Register2),
+        MOVE(Register3, Register2),
         BRANCHLINK(RuntimeError.label, Option(CS)),
         PopPC()
       )
@@ -172,6 +188,11 @@ object Compiler {
     if (state.p_throw_runtime_error) {
       footer ++= List(
         StringLabel(RuntimeError.label),
+        ADD(Register0, Register0, ImmediateNumber(4)),
+        COMPARE(Register1, ImmediateNumber(0)),
+        ADD(RegisterSP, RegisterSP, Register2),
+        BRANCHX(Register1, Some(NE)),
+        SUB(RegisterSP, RegisterSP, Register2),
         BRANCHLINK("printf"),
         MOVE(Register0, ImmediateNumber(Error.runtimeCode)),
         BRANCHLINK("exit")

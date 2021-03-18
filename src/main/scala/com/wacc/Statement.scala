@@ -1,5 +1,6 @@
 package com.wacc
 
+import com.wacc.TryCatch.catchLabelPosition
 import parsley.Parsley
 import parsley.Parsley.pos
 import parsley.implicits.{voidImplicitly => _, _}
@@ -236,6 +237,12 @@ case class Free(expression: Expression)(position: (Int, Int)) extends Statement 
     var newState = expression.compile(state)
 
     instructions += MOVE(Register0, resultReg)
+    if (newState.catchLabel.isEmpty) {
+      instructions += MOVE(Register1, ImmediateNumber(0))
+    } else {
+      instructions += LOAD(Register1, LabelLoad(newState.catchLabel.get))
+    }
+    instructions += LOAD(Register2, ImmediateLoad(newState.spOffset - newState.tryCatchSPInit))
     expression.getExpressionType match {
       case ArrayType(_) =>
         /* Free the array memory */
@@ -736,7 +743,6 @@ case class ContinueLoop()(position: (Int, Int)) extends Statement {
 }
 
 case class TryCatch(tryStatement: Statement, catchStatement: Statement) extends Statement {
-  val catchLabelPosition: String = "-catchLabel"
 
   override def toString: String = s"try $tryStatement catch $catchStatement end"
 
@@ -756,20 +762,15 @@ case class TryCatch(tryStatement: Statement, catchStatement: Statement) extends 
     val catchID = state.nextID
     val endID = state.nextID
 
-    /* Add the catch label on the stack */
-    instructions += LOAD(reg, LabelLoad(labelPrefix + endID))
-    instructions += SUB(RegisterSP, RegisterSP, ImmediateNumber(4))
-    instructions += STORE(reg, RegisterLoad(RegisterSP))
-    var newState =
-      state.copy(spOffset = state.spOffset + 4, varDic = state.varDic + ((catchLabelPosition, state.spOffset + 4)))
+    /* Remember the catch label */
+    var newState = state.copy(catchLabel = Some(labelPrefix + catchID), tryCatchSPInit = state.spOffset)
 
     /* Compile the try statement */
     newState = tryStatement.compileNewScope(newState)
+    instructions += BRANCH(None, labelPrefix + endID)
 
     /* Reset the try catch label */
-    instructions += ADD(RegisterSP, RegisterSP, ImmediateNumber(4))
-    newState = newState.copy(spOffset = newState.spOffset - 4, varDic = state.varDic)
-    instructions += BRANCH(None, labelPrefix + endID)
+    newState = newState.copy(catchLabel = state.catchLabel, tryCatchSPInit = state.tryCatchSPInit)
 
     /* Compile the catch statement */
     instructions += NumberLabel(catchID)
@@ -866,6 +867,7 @@ object StatementFunctionCall {
 }
 
 object TryCatch {
+  val catchLabelPosition: String = "-catchLabel"
   def apply(tryStatement: Parsley[Statement], catchStatement: Parsley[Statement]): Parsley[TryCatch] =
     (tryStatement, catchStatement).map(TryCatch(_, _))
 }
