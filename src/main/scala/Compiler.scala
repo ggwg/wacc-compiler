@@ -172,6 +172,7 @@ object Compiler {
     if (state.p_throw_runtime_error) {
       footer ++= List(
         StringLabel(RuntimeError.label),
+        ADD(Register0, Register0, ImmediateNumber(4)),
         BRANCHLINK("printf"),
         MOVE(Register0, ImmediateNumber(Error.runtimeCode)),
         BRANCHLINK("exit")
