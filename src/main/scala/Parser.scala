@@ -67,6 +67,10 @@ object Parser {
         parseKeyword("then") *> skipWhitespace *> statementParser,
         parseKeyword("else") *> skipWhitespace *> statementParser <* parseKeyword("fi") <* skipWhitespace
       )
+      <\> TryCatch(
+        parseKeyword("try") *> skipWhitespace *> statementParser,
+        parseKeyword("catch") *> skipWhitespace *> statementParser <* parseKeyword("end") <* skipWhitespace
+      )
       <\> While(
         parseKeyword("while") *> skipWhitespace *> expressionParser,
         parseKeyword("do") *> skipWhitespace *> statementParser <* parseKeyword("done") <* skipWhitespace
@@ -395,6 +399,8 @@ object Parser {
     "false",
     "break",
     "continueloop",
-    "for"
+    "for",
+    "try",
+    "catch"
   )
 }

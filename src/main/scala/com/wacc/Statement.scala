@@ -142,12 +142,6 @@ case class Assignment(assignmentLeft: AssignmentLeft, assignmentRight: Assignmen
     assignmentLeft.toString + " = " + assignmentRight.toString + "\n"
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
-    /* Note: for assignment of functions:
-     *   1. Get left type of function - if it is a FunctionType then:
-     *   2. Check if RHS is in the FunctionDictionary in the SymbolTable */
-    /* Check that assignment-left type is same as return type of assignment-right */
-
-    /* TODO: Do not allow assignment of pre-defined functions */
     assignmentLeft match {
       case Identifier(identifier) =>
         if (symbolTable.containsFunction(identifier)) {
@@ -739,6 +733,8 @@ case class ContinueLoop()(position: (Int, Int)) extends Statement {
   override def getPos(): (Int, Int) = position
 }
 
+case class TryCatch(tryStatement: Statement, catchStatement: Statement) extends Statement {}
+
 object Statement {
   def apply(action: Parsley[String], expr: Parsley[Expression]): Parsley[Statement] =
     pos <**> (action, expr).map {
@@ -822,4 +818,9 @@ object Initialization {
 object StatementFunctionCall {
   def apply(functionCall: Parsley[FunctionCall]): Parsley[StatementFunctionCall] =
     pos <**> functionCall.map(StatementFunctionCall(_))
+}
+
+object TryCatch {
+  def apply(tryStatement: Parsley[Statement], catchStatement: Parsley[Statement]): Parsley[TryCatch] =
+    (tryStatement, catchStatement).map(TryCatch(_, _))
 }
