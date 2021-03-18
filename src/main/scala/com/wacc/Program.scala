@@ -86,7 +86,9 @@ case class Function(returnType: Type, name: Identifier, parameters: Option[Param
       parameters.getOrElse("").toString + ") is\n" + body.toString + "end\n"
 
   override def removeUnreachableStatements(): Function = {
-    Function(returnType, name, parameters, body.removeUnreachableStatements())(position)
+    val res = Function(returnType, name, parameters, body.removeUnreachableStatements())(position)
+    res.thisFunctionType = this.thisFunctionType
+    res
   }
 
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
