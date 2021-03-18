@@ -167,7 +167,7 @@ object Compiler {
         PUSH(Register1),
         PUSH(Register2),
         MOVE(Register1, Register2),
-        MOVE(Register3, Register2),
+        MOVE(Register2, Register3),
         BRANCHLINK(RuntimeError.label, Option(LT)),
         POP(Register2),
         POP(Register1),
@@ -180,7 +180,7 @@ object Compiler {
           Option(CS)
         ),
         MOVE(Register1, Register2),
-        MOVE(Register3, Register2),
+        MOVE(Register2, Register3),
         BRANCHLINK(RuntimeError.label, Option(CS)),
         PopPC()
       )
@@ -191,7 +191,9 @@ object Compiler {
         ADD(Register0, Register0, ImmediateNumber(4)),
         COMPARE(Register1, ImmediateNumber(0)),
         ADD(RegisterSP, RegisterSP, Register2),
+        ADD(RegisterSP, RegisterSP, ImmediateNumber(4)),
         BRANCHX(Register1, Some(NE)),
+        SUB(RegisterSP, RegisterSP, ImmediateNumber(4)),
         SUB(RegisterSP, RegisterSP, Register2),
         BRANCHLINK("printf"),
         MOVE(Register0, ImmediateNumber(Error.runtimeCode)),

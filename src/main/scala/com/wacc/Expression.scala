@@ -550,15 +550,15 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
         val tempResultReg = newState.getResultRegister
         newState = newState.putMessageIfAbsent(OverflowError.errorMessage)
         instructions ++= List(
-          SMULL(resultReg, tempResultReg, firstOp, secondOp),
-          COMPAREASR(tempResultReg, resultReg),
           if (newState.catchLabel.isEmpty) {
             MOVE(Register0, ImmediateNumber(0))
           } else {
             LOAD(Register0, LabelLoad(newState.catchLabel.get))
           },
           LOAD(Register1, ImmediateLoad(newState.spOffset - newState.tryCatchSPInit)),
-          BLVS(OverflowError.label)
+          SMULL(resultReg, tempResultReg, firstOp, secondOp),
+          COMPAREASR(tempResultReg, resultReg),
+          BLNE(OverflowError.label)
         )
         newState = newState.copy(p_throw_overflow_error = true, p_throw_runtime_error = true)
 
