@@ -113,10 +113,12 @@ object Compiler {
     if (state.p_throw_overflow_error) {
       footer ++= List(
         StringLabel(OverflowError.label),
+        PushLR(),
         MOVE(Register2, Register1),
         MOVE(Register1, Register0),
         LOAD(Register0, MessageLoad(state.getMessageID(OverflowError.errorMessage))),
-        BRANCHLINK(RuntimeError.label)
+        BRANCHLINK(RuntimeError.label),
+        PopPC()
       )
     }
     if (state.p_free_pair) {
