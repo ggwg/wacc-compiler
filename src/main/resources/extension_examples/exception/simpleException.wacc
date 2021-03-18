@@ -1,3 +1,5 @@
+# should print "Exception caught"
+
 begin
   try
     int x = 0 / 0;

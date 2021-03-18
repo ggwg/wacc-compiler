@@ -496,7 +496,6 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
         instructions += MOVE(Register0, firstOp)
         instructions += MOVE(Register1, secondOp)
         instructions ++= TryCatch.setupRuntimeArgs(newState, Register2, Register3)
-        instructions += BLVS(OverflowError.label)
         instructions ++= List(
           BRANCHLINK(DivideByZeroError.label),
           BRANCHLINK("__aeabi_idiv"),
@@ -509,7 +508,6 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
         instructions += MOVE(Register0, firstOp)
         instructions += MOVE(Register1, secondOp)
         instructions ++= TryCatch.setupRuntimeArgs(newState, Register2, Register3)
-        instructions += BLVS(OverflowError.label)
         instructions ++= List(
           BRANCHLINK(DivideByZeroError.label),
           BRANCHLINK("__aeabi_idivmod"),

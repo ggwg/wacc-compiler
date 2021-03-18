@@ -1,0 +1,17 @@
+# Should print
+# First catch block
+# Second catch block
+
+begin
+  try
+    int x = 2000000 * 2000000
+  catch
+    println "First catch block";
+    try
+      int[] arr = [];
+      println arr[0] # Should not print
+    catch
+      println "Second catch block"
+    end
+  end
+end
