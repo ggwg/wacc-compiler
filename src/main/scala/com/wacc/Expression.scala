@@ -72,7 +72,9 @@ case class IncDec(isPrefix: Boolean, isIncrement: Boolean, operand: Expression)(
 
     /* Perform the operation */
     newState = newState.putMessageIfAbsent(OverflowError.errorMessage)
-    instructions ++= List(ADDS(helperReg, helperReg, ImmediateNumber(diff)), BLVS(OverflowError.label))
+    instructions += ADDS(helperReg, helperReg, ImmediateNumber(diff))
+    instructions ++= TryCatch.setupRuntimeArgs(newState, Register0, Register1)
+    instructions += BLVS(OverflowError.label)
     newState = newState.copy(p_throw_overflow_error = true, p_throw_runtime_error = true)
 
     /* Store back the result */
@@ -109,7 +111,9 @@ case class UnaryOperatorApplication(operator: UnaryOperator, operand: Expression
       case Negate() =>
         newState = operand.compile(newState)
         newState = newState.putMessageIfAbsent(OverflowError.errorMessage)
-        instructions ++= List(ReverseSUBS(resultReg, resultReg, ImmediateNumber(0)), BLVS(OverflowError.label))
+        instructions += ReverseSUBS(resultReg, resultReg, ImmediateNumber(0))
+        instructions ++= TryCatch.setupRuntimeArgs(newState, Register0, Register1)
+        instructions += BLVS(OverflowError.label)
         newState = newState.copy(p_throw_overflow_error = true, p_throw_runtime_error = true)
       case Not() =>
         newState = operand.compile(newState)
@@ -356,9 +360,9 @@ case class ArrayElement(name: Identifier, expressions: List[Expression])(positio
       instructions ++= List(
         LOAD(arrayReg, RegisterLoad(arrayReg)),
         MOVE(Register0, indexReg),
-        MOVE(Register1, arrayReg),
-        BRANCHLINK(ArrayIndexError.label)
-      )
+        MOVE(Register1, arrayReg)
+      ) ++ TryCatch.setupRuntimeArgs(newState, Register2, Register3)
+      instructions += BRANCHLINK(ArrayIndexError.label)
       newState = newState.copy(p_check_array_bounds = true, p_throw_runtime_error = true)
 
       /* Skip over the array size */
@@ -452,17 +456,22 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
       /* Integer operations */
       case Add() =>
         newState = newState.putMessageIfAbsent(OverflowError.errorMessage)
-        instructions ++= List(ADDS(resultReg, firstOp, secondOp), BLVS(OverflowError.label))
+        instructions += ADDS(resultReg, firstOp, secondOp)
+        instructions ++= TryCatch.setupRuntimeArgs(newState, Register0, Register1)
+        instructions += BLVS(OverflowError.label)
         newState = newState.copy(p_throw_overflow_error = true, p_throw_runtime_error = true)
 
       case Subtract() =>
         newState = newState.putMessageIfAbsent(OverflowError.errorMessage)
-        instructions ++= List(SUBS(resultReg, firstOp, secondOp), BLVS(OverflowError.label))
+        instructions += SUBS(resultReg, firstOp, secondOp)
+        instructions ++= TryCatch.setupRuntimeArgs(newState, Register0, Register1)
+        instructions += BLVS(OverflowError.label)
         newState = newState.copy(p_throw_overflow_error = true, p_throw_runtime_error = true)
 
       case Multiply() =>
         val tempResultReg = newState.getResultRegister
         newState = newState.putMessageIfAbsent(OverflowError.errorMessage)
+        instructions ++= TryCatch.setupRuntimeArgs(newState, Register0, Register1)
         instructions ++= List(
           SMULL(resultReg, tempResultReg, firstOp, secondOp),
           COMPAREASR(tempResultReg, resultReg),
@@ -472,9 +481,10 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
 
       case Divide() =>
         newState = newState.putMessageIfAbsent(DivideByZeroError.errorMessage)
+        instructions += MOVE(Register0, firstOp)
+        instructions += MOVE(Register1, secondOp)
+        instructions ++= TryCatch.setupRuntimeArgs(newState, Register2, Register3)
         instructions ++= List(
-          MOVE(Register0, firstOp),
-          MOVE(Register1, secondOp),
           BRANCHLINK(DivideByZeroError.label),
           BRANCHLINK("__aeabi_idiv"),
           MOVE(resultReg, Register0)
@@ -483,9 +493,10 @@ case class BinaryOperatorApplication(leftOperand: Expression, operator: BinaryOp
 
       case Modulo() =>
         newState = newState.putMessageIfAbsent(DivideByZeroError.errorMessage)
+        instructions += MOVE(Register0, firstOp)
+        instructions += MOVE(Register1, secondOp)
+        instructions ++= TryCatch.setupRuntimeArgs(newState, Register2, Register3)
         instructions ++= List(
-          MOVE(Register0, firstOp),
-          MOVE(Register1, secondOp),
           BRANCHLINK(DivideByZeroError.label),
           BRANCHLINK("__aeabi_idivmod"),
           MOVE(resultReg, Register1)
@@ -958,6 +969,7 @@ case class PairElement(expression: Expression, isFirst: Boolean)(position: (Int,
     /* Check for null pointer */
     newState = newState.putMessageIfAbsent(NullDereferenceError.errorMessage)
     instructions += MOVE(Register0, resultReg)
+    instructions ++= TryCatch.setupRuntimeArgs(newState, Register1, Register2)
     instructions += BRANCHLINK(NullDereferenceError.label)
     newState = newState.copy(p_check_null_pointer = true, p_throw_runtime_error = true)
 

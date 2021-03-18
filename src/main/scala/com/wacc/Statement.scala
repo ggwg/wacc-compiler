@@ -1,5 +1,6 @@
 package com.wacc
 
+import com.wacc.TryCatch.catchLabelPosition
 import parsley.Parsley
 import parsley.Parsley.pos
 import parsley.implicits.{voidImplicitly => _, _}
@@ -16,9 +17,11 @@ sealed trait Statement extends ASTNodeVoid {
       case BeginEnd(statement) => statement.exitable()
       case If(_, trueStatement, falseStatement) =>
         trueStatement.exitable() && falseStatement.exitable()
-      case StatementSequence(_, statement) => statement.exitable()
-      case While(_, statement)             => statement.exitable()
-      case _                               => false
+      case StatementSequence(_, statement)        => statement.exitable()
+      case While(_, statement)                    => statement.exitable()
+      case For(_, _, _, statement)                => statement.exitable()
+      case TryCatch(tryStatement, catchStatement) => tryStatement.exitable() && catchStatement.exitable()
+      case _                                      => false
     }
   }
 
@@ -142,12 +145,6 @@ case class Assignment(assignmentLeft: AssignmentLeft, assignmentRight: Assignmen
     assignmentLeft.toString + " = " + assignmentRight.toString + "\n"
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
-    /* Note: for assignment of functions:
-     *   1. Get left type of function - if it is a FunctionType then:
-     *   2. Check if RHS is in the FunctionDictionary in the SymbolTable */
-    /* Check that assignment-left type is same as return type of assignment-right */
-
-    /* TODO: Do not allow assignment of pre-defined functions */
     assignmentLeft match {
       case Identifier(identifier) =>
         if (symbolTable.containsFunction(identifier)) {
@@ -240,6 +237,7 @@ case class Free(expression: Expression)(position: (Int, Int)) extends Statement 
     var newState = expression.compile(state)
 
     instructions += MOVE(Register0, resultReg)
+    instructions ++= TryCatch.setupRuntimeArgs(newState, Register1, Register2)
     expression.getExpressionType match {
       case ArrayType(_) =>
         /* Free the array memory */
@@ -739,6 +737,44 @@ case class ContinueLoop()(position: (Int, Int)) extends Statement {
   override def getPos(): (Int, Int) = position
 }
 
+case class TryCatch(tryStatement: Statement, catchStatement: Statement) extends Statement {
+
+  override def toString: String = s"try $tryStatement catch $catchStatement end"
+
+  override def check(symbolTable: SymbolTable)(implicit errors: ListBuffer[Error]): Unit = {
+    val trySymbolTable = new SymbolTable(symbolTable)
+    tryStatement.check(trySymbolTable)
+
+    val catchSymbolTable = new SymbolTable(symbolTable)
+    catchStatement.check(catchSymbolTable)
+  }
+
+  override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
+    val labelPrefix = "L"
+
+    /* Get the label IDs */
+    val catchID = state.nextID
+    val endID = state.nextID
+
+    /* Remember the catch label */
+    var newState = state.copy(catchLabel = Some(labelPrefix + catchID), tryCatchSPInit = state.spOffset)
+
+    /* Compile the try statement */
+    newState = tryStatement.compileNewScope(newState)
+    instructions += BRANCH(None, labelPrefix + endID)
+
+    /* Reset the try catch label */
+    newState = newState.copy(catchLabel = state.catchLabel, tryCatchSPInit = state.tryCatchSPInit)
+
+    /* Compile the catch statement */
+    instructions += NumberLabel(catchID)
+    newState = catchStatement.compileNewScope(newState)
+
+    instructions += NumberLabel(endID)
+    newState
+  }
+}
+
 object Statement {
   def apply(action: Parsley[String], expr: Parsley[Expression]): Parsley[Statement] =
     pos <**> (action, expr).map {
@@ -822,4 +858,20 @@ object Initialization {
 object StatementFunctionCall {
   def apply(functionCall: Parsley[FunctionCall]): Parsley[StatementFunctionCall] =
     pos <**> functionCall.map(StatementFunctionCall(_))
+}
+
+object TryCatch {
+  val catchLabelPosition: String = "-catchLabel"
+
+  def apply(tryStatement: Parsley[Statement], catchStatement: Parsley[Statement]): Parsley[TryCatch] =
+    (tryStatement, catchStatement).map(TryCatch(_, _))
+
+  def setupRuntimeArgs(state: AssemblerState, labelReg: Register, offsetReg: Register): List[Instruction] = List(
+    if (state.catchLabel.isEmpty) {
+      MOVE(labelReg, ImmediateNumber(0))
+    } else {
+      LOAD(labelReg, LabelLoad(state.catchLabel.get))
+    },
+    LOAD(offsetReg, ImmediateLoad(state.spOffset - state.tryCatchSPInit))
+  )
 }

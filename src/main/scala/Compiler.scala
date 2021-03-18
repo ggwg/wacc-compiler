@@ -7,6 +7,7 @@ import com.wacc.{
   AssemblerState,
   BRANCH,
   BRANCHLINK,
+  BRANCHX,
   COMPARE,
   CS,
   DataDirective,
@@ -21,6 +22,7 @@ import com.wacc.{
   LT,
   MOVE,
   MessageLoad,
+  NE,
   NullDereferenceError,
   OverflowError,
   POP,
@@ -29,6 +31,8 @@ import com.wacc.{
   PushLR,
   Register0,
   Register1,
+  Register2,
+  Register3,
   RegisterLoad,
   RegisterOffsetLoad,
   RegisterSP,
@@ -85,6 +89,7 @@ object Compiler {
   def generateFooter(state: AssemblerState): ListBuffer[Instruction] = {
     var footer: ListBuffer[Instruction] = ListBuffer.empty
     if (state.p_check_null_pointer) {
+      /* r0 = pointer, r1 = catch label, r2 = sp offset for the label */
       footer ++= List(
         StringLabel(NullDereferenceError.label),
         PushLR(),
@@ -95,23 +100,32 @@ object Compiler {
       )
     }
     if (state.p_check_divide_by_zero) {
+      /* r0 = denominator, r1 = numerator, r2 = catch label, r3 = sp offset for the label */
       footer ++= List(
         StringLabel(DivideByZeroError.label),
         PushLR(),
         COMPARE(Register1, ImmediateNumber(0)),
         LOAD(Register0, MessageLoad(state.getMessageID(DivideByZeroError.errorMessage)), isByte = false, Option(EQ)),
+        MOVE(Register1, Register2, cond = Option(EQ)),
+        MOVE(Register2, Register3, cond = Option(EQ)),
         BRANCHLINK(RuntimeError.label, Option(EQ)),
         PopPC()
       )
     }
     if (state.p_throw_overflow_error) {
+      /* r0 = catch label, r1 = sp offset for the label */
       footer ++= List(
         StringLabel(OverflowError.label),
+        PushLR(),
+        MOVE(Register2, Register1),
+        MOVE(Register1, Register0),
         LOAD(Register0, MessageLoad(state.getMessageID(OverflowError.errorMessage))),
-        BRANCHLINK(RuntimeError.label)
+        BRANCHLINK(RuntimeError.label),
+        PopPC()
       )
     }
     if (state.p_free_pair) {
+      /* r0 = pointer, r1 = catch label, r2 = sp offset for the label */
       footer ++= List(
         StringLabel(FreeNullPairError.label),
         PushLR(),
@@ -135,6 +149,7 @@ object Compiler {
       )
     }
     if (state.p_free_array) {
+      /* r0 = pointer, r1 = catch label, r2 = sp offset for the label */
       footer ++= List(
         StringLabel(FreeNullArrayError.label),
         PushLR(),
@@ -146,6 +161,7 @@ object Compiler {
       )
     }
     if (state.p_check_array_bounds) {
+      /* r0 = index, r1 = array pointer, r2 = catch label, r3 = sp offset for the label */
       footer ++= List(
         StringLabel(ArrayIndexError.label),
         PushLR(),
@@ -156,7 +172,13 @@ object Compiler {
           isByte = false,
           Option(LT)
         ),
+        PUSH(Register1),
+        PUSH(Register2),
+        MOVE(Register1, Register2),
+        MOVE(Register2, Register3),
         BRANCHLINK(RuntimeError.label, Option(LT)),
+        POP(Register2),
+        POP(Register1),
         LOAD(Register1, RegisterLoad(Register1)),
         COMPARE(Register0, Register1),
         LOAD(
@@ -165,14 +187,23 @@ object Compiler {
           isByte = false,
           Option(CS)
         ),
+        MOVE(Register1, Register2),
+        MOVE(Register2, Register3),
         BRANCHLINK(RuntimeError.label, Option(CS)),
         PopPC()
       )
     }
     if (state.p_throw_runtime_error) {
+      /* r0 = message, r1 = catch label, r2 = sp offset for the label */
       footer ++= List(
         StringLabel(RuntimeError.label),
         ADD(Register0, Register0, ImmediateNumber(4)),
+        COMPARE(Register1, ImmediateNumber(0)),
+        ADD(RegisterSP, RegisterSP, Register2),
+        ADD(RegisterSP, RegisterSP, ImmediateNumber(4)),
+        BRANCHX(Register1, Some(NE)),
+        SUB(RegisterSP, RegisterSP, ImmediateNumber(4)),
+        SUB(RegisterSP, RegisterSP, Register2),
         BRANCHLINK("printf"),
         MOVE(Register0, ImmediateNumber(Error.runtimeCode)),
         BRANCHLINK("exit")
