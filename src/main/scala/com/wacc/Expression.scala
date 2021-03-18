@@ -163,18 +163,6 @@ case class UnaryOperatorApplication(operator: UnaryOperator, operand: Expression
             errors += UnaryOperatorError.expectation("length", "array", operandType.toString, operand.getPos())
             return
         }
-      case PrefixInc() | PrefixDec() =>
-        if (!operandType.unifies(IntType())) {
-          errors += UnaryOperatorError.expectation(operator.toString, "int", operandType.toString, operand.getPos())
-          return
-        }
-        if (!operand.isInstanceOf[AssignmentLeft]) {
-          errors += Error(
-            "Expression can not be assigned to; It must be an identifier or an array element access",
-            position
-          )
-          return
-        }
     }
 
     /* Check operand correctness */
