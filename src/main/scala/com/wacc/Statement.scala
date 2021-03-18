@@ -733,7 +733,17 @@ case class ContinueLoop()(position: (Int, Int)) extends Statement {
   override def getPos(): (Int, Int) = position
 }
 
-case class TryCatch(tryStatement: Statement, catchStatement: Statement) extends Statement {}
+case class TryCatch(tryStatement: Statement, catchStatement: Statement) extends Statement {
+  override def toString: String = s"try $tryStatement catch $catchStatement end"
+
+  override def check(symbolTable: SymbolTable)(implicit errors: ListBuffer[Error]): Unit = {
+    val trySymbolTable = new SymbolTable(symbolTable)
+    tryStatement.check(trySymbolTable)
+
+    val catchSymbolTable = new SymbolTable(symbolTable)
+    catchStatement.check(catchSymbolTable)
+  }
+}
 
 object Statement {
   def apply(action: Parsley[String], expr: Parsley[Expression]): Parsley[Statement] =
