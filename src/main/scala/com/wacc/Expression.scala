@@ -245,7 +245,7 @@ case class FunctionCall(name: Identifier, arguments: Option[ArgumentList])(posit
       arguments.foreach(_.check(symbolTable))
     } else {
       /* Invalid function call with an identifier that's not a function */
-      errors += FunctionCallError.invalid(name.identifier, name.identifier, getPos())
+      errors += FunctionCallError.invalid(name.identifier, calledFunctionType.printArgumentTypes, getPos())
     }
   }
 

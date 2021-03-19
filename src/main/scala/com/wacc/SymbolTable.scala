@@ -59,10 +59,16 @@ class SymbolTable(parentSymbolTable: SymbolTable, isFunctionSymbolTable: Boolean
               return expectedFunctionType
             }
           }
-          current = current.get.parent
-        case None =>
-          current = current.get.parent
+        case None => ()
       }
+      current.get.dictionary.get(funcName) match {
+        case Some((expectedFunctionType, _)) =>
+          if (functionType.unifies(expectedFunctionType)) {
+            return expectedFunctionType
+          }
+        case None => ()
+      }
+      current = current.get.parent
     }
     /* If no function is found, return voidType to indicate failure */
     NotAType()

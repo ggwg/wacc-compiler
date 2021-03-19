@@ -75,7 +75,7 @@ case class ArrayType(arrayType: Type) extends Type with PairElementType {
 /* Error type. This type represents errors caught during the semantic analysis. */
 case class NotAType() extends PairElementType {
   override def toString: String = "NOT A TYPE"
-  override def unifies(otherType: Type): Boolean = false
+  override def unifies(otherType: Type): Boolean = otherType == this
 }
 
 /* AnyType is a type used to help compare 2 function types for function overloading:
@@ -88,11 +88,11 @@ case class AnyType() extends Type {
 
 /* This type represents the type of a function (e.g. int fun(int, char)) */
 case class FunctionType(returnType: Type, parameters: Option[List[Type]]) extends Type {
-  override def toString: String = "(" +
-    (parameters match {
-      case Some(list: List[Type]) => list.map(_.toString).mkString(", ")
-      case None                   => ""
-    }) + ") => " + returnType
+  override def toString: String = printArgumentTypes + " => " + returnType
+  def printArgumentTypes: String = "(" + (parameters match {
+    case Some(list: List[Type]) => list.map(_.toString).mkString(", ")
+    case None                   => ""
+  }) + ")"
   override def unifies(otherType: Type): Boolean = otherType match {
     case FunctionType(ret, params) => returnType.unifies(ret) && Type.unifiesParameters(params, parameters)
     case _                         => false

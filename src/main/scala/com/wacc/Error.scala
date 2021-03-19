@@ -74,7 +74,7 @@ case object FunctionCallError {
 
   def invalid(name: String, actual: String, position: (Int, Int)): Error = {
     val message = "Invalid function call to alleged user-defined function \"" + name +
-      "\":\n\t  Actual type of " + name + " is " + Error.formatYellow(actual)
+      "\":\n\t  Expected types of " + name + "'s arguments are " + Error.formatYellow(actual)
     Error(message, position)
   }
 }

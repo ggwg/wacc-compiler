@@ -10,10 +10,15 @@ import scala.collection.mutable.ListBuffer
 
 case class Program(imports: List[Import], functions: List[Function], body: Statement)(position: (Int, Int))
     extends ASTNodeVoid {
-  override def toString: String = "begin\n" + functions
-    .map(_.toString)
-    .reduceOption((left, right) => left + right)
-    .getOrElse("") + body.toString + "end"
+  override def toString: String = "begin\n" +
+    imports
+      .map(_.toString)
+      .reduceOption((left, right) => left + right)
+      .getOrElse("") +
+    functions
+      .map(_.toString)
+      .reduceOption((left, right) => left + right)
+      .getOrElse("") + body.toString + "end"
 
   override def removeUnreachableStatements(): Program = {
     Program(imports, functions.map(_.removeUnreachableStatements()), body.removeUnreachableStatements())(position)
