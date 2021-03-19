@@ -209,78 +209,13 @@ object Compiler {
     }
   }
 
-  def main(args: Array[String]): Unit = {
-    var state = AssemblerState.initialState
-    /* Semantic Analysis: Initialize top level Symbol Table */
-    val topST: SymbolTable = new SymbolTable()
-
-    if (args.length < 1) {
-      println("Usage: ./compile <path_to_file>")
-      return
-    }
-    /* Compile additional libraries */
-    if (args.length > 1) {
-      for (i <- 1 until args.length) {
-        val fileName = args(i)
-        val split = fileName.split('.')
-        /* Check that the input is correct */
-        if (split.length != 2 || !split(1).equals("wacc")) {
-          println("File path must be of the form 'path/name.wacc' or 'name.wacc'")
-          return
-        }
-        /* Retrieve the base file name from the path */
-        val baseName = split(0).split('/').last
-        /* Parse the input */
-        val parseResult = Parser.programParser.parseFromFile(new File(fileName))
-
-        parseResult match {
-          case Failure(msg) =>
-            println("#syntax_error#\n" + msg)
-            sys.exit(Error.syntaxCode)
-          case Success(_) => ()
-        }
-
-        var AST = parseResult.get
-        implicit val semanticErrors: mutable.ListBuffer[Error] = mutable.ListBuffer.empty
-
-        /* Traverse the AST to identify any semantic errors and a few syntactic ones */
-        AST.check(topST)(semanticErrors)
-
-        /* Check for any syntax errors */
-        val syntaxError = semanticErrors.find(error => error.code == Error.syntaxCode)
-        syntaxError match {
-          case Some(err) =>
-            err.throwError()
-            sys.exit(Error.syntaxCode)
-          case None => ()
-        }
-
-        /* Remove unreachable statements */
-        AST = AST.removeUnreachableStatements()
-
-        val instructions = ListBuffer.empty[Instruction]
-        for (function <- parseResult.get.functions) {
-          state = state.putFunction(function.name.identifier, function.thisFunctionType)
-          state = function.compile(state)(instructions)
-        }
-
-        /* Finally, add parsed program into assembler state */
-        state = state.putImport(baseName, instructions.toList)
-      }
-    }
-
-    val fileName = args(0)
+  def generateAST(fileName: String, symbolTable: SymbolTable): Option[Program] = {
     val split = fileName.split('.')
-
     /* Check that the input is correct */
     if (split.length != 2 || !split(1).equals("wacc")) {
       println("File path must be of the form 'path/name.wacc' or 'name.wacc'")
-      return
+      Option.empty
     }
-
-    /* Retrieve the base file name from the path */
-    val baseName = split(0).split('/').last
-
     /* Parse the input */
     val parseResult = Parser.programParser.parseFromFile(new File(fileName))
 
@@ -295,7 +230,7 @@ object Compiler {
     implicit val semanticErrors: mutable.ListBuffer[Error] = mutable.ListBuffer.empty
 
     /* Traverse the AST to identify any semantic errors and a few syntactic ones */
-    AST.check(topST)(semanticErrors)
+    AST.check(symbolTable)(semanticErrors)
 
     /* Check for any syntax errors */
     val syntaxError = semanticErrors.find(error => error.code == Error.syntaxCode)
@@ -314,6 +249,49 @@ object Compiler {
     if (semanticErrors.nonEmpty) {
       sys.exit(Error.semanticCode)
     }
+    Option(AST)
+  }
+
+  /* getBaseName is only called after generateAST, which checks fileName is in the right format */
+  def getBaseName(fileName: String): String = {
+    val split = fileName.split('.')
+    split(0).split('/').last
+  }
+
+  def main(args: Array[String]): Unit = {
+    var state = AssemblerState.initialState
+    /* Semantic Analysis: Initialize top level Symbol Table */
+    val topST: SymbolTable = new SymbolTable()
+
+    if (args.length < 1) {
+      println("Usage: ./compile <path_to_file>")
+      return
+    }
+    /* Compile additional libraries */
+    if (args.length > 1) {
+      for (i <- 1 until args.length) {
+        val parsedImportAST: Option[Program] = generateAST(args(i), topST)
+        val AST = parsedImportAST match {
+          case Some(value) => value
+          case None => return
+        }
+
+        val instructions = ListBuffer.empty[Instruction]
+        for (function <- AST.functions) {
+          state = state.putFunction(function.name.identifier, function.thisFunctionType)
+          state = function.compile(state)(instructions)
+        }
+
+        /* Finally, add parsed program into assembler state */
+        state = state.putImport(getBaseName(args(i)), instructions.toList)
+      }
+    }
+
+    val parseMainAST: Option[Program] =generateAST(args(0), topST)
+    val AST = parseMainAST match {
+      case Some(value) => value
+      case None => return
+    }
 
     /* Compile the program */
     val instructions: ListBuffer[Instruction] = ListBuffer.empty
@@ -328,7 +306,7 @@ object Compiler {
     val curatedInstructions: List[Instruction] = curateInstructions(instructions.toList)
 
     /* Write to an assembly file */
-    writeToFile(baseName + ".s", header, curatedInstructions, footer)
+    writeToFile(getBaseName(args(0)) + ".s", header, curatedInstructions, footer)
   }
 
   def writeToFile(
