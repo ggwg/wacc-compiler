@@ -1,11 +1,9 @@
 package com.wacc
 
-import scala.::
-import scala.collection.mutable.ListBuffer
-import scala.collection.{immutable, mutable}
+import scala.collection.mutable
 
 class SymbolTable(parentSymbolTable: SymbolTable, isFunctionSymbolTable: Boolean, functionReturnType: Type) {
-  // default parameter to null
+  /* Default parent symbol table to null */
   def this() = this(null, false, NotAType())
 
   def this(parentSymbolTable: SymbolTable) = this(parentSymbolTable, false, NotAType())
@@ -29,10 +27,9 @@ class SymbolTable(parentSymbolTable: SymbolTable, isFunctionSymbolTable: Boolean
     /* If the type specified is not a function type, do not add it to the function dictionary */
     t match {
       case functionType @ FunctionType(returnType, parameters) =>
-        /* TODO: Refactor this to use list buffer - increased efficiency. */
         functionDic.get(functionName) match {
           case Some(values) =>
-            // Check first that the function type is no already the dictionary:
+            /* Check first that the function type is no already the dictionary: */
             for (value <- values) {
               if (FunctionType(AnyType(), parameters).unifies(value)) {
                 return false
@@ -44,7 +41,7 @@ class SymbolTable(parentSymbolTable: SymbolTable, isFunctionSymbolTable: Boolean
         }
       case _ => ()
     }
-    return true
+    true
   }
 
   /* Looks up all the symbol tables - returns FunctionType if found, otherwise NotAType() */
@@ -53,7 +50,6 @@ class SymbolTable(parentSymbolTable: SymbolTable, isFunctionSymbolTable: Boolean
     while (current.isDefined) {
       current.get.functionDic.get(funcName) match {
         case Some(expectedFunctionTypes) =>
-          // TODO: Refactor to use "Reduce"
           for (expectedFunctionType <- expectedFunctionTypes) {
             if (functionType.unifies(expectedFunctionType)) {
               return expectedFunctionType
@@ -104,11 +100,9 @@ class SymbolTable(parentSymbolTable: SymbolTable, isFunctionSymbolTable: Boolean
   /* Add a variable, along with it's type and corresponding AST node, to the symbol table */
   def add(varName: String, varType: Type, varObj: ASTNode): Unit = {
     dictionary += (varName -> (varType, varObj))
-    // dictionary.updated(varName, (varType, varObj))
   }
 
-  // TODO: Refactor null to use Option[]
-  // Returns Type object else empty Option if name not in dict
+  /* Returns Type object else empty Option if name not in dict */
   def lookup(name: String): Option[(Type, ASTNode)] = {
     dictionary.get(name)
   }
@@ -126,26 +120,31 @@ class SymbolTable(parentSymbolTable: SymbolTable, isFunctionSymbolTable: Boolean
     None
   }
 
+  /* Returns true if the symbol table is inside a function body */
   def isInsideFunctionSymbolTable(): Boolean = {
     var current = Option(this)
     while (current.isDefined) {
-      if (current.get.isFunction)
+      if (current.get.isFunction) {
         return true
+      }
       current = current.get.parent
     }
     false
   }
 
+  /* Returns the return type of the function represented by the top-most symbol table*/
   def getReturnType(): Type = {
     var current = Option(this)
     while (current.isDefined) {
-      if (current.get.isFunction)
+      if (current.get.isFunction) {
         return current.get.returnType
+      }
       current = current.get.parent
     }
-    return NotAType()
+    NotAType()
   }
 
+  /* Returns true if the specified identifier coresponds to a function */
   def identifierIsFunction(identifier: String): Boolean = {
     val option = lookupAll(identifier)
     if (option.isEmpty) {

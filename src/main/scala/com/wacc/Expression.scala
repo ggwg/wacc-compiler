@@ -209,7 +209,7 @@ case class FunctionCall(name: Identifier, arguments: Option[ArgumentList])(posit
 
     /* Jump to the function, reset the stack pointer, and move the result */
     instructions ++= List(
-      if (!functionLabel.equals("ERROR")) {
+      if (!functionLabel.equals("")) {
         BRANCHLINK(labelPrefix + functionLabel)
       } else {
         /* Find the position of the identifier in the stack relative to the SP */
@@ -264,8 +264,7 @@ case class FunctionCall(name: Identifier, arguments: Option[ArgumentList])(posit
         returnType
       case _ =>
         /* If the function was not found in the function table, then check again to see if it is in the
-           regular symbol table (as a function type)
-         */
+           regular symbol table (as a function type) */
         symbolTable.lookupAll(name.identifier) match {
           case Some(value) =>
             value._1 match {

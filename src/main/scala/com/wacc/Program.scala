@@ -55,13 +55,12 @@ case class Program(imports: List[Import], functions: List[Function], body: State
   }
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
-    // Check each of the files at the imports
+    /* Check each of the files at the imports */
     for (imp <- imports) {
       imp.check(symbolTable)
     }
 
     functions.foreach { func =>
-      // TODO: Create functionType object for function
       val functionAdded = symbolTable.addFunction(func.name.identifier, func.getType(symbolTable))
       if (!functionAdded) {
         errors += Error(
@@ -70,18 +69,6 @@ case class Program(imports: List[Import], functions: List[Function], body: State
           Error.semanticCode
         )
       }
-
-//      val F = symbolTable.lookup(func.name.identifier)
-//      if (F.isDefined) {
-//        /* TODO: ALLOW FUNCTION OVERLOADING! */
-//        symbolTable.add(func.name.identifier, func.returnType, func)
-////        errors +=
-////          Error("Function " + func.name.identifier + " conflicts with another variable in the current scope.", getPos())
-//      } else {
-//        /* TODO: FUNCTION OVERLOADING (DEFAULT CASE) */
-//        symbolTable.add(func.name.identifier, func.returnType, func)
-//      }
-
     }
     functions.foreach { func =>
       func.check(symbolTable)
@@ -98,18 +85,17 @@ case class Import(fileName: Identifier)(position: (Int, Int)) extends ASTNodeVoi
 
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     instructions ++= state.getImport(fileName.identifier)
-    // Error message if import not found
     state
   }
 
   override def check(symbolTable: SymbolTable)(implicit errors: mutable.ListBuffer[Error]): Unit = {
-    // No need for check here - program already checked imported file when importing functions
+    /* No need for check here - program already checked imported file when importing functions */
   }
 
   override def getPos(): (Int, Int) = position
 }
 
-/* Function declaration - see P31 of semantic analysis slides */
+/* Function declaration */
 case class Function(returnType: Type, name: Identifier, parameters: Option[ParameterList], body: Statement)(
   position: (Int, Int)
 ) extends ASTNodeVoid {

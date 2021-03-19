@@ -1,47 +1,4 @@
-import com.wacc.{
-  ADD,
-  ArrayIndexBoundsError,
-  ArrayIndexError,
-  ArrayIndexNegativeError,
-  AsciiDirective,
-  AssemblerState,
-  BRANCH,
-  BRANCHLINK,
-  BRANCHX,
-  COMPARE,
-  CS,
-  DataDirective,
-  DivideByZeroError,
-  EQ,
-  Error,
-  FreeNullArrayError,
-  FreeNullPairError,
-  ImmediateNumber,
-  Instruction,
-  LOAD,
-  LT,
-  MOVE,
-  MessageLoad,
-  NE,
-  NullDereferenceError,
-  OverflowError,
-  POP,
-  PUSH,
-  PopPC,
-  PushLR,
-  Register0,
-  Register1,
-  Register2,
-  Register3,
-  RegisterLoad,
-  RegisterOffsetLoad,
-  RegisterSP,
-  RuntimeError,
-  SUB,
-  StringLabel,
-  SymbolTable,
-  WordDirective
-}
+import com.wacc._
 import parsley.{Failure, Success}
 
 import java.io.{File, FileWriter}
@@ -263,7 +220,7 @@ object Compiler {
     }
     /* Compile additional libraries */
     if (args.length > 1) {
-      for (i <- 1 to args.length - 1) {
+      for (i <- 1 until args.length) {
         val fileName = args(i)
         val split = fileName.split('.')
         /* Check that the input is correct */
@@ -301,7 +258,7 @@ object Compiler {
         /* Remove unreachable statements */
         AST = AST.removeUnreachableStatements()
 
-        var instructions = ListBuffer.empty[Instruction]
+        val instructions = ListBuffer.empty[Instruction]
         for (function <- parseResult.get.functions) {
           state = state.putFunction(function.name.identifier, function.thisFunctionType)
           state = function.compile(state)(instructions)
@@ -333,10 +290,6 @@ object Compiler {
         sys.exit(Error.syntaxCode)
       case Success(_) => ()
     }
-
-//    /* Semantic Analysis:
-//       Initialize top level Symbol Table */
-//    val topST: SymbolTable = new SymbolTable()
 
     var AST = parseResult.get
     implicit val semanticErrors: mutable.ListBuffer[Error] = mutable.ListBuffer.empty

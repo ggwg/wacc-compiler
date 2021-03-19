@@ -3,24 +3,25 @@ import com.wacc._
 import com.wacc.operator.{BinaryOperator, UnaryOperator}
 import parsley.Parsley._
 import parsley.character._
-import parsley.combinator.{attemptChoice, eof, manyN, option, optional}
+import parsley.combinator.{attemptChoice, eof, manyN, option}
 import parsley.expr._
 import parsley.implicits.{voidImplicitly => _, _}
 import parsley.{Parsley, combinator}
 
 object Parser {
-  /*  <program> ::=  ‘begin’ <func> * <stat> ‘end’ */
+  /*  <program> ::=  ‘begin’ <import>* <func>* <stat> ‘end’ */
   lazy val programParser: Parsley[Program] =
     Program(
       skipWhitespace *> parseKeyword("begin") *> skipWhitespace *>
-        combinator.many(attempt(importParser)), combinator.many(attempt(functionParser)),
+        combinator.many(attempt(importParser)),
+      combinator.many(attempt(functionParser)),
       statementParser <* parseKeyword("end") <* skipWhitespace <* eof
     )
       .label("a program")
-  lazy val importParser: Parsley[Import] = Import(
-    parseKeyword("import") *> skipWhitespace *> identifierParser <* skipWhitespace
-  )
-    .label("an import")
+  /* <import> ::= (‘import‘ <identifier>)* */
+  lazy val importParser: Parsley[Import] =
+    Import(parseKeyword("import") *> skipWhitespace *> identifierParser <* skipWhitespace)
+      .label("an import")
   /*  <func> ::= <type>   <ident> ‘(’ <param-list> ?  ‘)’ ‘is’ <stat> ‘end’ */
   lazy val functionParser: Parsley[wacc.Function] = Function(
     typeParser,
@@ -47,6 +48,10 @@ object Parser {
                | ‘println’ <expr>
                | ’if’ <expr> ‘then’ <stat> ‘else’ <stat> ‘fi’
                | ‘while’ <expr> ‘do’ <stat> ‘done’
+               | ‘for‘ ‘(‘ <initialization>* <expr>? <assignment>* ‘)‘ ‘do‘ <stat> ‘done‘
+               | ‘break‘
+               | ‘continueloop‘
+               | ‘try‘ <stat> ‘catch‘ <stat> ‘end‘
                | ‘begin’ <stat> ‘end’
                |  <stat> ‘;’ <stat> */
   lazy val statementParser: Parsley[Statement] = precedence[Statement](
@@ -149,7 +154,8 @@ object Parser {
   /*  <type> ::= <base-type>
              |  <array-type>
              |  <pair-type>
-             |  <func-type> */
+             |  <func-type>
+             |  <void-type> */
   lazy val typeParser: Parsley[Type] =
     (precedence[Type](
       voidTypeParser <\> pairTypeParser <\> baseTypeParser <\> functionTypeParser,
@@ -168,7 +174,7 @@ object Parser {
     (BaseType(attemptChoice(BaseType.types.map(parseKeyword(_)): _*)) <* skipWhitespace).label("a base type")
   /* <array-type> ::= <type> ‘[’ ‘]’ */
   lazy val arrayTypeParser: Parsley[ArrayType] =
-    (lookAhead(attemptChoice(baseTypeParser, pairTypeParser) *> "[") *> typeParser)
+    (lookAhead(attemptChoice(baseTypeParser, pairTypeParser, functionTypeParser) *> "[") *> typeParser)
       .map(_.asInstanceOf[ArrayType]) <* skipWhitespace
       .label("an array type")
   /* <func-type> ::= 'func' '(' <type>, <type>* ')' */

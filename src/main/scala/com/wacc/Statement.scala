@@ -1,6 +1,5 @@
 package com.wacc
 
-import com.wacc.TryCatch.catchLabelPosition
 import parsley.Parsley
 import parsley.Parsley.pos
 import parsley.implicits.{voidImplicitly => _, _}
@@ -224,12 +223,6 @@ case class Exit(expression: Expression)(position: (Int, Int)) extends Statement 
   override def getPos(): (Int, Int) = position
 }
 
-/* Memory Free Statements: A memory free statement ‘free’ is used to free the heap memory allocated for a pair or array
-   and its immediate content. The statement is given an expression that must be of type ‘pair(T1, T2)’ or ‘T[]’
-   (for some T, T1, T2). The expression must evaluate to a valid reference to a pair or array, otherwise a segmentation
-   fault will occur at runtime. If the reference is valid, then the memory for each element of the pair/array is freed,
-   so long as the element is not a reference to another pair or another array (i.e. free is not recursive). Then the
-   memory that stores the pair/array itself is also freed. */
 case class Free(expression: Expression)(position: (Int, Int)) extends Statement {
   override def compile(state: AssemblerState)(implicit instructions: ListBuffer[Instruction]): AssemblerState = {
     /* Compile the expression */
@@ -389,11 +382,6 @@ case class Print(expression: Expression, isNewLine: Boolean)(position: (Int, Int
   override def getPos(): (Int, Int) = position
 }
 
-/* A read statement ‘read’ is a special assignment statement that takes its value from the standard input and writes it
-   to its argument. Just like a general assignment statement, a read statement can target a program variable, an array
-   element or a pair element. However, the read statement can only handle character or integer input. The read statement
-   determines how it will interpret the value from the standard input based on the type of the target. For example, if
-   the target is a variable of type ‘int’ then it will convert the input string into an integer. */
 case class Read(assignmentLeft: AssignmentLeft)(position: (Int, Int)) extends Statement {
   override def toString: String = "read " + assignmentLeft.toString + "\n"
 
@@ -695,11 +683,6 @@ case class For(
     forInnerSymbolTable.inLoop = true
     body.check(forInnerSymbolTable)
   }
-
-  /* initializations: Option[List[Initialization]],
-  cond: Option[Expression],
-  updates: Option[List[Assignment]],
-  body: Statement*/
 
   override def getPos(): (Int, Int) = position
 }

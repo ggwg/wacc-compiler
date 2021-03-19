@@ -21,8 +21,6 @@ trait ASTNode {
   /* Returns the actual type of a node */
   def getType(symbolTable: SymbolTable): Type
 
-  // TODO: Remove null; Maybe add flags in the state so that we add helper functions
-  // TODO: at the end of the program
   /* Given a compilation state, this function compiles the current node and stores the list of
      generated instructions in the instructions list. Returns the new state after the entire code was
      compiled

@@ -1,6 +1,6 @@
 package com.wacc
 
-import scala.collection.{immutable, mutable}
+import scala.collection.immutable
 
 /* This class represents the state of the compiler while it is converting
    the code into assembly */
@@ -23,9 +23,9 @@ case class AssemblerState(
   /* How much space on the stack the current code compilation is using for variables.
      Useful when exiting scopes to reset the stack pointer to the original value */
   declaredSize: Int,
-  /* TODO: Add a function to the dictionary whenever */
+  /* Maps function names to their overloaded types */
   functionDic: immutable.Map[String, List[FunctionType]],
-
+  /* Maps imports to the generated function instructions */
   importDic: immutable.Map[String, List[Instruction]],
   /* Whether functions are set */
   p_throw_overflow_error: Boolean,
@@ -81,14 +81,11 @@ case class AssemblerState(
     importDic.getOrElse(importFileName, List.empty[Instruction])
   }
 
-  // TODO: Check that no 2 functions of the same type can be added to the symbol table.
   /* Add a new function (potentially overloaded) to the list of currently callable functions */
   def putFunction(functionName: String, t: Type): AssemblerState = {
     /* If the type specified is not a function type, do not add it to the function dictionary */
     t match {
-      case functionType @ FunctionType(returnType, parameters) =>
-        // Do something different
-        /* TODO: Refactor this to use list buffer - increased efficiency. */
+      case functionType @ FunctionType(_, _) =>
         val newFunctionDic = functionDic.get(functionName) match {
           case Some(value) =>
             functionDic + (functionName -> List.concat(value, List(functionType)))
@@ -100,50 +97,19 @@ case class AssemblerState(
     }
   }
 
-  /*
-  case Some(expectedFunctionTypes) =>
-          // TODO: Refactor to use "Reduce"
-          for (expectedFunctionType <- expectedFunctionTypes) {
-            if (functionType.unifies(expectedFunctionType)) {
-              return expectedFunctionType.returnType
-            }
-          }
-          current = current.get.parent
-        case None =>
-          current = current.get.parent
-   */
-
   /* Looks up all the symbol tables */
   def getFunctionLabel(funcName: String, functionType: Type): String = {
-    // 1. Look inside functionDic to match functionType
+    /* 1. Look inside functionDic to match functionType */
     functionDic.get(funcName) match {
       case Some(value) =>
-        for (i <- 0 to (value.length - 1)) {
+        for (i <- value.indices) {
           if (functionType.unifies(value(i))) {
             return funcName + "_" + i
           }
         }
-        /* TODO: RUNTIME ERROR */
-        "ERROR"
-      case None =>
-        /* TODO: RUNTIME ERROR */
-        "ERROR"
+      case None => ()
     }
-//    var current = Option(this)
-//    while (current.isDefined) {
-//      current.get.functionDic.get(funcName) match {
-//        case Some(expectedFunctionTypes) =>
-//          // TODO: Refactor to use "Reduce"
-//          for (expectedFunctionType <- expectedFunctionTypes) {
-//            if (functionType.unifies(expectedFunctionType)) {
-//              return expectedFunctionType.returnType
-//            }
-//          }
-//          current = current.get.parent
-//        case None =>
-//          current = current.get.parent
-//      }
-//    }
+    ""
   }
 
   /* Retrieves the ID of a message */

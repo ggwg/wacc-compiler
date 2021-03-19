@@ -1,7 +1,6 @@
 package com.wacc.operator
 
-import com.wacc
-import com.wacc.{ASTNodeVoid, SymbolTable}
+import com.wacc.ASTNodeVoid
 import parsley.Parsley
 
 sealed trait UnaryOperator extends ASTNodeVoid
