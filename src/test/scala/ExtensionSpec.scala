@@ -87,6 +87,7 @@ class ExtensionSpec extends AnyFlatSpec {
   }
   it should "compile higher order functions" in {
     compileAndMatch("src/main/resources/extension_examples/higherOrderFunctions/simpleMap.wacc", "2\n3\n4\n5\n")
+    compileAndMatch("src/main/resources/extension_examples/higherOrderFunctions/functionList.wacc", "11\n10\n9\n")
   }
   it should "compile try catch blocks" in {
     compileAndMatch("src/main/resources/extension_examples/exception/simpleException.wacc", "Exception caught\n")
