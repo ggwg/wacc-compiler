@@ -9,7 +9,7 @@ If using IntelliJ IDEA, open the project from that file. To compile the project,
 calls sbt to compile and assemble the project. To run the project, invoke the `./compile` command with the required
 arguments (`.wacc` files).
 
-#Example Program:
+# Example Program:
 ```
 begin
   import io_lib # Import pretty array print functions from external library
@@ -53,7 +53,7 @@ Output:
 i exceeded array bounds
 [A, B, C, d]
 
-#Project Reflection & Final Thoughts
+# Project Reflection & Final Thoughts
 
 We developed a specification for our own programming language, then wrote our own optimised compiler which produces assembly code directly executable on the ARM11 CPU architecture. The compiler was written entirely in Scala, and we used an open-source Parser-Combinator to handle the parsing of the language developed by our tutor at Imperial College. For version control and code maintenance, we used Git and GitLab’s automated CI/CD pipeline to run an automated test suite, ensuring the functional correctness of our compiler.
 
