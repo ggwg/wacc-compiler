@@ -51,7 +51,9 @@ begin
 end
 ```
 Output:
+
 i exceeded array bounds
+
 [A, B, C, d]
 
 ## Project Reflection & Final Thoughts
