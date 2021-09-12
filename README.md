@@ -4,12 +4,13 @@
 > (@cc1619), Daria Petca (@dp1119), Gavin Wu (@gjw19) and Sudarshan Sreeram (@ss8119). Note that this software is
 > provided without warranty of any kind; the developers are not held liable for any damages in through use of this code.
 
+## Building / Setup
 The project follows the standard SBT structure; the build configuration file `build.sbt` is present in the root folder.
 If using IntelliJ IDEA, open the project from that file. To compile the project, run `make` in the root directory; this
 calls sbt to compile and assemble the project. To run the project, invoke the `./compile` command with the required
 arguments (`.wacc` files).
 
-# Example Program:
+## Example Program:
 ```
 begin
   import io_lib # Import pretty array print functions from external library
@@ -53,7 +54,7 @@ Output:
 i exceeded array bounds
 [A, B, C, d]
 
-# Project Reflection & Final Thoughts
+## Project Reflection & Final Thoughts
 
 We developed a specification for our own programming language, then wrote our own optimised compiler which produces assembly code directly executable on the ARM11 CPU architecture. The compiler was written entirely in Scala, and we used an open-source Parser-Combinator to handle the parsing of the language developed by our tutor at Imperial College. For version control and code maintenance, we used Git and GitLab’s automated CI/CD pipeline to run an automated test suite, ensuring the functional correctness of our compiler.
 
@@ -64,4 +65,3 @@ Our compilation process involves 3 main phases: Parsing and Lexical Analysis, wh
 After this project, I gained a much deeper understanding of functional object orientated programming through the clever features of the Scala language. Gaining an in-depth understanding of the inner-workings of a compiler will certainly be useful in understanding software technologies from a lower level in the future. Additionally, setting up an automated pipeline test to check the correctness of our code with each new commit has greatly saved us time in the long term, and we really appreciated investing the time to set up the CI/CD pipeline and write test cases towards the end of the project.
 
 The project was really successful, and not only did we end up learning so much about Compilers, but we also created completely from scratch our own new programming language capable of handling some pretty advanced programming features like imports, method overloading and higher-order functions.
-
