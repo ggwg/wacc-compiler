@@ -1,7 +1,9 @@
 # WACC Compiler
 
-> This compiler was written as a part of the second year undergraduate computing compilers project by Codrin Cotarlan
-> (@cc1619), Daria Petca (@dp1119), Gavin Wu (@gjw19) and Sudarshan Sreeram (@ss8119).
+> This compiler was written entirely from scratch as a part of the second year undergraduate computing compilers project.
+> It is an optimized compiler for our own programming language specification, with advanced features like: 
+> importing libraries, method overloading, higher-order functions and exception handling. 
+> By  Gavin Wu (@gjw19), Codrin Cotarlan (@cc1619), Daria Petca (@dp1119) and Sudarshan Sreeram (@ss8119).
 
 ## Building / Setup
 The project follows the standard SBT structure; the build configuration file `build.sbt` is present in the root folder.
