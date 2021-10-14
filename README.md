@@ -10,6 +10,7 @@ calls sbt to compile and assemble the project. To run the project, invoke the `.
 arguments (`.wacc` files).
 
 ## Example Program:
+Here is an example input file, it is our own programming language defined by our own specification.
 ```
 begin
   import io_lib # Import pretty array print functions from external library
