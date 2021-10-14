@@ -1,8 +1,9 @@
 # WACC Compiler
 
 > This compiler was written entirely from scratch as a part of the second year undergraduate computing compilers project.
-> It is an optimized compiler for our own programming language specification, with advanced features like: 
+> It is an optimized compiler for our own programming language specification, with advanced features like 
 > importing libraries, method overloading, higher-order functions and exception handling. 
+> 
 > By  Gavin Wu (@gjw19), Codrin Cotarlan (@cc1619), Daria Petca (@dp1119) and Sudarshan Sreeram (@ss8119).
 
 ## Building / Setup
